@@ -87,9 +87,6 @@ celerybeat-schedule
 venv/
 ENV/
 
-
-.idea
-
 # Spyder project settings
 .spyderproject
 .spyproject
@@ -102,3 +99,5 @@ ENV/
 
 # mypy
 .mypy_cache/
+
+.idea
