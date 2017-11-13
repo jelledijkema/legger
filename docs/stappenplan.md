@@ -19,8 +19,12 @@ diepte. Stap 1 is in 4 delen gesplitst:
   * PRWIDENT;
   * ???
 * Hydro-objecten:
-  * ???
-* Streefpeilentabel;
+  * hydroobject_id
+  * categorie (primair=1, secundair=2, tertiair=3)
+  * in_peilgebied **(bespreken met Maarten, wat te doen met peilafwijkingen i.h.k.v. toetspeilen)**
+* PeilgebiedPraktijk;
+ * peilgebiedpraktijk_id
+* Streefpeil (tabel)
 * Watervlakken;
 * Grondsoorten???
 * Dieptemetingen baggeraars???
@@ -42,7 +46,7 @@ object, met gemeten   profiel, in hetzelfde segment);
   * Maximum diepte.
 
 **OUTPUT DEEL 1.4**
-*Hydro-objecten:
+* Hydro-objecten:
   * Hydro-object ID;
   * Peilvak ID???;
   * Streefpeil zomer;
