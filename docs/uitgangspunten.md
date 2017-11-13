@@ -21,4 +21,5 @@ Stijlregels:
 
 Overige uitgangspunten:
 1. Onderzoeken welke bibliotheken meegaan naar versie 3.x. (Uitzoeken Martin Meirink);
-1. Wanneer 'objecten' of 'functies' te gebruiken? Dit wordt gaandeweg vastgesteld.
+1. Wanneer 'objecten' of 'functies' te gebruiken? Dit wordt gaandeweg vastgesteld;
+1. Peilgrenzen en peilafwijkingsgrenzen kloppen, daarmee liggen dus ook alle kunstwerken op de juiste plek.
