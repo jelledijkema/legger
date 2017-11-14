@@ -1,0 +1,5 @@
+<RCC>
+    <qresource prefix="/plugins/legger/" >
+        <file>media/icon_legger.png</file>
+    </qresource>
+</RCC>

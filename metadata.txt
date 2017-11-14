@@ -1,0 +1,31 @@
+# This file contains metadata for your plugin.
+# This file should be included when you package your plugin.
+
+[general]
+name=legger
+qgisMinimumVersion=2.18
+description=Leggertool, tool for getting 'legger' profiles based on dicharged and
+    situational data
+version=0.1
+author= todo
+email= todo
+
+about=...
+
+tracker=https://github.com/hhnk/legger/issues
+repository=https://github.com/hhnk/legger
+# End of mandatory metadata
+
+# Recommended items:
+
+# Uncomment the following line and add your changelog:
+# changelog=
+
+# Tags are comma separated with spaces allowed
+# tags=
+
+homepage=https://github.com/hnk/legger/wiki
+category=Plugins
+icon=media/icon_legger.png
+# experimental flag
+experimental=True
