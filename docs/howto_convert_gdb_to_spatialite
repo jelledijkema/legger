@@ -1,0 +1,10 @@
+Een workaround om de gdb uitvoer van FME om te zetten naar een spatialite database:
+
+In windows mbv de OSGeo4W Shell het commando:
+
+ogr2ogr -f SQLite -dsco SPATIALITE=YES pad_naar_te_maken_sqlite.sqlite pad_naar_gdb.gdb
+
+bijvoorbeeld:
+ogr2ogr -f SQLite -dsco SPATIALITE=YES h:\testmap\test.sqlite h:testmap\brondata.gdb
+
+Er worden geen relaties tussen tabellen gelegd!
