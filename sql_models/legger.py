@@ -56,7 +56,7 @@ class HydroObject(Base):
                               # foreign_keys='ws_in_peilgebied',
                               back_populates="hydro_objects")
 
-    tdi_result = relationship("TdiResults",
+    tdi_result = relationship("TdiHydroObjectResults",
                               uselist=False,
                               back_populates="hydroobject")
 
@@ -65,8 +65,8 @@ class HydroObject(Base):
             self.code)
 
 
-class TdiResults(Base):
-    __tablename__ = 'tdi_results'
+class TdiHydroObjectResults(Base):
+    __tablename__ = 'tdi_hydro_object_results'
 
     hydroobject_id = Column(Integer,
                             ForeignKey(HydroObject.__tablename__ + ".objectid"),
@@ -81,7 +81,21 @@ class TdiResults(Base):
                                back_populates="tdi_result")
 
     def __str__(self):
-        return u'Hydro object {0}'.format(
+        return u'Hydro object 3di result {0}'.format(
+            self.hydrobject)
+
+
+class TdiCulvertResults(Base):
+    __tablename__ = 'tdi_culvert_results'
+
+    id = Column(Integer,
+                primary_key=True)
+    code = Column(String())
+    source = Column(String())
+    qend = Column(Float)
+
+    def __str__(self):
+        return u'Culvert 3di result {0}'.format(
             self.code)
 
 

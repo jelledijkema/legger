@@ -7,7 +7,7 @@ def create_legger_views(session):
         """
             CREATE VIEW IF NOT EXISTS hydroobject_with_results AS
             SELECT *
-            FROM hydroobject h JOIN tdi_results t ON h.objectid = t.hydroobject_id;
+            FROM hydroobject h JOIN tdi_hydroobject_results t ON h.objectid = t.hydroobject_id;
         """)
 
     session.execute(

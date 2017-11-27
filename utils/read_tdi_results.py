@@ -5,7 +5,7 @@ from ThreeDiToolbox.datasource.netcdf import NetcdfDataSource
 from geometry_tools.geom_collections.lines import LineCollection
 from geometry_tools.geometries import LineString
 from geometry_tools.geometries import shape
-from legger.sql_models.legger import TdiResults
+from legger.sql_models.legger import TdiHydroObjectResults, TdiCulvertResults
 from legger.sql_models.legger_database import LeggerDatabase
 from pyspatialite import dbapi2 as dbapi
 
@@ -221,7 +221,7 @@ def write_tdi_results_to_db(hydroobject_results, path_legger_db):
     hydroobjects = []
 
     for hydroobj in hydroobject_results:
-        hydroobjects.append(TdiResults(
+        hydroobjects.append(TdiHydroObjectResults(
             hydroobject_id=hydroobj['hydroobject_id'],
             qend=hydroobj['qend'],
             channel_id=hydroobj['channel_id'],
@@ -231,8 +231,78 @@ def write_tdi_results_to_db(hydroobject_results, path_legger_db):
         ))
 
     log.info('delete old results from database')
-    session.execute("Delete from {0}".format(TdiResults.__tablename__))
+    session.execute("Delete from {0}".format(TdiHydroObjectResults.__tablename__))
 
     log.info("Save 3di results instances to database ")
     session.bulk_save_objects(hydroobjects)
+    session.commit()
+
+
+def read_tdi_culvert_results(path_model_db,
+                             path_result_nc, path_legger_db):
+
+    con_model = dbapi.connect(path_model_db)
+    con_legger = dbapi.connect(path_legger_db)
+
+    result_ds = NetcdfDataSource(path_result_nc)
+
+    # make sure we got dictionaries returned
+    con_model.row_factory = dbapi.Row
+    con_legger.row_factory = dbapi.Row
+
+    # read discharge of last timestep. Returns numpy array with index number is idx.
+    # to link to model channels, the id mapping is needed.
+    qend = result_ds.get_values_by_timestep_nr('q', len(result_ds.timestamps) - 1)
+
+    culverts = []
+
+    for tp in ['v2_culvert', 'v2_orifice']:
+
+        cursor = con_model.execute(
+            'SELECT '
+            'id, code '
+            'FROM ' + tp
+        )
+
+        id_mapping = result_ds.id_mapping.get(tp, {})
+
+        for culvert in cursor.fetchall():
+            idx = id_mapping.get(str(culvert['id']))
+
+            culverts.append({
+                'code': culvert['code'],
+                'id': culvert['id'],
+                'source': tp,
+                'idx': idx,
+                'qend': qend[idx]
+            })
+
+    return culverts
+
+
+def write_tdi_culvert_results_to_db(culvert_results, path_legger_db):
+    db = LeggerDatabase(
+        {
+            'db_path': path_legger_db
+        },
+        'spatialite'
+    )
+    db.create_and_check_fields()
+    session = db.get_session()
+
+    culverts = []
+
+    for culvert in culvert_results:
+        culverts.append(TdiCulvertResults(
+            id=culvert['id'],
+            code=culvert['code'],
+            source=culvert['source'],
+            qend=culvert['qend']
+        ))
+
+    log.info('delete old results from database')
+    session.execute("Delete from {0}".format(TdiCulvertResults.__tablename__))
+
+    log.info("Save 3di results instances to database ")
+    session.bulk_save_objects(culverts)
     session.commit()
