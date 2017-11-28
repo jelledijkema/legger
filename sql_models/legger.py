@@ -146,3 +146,22 @@ class Streefpeil(Base):
             self.code)
 
 # todo: add prw, pro, pbp, profielpunten
+
+
+class ProfielVarianten(Base):
+    __tablename__ = 'profiel_varianten'
+
+    hydro_object_id = Column(Integer,
+                           ForeignKey(HydroObject.__tablename__ + ".objectid"))
+    id = Column(String(), primary_key=True)
+    talud = Column(Float)
+    waterdiepte = Column(Float)
+    waterbreedte = Column(Float)
+    bodembreedte = Column(Float)
+    maatgevend_debiet = Column(Float)
+    verhang_bos_bijkerk = Column(Float)
+
+    def __str__(self):
+        return u'profiel_variant {0}'.format(
+            self.id)
+

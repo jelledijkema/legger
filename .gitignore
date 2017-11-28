@@ -104,3 +104,5 @@ ENV/
 external/
 
 tests/data/tdimodel/subgrid_map_original.nc
+tests/data/test_spatialite_output_join_with_tdi_results.sqlite
+tests/data/test_spatialite_output_with_theoretical_profiles.sqlite
