@@ -103,3 +103,4 @@ ENV/
 .idea
 external/
 
+tests/data/tdimodel/subgrid_map_original.nc
