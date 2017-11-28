@@ -42,7 +42,7 @@ class TestReadTdiResults(unittest.TestCase):
         legger_db_original = os.path.join(
             os.path.dirname(__file__),
             'data',
-            'test_spatialite_output.sqlite'
+            'test_spatialite.sqlite'
         )
 
         copyfile(legger_db_original, self.legger_db)
