@@ -165,6 +165,9 @@ def read_tdi_results(path_model_db, path_result_db,
             # hydroobject can have an other orientation than channel
             dist1 = geom_channel.project(line.startpoint())
             dist2 = geom_channel.project(line.endpoint())
+            rev_flow_dir = False
+            if (dist1 > dist2):
+                rev_flow_dir = True
             dist_startpoint = min(dist1, dist2)
             dist_endpoint = max(dist1, dist2)
             # get best flowline
@@ -179,7 +182,8 @@ def read_tdi_results(path_model_db, path_result_db,
 
                     flowline_candidates.append((
                         matching_length,
-                        fl
+                        fl,
+                        rev_flow_dir
                     ))
 
             if len(flowline_candidates) == 0:
@@ -190,15 +194,20 @@ def read_tdi_results(path_model_db, path_result_db,
                     selected['properties']['id'])
 
             else:
-                matching_length, selected_fl = sorted(
+                matching_length, selected_fl, rev_flow_dir = sorted(
                     flowline_candidates,
                     key=lambda item: item[0],
                     reverse=True
                 )[0]
 
+                if rev_flow_dir:
+                    qend = -1 * selected_fl['q_end']
+                else:
+                    qend = selected_fl['q_end']
+
                 hydroobjects.append({
                     'hydroobject_id': hydroobject['id'],
-                    'qend': selected_fl['q_end'],
+                    'qend': qend,
                     'channel_id': selected['properties']['id'],
                     'flowline_id': selected_fl['id'],
                     'nr_candidates': len(candidates),
