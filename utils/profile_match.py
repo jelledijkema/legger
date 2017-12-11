@@ -73,15 +73,19 @@ def peilperprofiel(cur):
 
 def haal_meetprofielen(cur, profielsoort="Z1"):
     """ Haal de gemeten profieelpunten op uit de database voor de profielsoort vastebodem
-     Bepaal de punten die meedoen op grond van het peil dat bij het hydroobject waar de
+     Bepaal de punten die meedoen op grond van het peil dat bij het hydroobject hoort waar de
      reeks punten bijhoort
      Invoer:    cur = een cursor naar de database met gemetenprofielen, hydroobjecten en theoretische profielen
                 profielsoort = de code voor de harde bodem
-     Uitvoer:   een dictionary met
+     Uitvoer:   een dictionary met als sleutel de hydroobjectids van gemeten profielen
+                met per hydroobjectid:
+                het proid (profielid)
+                het peil
+                de (al dan niet geinterpoleerde) punten van het gemeten profiel die lager of gelijk zijn aan het peil
      Aanpak:
      a) haal voor alle gemetenprofielen de peilen op en werk door met de profielen die een peil hebben
      b) haal per profiel de punten op volgorde van iws_volgnummer op
-     c) doorloop de punten, zodra een punt onder het peil komt: bepaal snijpunt van de
+     c) doorloop de punten, zodra een punt onder het peil komt: interpoleer snijpunt van de
                 """
     prof = {}
     peilvanprofiel = peilperprofiel(cur)
@@ -96,9 +100,10 @@ def haal_meetprofielen(cur, profielsoort="Z1"):
     for proid in peilvanprofiel:
         if peilvanprofiel[proid][1] is not None:
             print peilvanprofiel[proid], proid
-            prof[proid] = {}
-            prof[proid]['hydroid'] = peilvanprofiel[proid][0]
-            prof[proid]['peil'] = peilvanprofiel[proid][1]
+            hydroid = peilvanprofiel[proid][0]
+            prof[hydroid] = {}  # veronderstelling 1 profiel per hydroobject
+            prof[hydroid]['proid'] = proid
+            prof[hydroid]['peil'] = peilvanprofiel[proid][1]
             s = 0
             for r in cur.execute(q % (proid, profielsoort)):
                 if s == 0:  # beginconditie
@@ -107,7 +112,7 @@ def haal_meetprofielen(cur, profielsoort="Z1"):
                     if links[4] <= peilvanprofiel[proid][1]:
                         omlaag = 0  # profiel start onder peil, omhoog zoeken
                         meedoen = 1  # volgende punten lager dan peil doen mee met profiel
-                        prof[proid]['orig'] = [[r[2], r[3], peilvanprofiel[proid][1]]]  # eerste punt van profiel
+                        prof[hydroid]['orig'] = [[r[2], r[3], peilvanprofiel[proid][1]]]  # eerste punt van profiel
                     else:
                         omlaag = 1   # eerste punt boven peil, omlaag zoeken
                         meedoen = 0  # punten boven peil doen niet mee
@@ -120,41 +125,41 @@ def haal_meetprofielen(cur, profielsoort="Z1"):
                                          (rechts[4] - links[4])
                                 nieuwex = links[2] + factor * (rechts[2] - links[2])
                                 nieuwey = links[3] + factor * (rechts[3] - links[3])
-                                prof[proid]["orig"].append([nieuwex, nieuwey, peilvanprofiel[proid][1]])
+                                prof[hydroid]["orig"].append([nieuwex, nieuwey, peilvanprofiel[proid][1]])
                                 break
                             elif rechts[4] == peilvanprofiel[proid][1]:  # toeval precies op peil
                                 if links[4] == rechts[4]:
                                     """dit is de uitzondering dat een profiel start precies op 
                                        het peil, het meest linkse punt moet vervangen worden
                                        """
-                                    prof[proid]["orig"][0] = [rechts[2], rechts[3], rechts[4]]
+                                    prof[hydroid]["orig"][0] = [rechts[2], rechts[3], rechts[4]]
                                 else:   # OK dit is het laatste punt
-                                    prof[proid]["orig"].append([rechts[2], rechts[3], rechts[4]])
+                                    prof[hydroid]["orig"].append([rechts[2], rechts[3], rechts[4]])
                                     break
                             else:   # we kijken omhoog, punt is lager dan peil, punt toevoegen
-                                prof[proid]["orig"].append([rechts[2], rechts[3], rechts[4]])
+                                prof[hydroid]["orig"].append([rechts[2], rechts[3], rechts[4]])
                     else:   # meedoen nog op nul
                         if omlaag:      # alleen als we omlaag kijken voor een doorsnijding met het peil
                             if rechts[4] <= peilvanprofiel[proid][1]:  # ok dit punt ligt onder het peil
                                 meedoen = 1    # volgende punten gaan meedoen
                                 omlaag = 0     # en we gaan omhoog kijken
                                 if rechts[4] == peilvanprofiel[proid][1]:     # toeval perecies op peil
-                                    prof[proid]['orig'] = [[rechts[2], rechts[3], rechts[4]]]
+                                    prof[hydroid]['orig'] = [[rechts[2], rechts[3], rechts[4]]]
                                 else:
                                     factor = (peilvanprofiel[proid][1] - links[4]) / (rechts[4] - links[4])
                                     nieuwex = links[2] + factor * (rechts[2] - links[2])
                                     nieuwey = links[3] + factor * (rechts[3] - links[3])
-                                    prof[proid]['orig'] = [[nieuwex, nieuwey, peilvanprofiel[proid][1]]]
+                                    prof[hydroid]['orig'] = [[nieuwex, nieuwey, peilvanprofiel[proid][1]]]
                     links = rechts
-            prof[proid]['waterbreedte_orig'] = math.sqrt((prof[proid]['orig'][-1][0]-prof[proid]['orig'][0][0]) *\
-                                                    (prof[proid]['orig'][-1][0]-prof[proid]['orig'][0][0]) +\
-                                                    (prof[proid]['orig'][-1][1]-prof[proid]['orig'][0][1]) * \
-                                                    (prof[proid]['orig'][-1][1] - prof[proid]['orig'][0][1]))
+            prof[hydroid]['waterbreedte_orig'] = math.sqrt((prof[hydroid]['orig'][-1][0]-prof[hydroid]['orig'][0][0]) *
+                                                    (prof[hydroid]['orig'][-1][0]-prof[hydroid]['orig'][0][0]) +
+                                                    (prof[hydroid]['orig'][-1][1]-prof[hydroid]['orig'][0][1]) *
+                                                    (prof[hydroid]['orig'][-1][1] - prof[hydroid]['orig'][0][1]))
     return prof
 
 
-def projecteerprofiel(prof,  projectie="eindpunt" ):
-    """" Verrijk profielen met de projectie op een rechte lijn
+def projecteerprofiel(prof,  projectie="eindpunt"):
+    """ Verrijk profielen met de projectie op een rechte lijn
     Invoer: prof = dictionary met gemeten profielen; punten staan onder key "orig"
             projectie = keuze soort projectie van de xy punten van het gemeten profiel; waarden:
                    eindpunt: op de rechte tussen de eindpunten van het gemeten profiel
@@ -162,19 +167,50 @@ def projecteerprofiel(prof,  projectie="eindpunt" ):
                              van het lijnstuk van het hydroobject met de gemeten profiellijn (pro)
     In eerste instantie is alleen eindpunt geimplementeerd!
     """
+    if projectie == 'eindpunt':
+        for proid in prof:
+            lijn = shapely.geometry.LineString([(prof[proid]['orig'][0][0], prof[proid]['orig'][0][1]),
+                                                (prof[proid]['orig'][-1][0], prof[proid]['orig'][-1][1])])
+            prof[proid]['proj'] = []
+            for p in prof[proid]['orig']:
+                afstand = lijn.project(shapely.geometry.Point((p[0], p[1])))
+                pr = lijn.interpolate(afstand)
+                prof[proid]['proj'].append([afstand, pr.x, pr.y, p[2]])
     return prof
+
+
+def mkmogelijkprofiel(bodembreedte, waterdiepte, talud, peil):
+    return shapely.geometry.Polygon([(0, peil), (talud * waterdiepte, peil-waterdiepte),
+        (talud*waterdiepte + bodembreedte, peil - waterdiepte),
+        (talud*waterdiepte + bodembreedte + talud*waterdiepte, peil)])
+
+
+def prof_in_prof(prof1, prof2, aantstap, delta):
+    fit = 0
+    return fit
 
 
 con = sql.connect('../tests/data/test_spatialite_with_theoretical_profiles.sqlite')
 cur0 = con.cursor()
+cur1 = con.cursor()
 p = peilperprofiel(cur0)
 print p
 b = cur0.execute('select AsText(extent(GEOMETRY)) from pro where pro.pro_id=22488')
 print cur0.fetchone()
-gemprof = haal_meetprofielen(cur0)
+hydrogemprof = haal_meetprofielen(cur0)
+hydrogemprof = projecteerprofiel(hydrogemprof, 'eindpunt')
 print
-print '----- 22531 ---'
-print gemprof[22531]
+print '-----proid 22531 ---, hydroid 73086'
+print hydrogemprof[73086]
 print
-print '----- 54577 ---'
-print gemprof[54577]
+print '-----proid 54577, hydroid 87862 ---'
+print hydrogemprof[87862]
+print hydrogemprof.keys()
+q = """select ROWID, id, talud, waterdiepte, bodembreedte from profiel_varianten where hydro_object_id='%s'"""
+for hydroid in hydrogemprof.keys():
+    print hydroid
+    for theo_profdata in cur0.execute(q % hydroid):
+        theoprof = mkmogelijkprofiel(theo_profdata[4], theo_profdata[3], theo_profdata[2], hydrogemprof[hydroid]['peil'])
+        print hydroid, theo_profdata, hydrogemprof[hydroid]['peil']
+        print theoprof
+        print '---'
