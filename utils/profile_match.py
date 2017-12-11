@@ -3,6 +3,7 @@
 #   plaatst theoretische profielen zo goed mogelijk binnen gemeten profielen
 
 from pyspatialite import dbapi2 as sql
+import math
 import shapely
 import shapely.geometry
 import time
@@ -93,8 +94,11 @@ def haal_meetprofielen(cur, profielsoort="Z1"):
             order by "b"."iws_volgnr" 
                 '''
     for proid in peilvanprofiel:
-        if peilvanprofiel[proid][0] is not None:
+        if peilvanprofiel[proid][1] is not None:
             print peilvanprofiel[proid], proid
+            prof[proid] = {}
+            prof[proid]['hydroid'] = peilvanprofiel[proid][0]
+            prof[proid]['peil'] = peilvanprofiel[proid][1]
             s = 0
             for r in cur.execute(q % (proid, profielsoort)):
                 if s == 0:  # beginconditie
@@ -103,7 +107,7 @@ def haal_meetprofielen(cur, profielsoort="Z1"):
                     if links[4] <= peilvanprofiel[proid][1]:
                         omlaag = 0  # profiel start onder peil, omhoog zoeken
                         meedoen = 1  # volgende punten lager dan peil doen mee met profiel
-                        prof[proid] = { "orig": [[r[2], r[3], peilvanprofiel[proid][1]]]}  # eerste punt van profiel
+                        prof[proid]['orig'] = [[r[2], r[3], peilvanprofiel[proid][1]]]  # eerste punt van profiel
                     else:
                         omlaag = 1   # eerste punt boven peil, omlaag zoeken
                         meedoen = 0  # punten boven peil doen niet mee
@@ -135,13 +139,17 @@ def haal_meetprofielen(cur, profielsoort="Z1"):
                                 meedoen = 1    # volgende punten gaan meedoen
                                 omlaag = 0     # en we gaan omhoog kijken
                                 if rechts[4] == peilvanprofiel[proid][1]:     # toeval perecies op peil
-                                    prof[proid] = {"orig": [[rechts[2], rechts[3], rechts[4]]]}
+                                    prof[proid]['orig'] = [[rechts[2], rechts[3], rechts[4]]]
                                 else:
                                     factor = (peilvanprofiel[proid][1] - links[4]) / (rechts[4] - links[4])
                                     nieuwex = links[2] + factor * (rechts[2] - links[2])
                                     nieuwey = links[3] + factor * (rechts[3] - links[3])
-                                    prof[proid] = {"orig": [[nieuwex, nieuwey, peilvanprofiel[proid][1]]]}
+                                    prof[proid]['orig'] = [[nieuwex, nieuwey, peilvanprofiel[proid][1]]]
                     links = rechts
+            prof[proid]['waterbreedte_orig'] = math.sqrt((prof[proid]['orig'][-1][0]-prof[proid]['orig'][0][0]) *\
+                                                    (prof[proid]['orig'][-1][0]-prof[proid]['orig'][0][0]) +\
+                                                    (prof[proid]['orig'][-1][1]-prof[proid]['orig'][0][1]) * \
+                                                    (prof[proid]['orig'][-1][1] - prof[proid]['orig'][0][1]))
     return prof
 
 
