@@ -143,7 +143,7 @@ def haal_meetprofielen(cur, profielsoort="Z1"):
                             if rechts[4] <= peilvanprofiel[proid][1]:  # ok dit punt ligt onder het peil
                                 meedoen = 1    # volgende punten gaan meedoen
                                 omlaag = 0     # en we gaan omhoog kijken
-                                if rechts[4] == peilvanprofiel[proid][1]:     # toeval perecies op peil
+                                if rechts[4] == peilvanprofiel[proid][1]:     # toeval precies op peil
                                     prof[hydroid]['orig'] = [[rechts[2], rechts[3], rechts[4]]]
                                 else:
                                     factor = (peilvanprofiel[proid][1] - links[4]) / (rechts[4] - links[4])
@@ -151,6 +151,8 @@ def haal_meetprofielen(cur, profielsoort="Z1"):
                                     nieuwey = links[3] + factor * (rechts[3] - links[3])
                                     prof[hydroid]['orig'] = [[nieuwex, nieuwey, peilvanprofiel[proid][1]]]
                     links = rechts
+            # wat te doen als rechts nog geen doorsnijding is gevonden? punt toevoegen? Nog oplossen en kwaliteit van de
+            # profieldata opnemen (geen, volledig, onder peil begonnen en aangepast, onder peil geeindigten aangepast)
             prof[hydroid]['waterbreedte_orig'] = math.sqrt((prof[hydroid]['orig'][-1][0]-prof[hydroid]['orig'][0][0]) *
                                                     (prof[hydroid]['orig'][-1][0]-prof[hydroid]['orig'][0][0]) +
                                                     (prof[hydroid]['orig'][-1][1]-prof[hydroid]['orig'][0][1]) *
@@ -183,6 +185,14 @@ def mkmogelijkprofiel(bodembreedte, waterdiepte, talud, peil):
     return shapely.geometry.Polygon([(0, peil), (talud * waterdiepte, peil-waterdiepte),
         (talud*waterdiepte + bodembreedte, peil - waterdiepte),
         (talud*waterdiepte + bodembreedte + talud*waterdiepte, peil)])
+
+
+def mkgemprof(axyzlist):
+    """"Maak een shapely profiel"""
+    xy = []
+    for c in axyzlist:
+        xy.append((c[0], c[3]))
+    return shapely.geometry.Polygon(xy)
 
 
 def prof_in_prof(prof1, prof2, aantstap, delta):
