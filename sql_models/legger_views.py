@@ -1,13 +1,20 @@
-
-
-
 def create_legger_views(session):
+    session.execute(
+        """
+        DROP VIEW IF EXISTS hydroobject_with_results;
+        """
+    )
 
     session.execute(
         """
-            CREATE VIEW IF NOT EXISTS hydroobject_with_results AS
-            SELECT *
-            FROM hydroobject h JOIN tdi_hydro_object_results t ON h.objectid = t.hydroobject_id;
+            CREATE VIEW hydroobject_with_results AS
+            SELECT *,
+                   CASE WHEN t.qend > 0
+                       THEN 1 ELSE 2
+                   END AS direction
+            FROM hydroobject h 
+            JOIN tdi_hydro_object_results t ON h.objectid = t.hydroobject_id
+            JOIN hydrokenmerken k ON h.objectid = k.objectid;        
         """)
 
     session.execute(

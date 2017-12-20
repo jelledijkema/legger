@@ -113,7 +113,7 @@ def read_tdi_results(path_model_db, path_result_db,
         'ASGEOJSON(geometry) AS geojson, '
         'ST_LENGTH(geometry) AS length '
         'FROM hydroobject '
-        # 'WHERE objectid=216360 ' # for testing and debugging
+        # 'WHERE objectid=454401 ' # for testing and debugging
     )
     hydroobjects = []
 
@@ -167,6 +167,10 @@ def read_tdi_results(path_model_db, path_result_db,
             dist2 = geom_channel.project(line.endpoint())
             dist_startpoint = min(dist1, dist2)
             dist_endpoint = max(dist1, dist2)
+            if dist2 < dist1:
+                factor = -1
+            else:
+                factor = 1
             # get best flowline
 
             flowline_candidates = []
@@ -198,7 +202,7 @@ def read_tdi_results(path_model_db, path_result_db,
 
                 hydroobjects.append({
                     'hydroobject_id': hydroobject['id'],
-                    'qend': selected_fl['q_end'],
+                    'qend': selected_fl['q_end'] * factor,
                     'channel_id': selected['properties']['id'],
                     'flowline_id': selected_fl['id'],
                     'nr_candidates': len(candidates),

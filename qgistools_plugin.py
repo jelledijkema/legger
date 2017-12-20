@@ -5,7 +5,7 @@ from PyQt4.QtCore import (QSettings, QTranslator, qVersion, QCoreApplication,
                           QObject)
 from PyQt4.QtGui import QAction, QIcon
 # Import the code of the tools
-from legger.tools.example import ExampleTool
+from legger.tools.legger_network_tool import LeggerNetworkTool
 # from qgis.utils import plugins
 
 
@@ -24,7 +24,7 @@ class Legger(QObject):
         iface(QgsInterface): An interface instance which provides the hook to
         manipulate the QGIS application at run time.
         """
-        log.debug('ThreeDiStatistics init')
+        log.debug('Legger init')
 
         super(Legger, self).__init__(iface)
 
@@ -141,10 +141,11 @@ class Legger(QObject):
         self.toolbar.setObjectName(u'Legger')
 
         # Init tools
-        self.example_tool = ExampleTool(self.iface, self.toolbar)
+        self.network_tool = LeggerNetworkTool(
+            self.iface)
 
         self.tools = []
-        self.tools.append(self.example_tool)
+        self.tools.append(self.network_tool)
 
         try:
             import remote_debugger_settings

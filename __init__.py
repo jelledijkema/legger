@@ -10,6 +10,14 @@ sys.path.insert(
     os.path.join(os.path.dirname(os.path.realpath(__file__)), 'external')
 )
 
+sys.path.insert(
+    0,
+    os.path.join(os.path.dirname(os.path.realpath(__file__)),
+                 os.path.pardir,
+                 'ThreeDiToolbox',
+                 'external')
+)
+
 
 # noinspection PyPep8Naming
 def classFactory(iface):  # pylint: disable=invalid-name
