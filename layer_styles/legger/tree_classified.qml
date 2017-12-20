@@ -11,9 +11,9 @@
       <widgetv2config IsMultiline="0" fieldEditable="1" constraint="" UseHtml="0" labelOnTop="0" constraintDescription="" notNull="0"/>
     </edittype>
   </edittypes>
-  <renderer-v2 attr="value" forceraster="0" symbollevels="0" type="graduatedSymbol" graduatedMethod="GraduatedColor" enableorderby="0">
+  <renderer-v2 attr="case when  &quot;value&quot;  is NULL then -999 else &quot;value&quot; end" forceraster="0" symbollevels="0" type="graduatedSymbol" graduatedMethod="GraduatedColor" enableorderby="0">
     <ranges>
-      <range render="true" symbol="0" lower="0.000000000000000" upper="0.000000000000000" label="0.0 - 0.0"/>
+      <range render="true" symbol="0" lower="-inf" upper="0.000000000000000" label="NULL"/>
       <range render="true" symbol="1" lower="0.000000000000000" upper="2.000000000000000" label="0-2"/>
       <range render="true" symbol="2" lower="2.000000000000000" upper="4.000000000000000" label="2-4"/>
       <range render="true" symbol="3" lower="4.000000000000000" upper="6.000000000000000" label="4-6"/>
@@ -154,7 +154,7 @@
           <prop k="customdash_unit" v="MM"/>
           <prop k="draw_inside_polygon" v="0"/>
           <prop k="joinstyle" v="round"/>
-          <prop k="line_color" v="247,247,247,255"/>
+          <prop k="line_color" v="247,247,185,255"/>
           <prop k="line_style" v="solid"/>
           <prop k="line_width" v="1.08571"/>
           <prop k="line_width_unit" v="MM"/>
