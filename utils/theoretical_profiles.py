@@ -78,7 +78,7 @@ def filter_unused(df_in, column):
 
 def calc_bos_bijkerke(normative_flow, ditch_bottom_width, water_depth, slope):
     """
-    A calculation of the formula for gradient in the water level.
+    A calculation of the formula for gradient in the water level according to De Bos and Bijkerk.
     Based on physical parameters like normative flow, ditch width, water depth and slope.
     """
     ditch_circumference = (ditch_bottom_width
@@ -176,15 +176,28 @@ def calc_profile_max_ditch_width(object_id, normative_flow, length, slope, max_d
     return profile
 
 
-def calc_surge(object_id, length, gradient):
+def add_surge(hydro_object_table):
     """
     Calculates the absolute water surge that is the result of the gradient in water level and ditch length.
     The gradient is the max of the gradient calculated with Manning and Bos and Bijkerke equations.
     """
+    surge_table = pd.DataFrame(columns=['object_id', 'surge'])
 
-    surge = (float(gradient) * (float(length) / 1000.0))  # gradient in cm/km and length in m.
+    for i, rows in hydro_object_table.iterrows():
+        object_id = hydro_object_table.object_id[i]
+        length = hydro_object_table.length[i]
+        gradient = max(float(hydro_object_table.gradient_bos_bijkerke[i]),
+                       float(hydro_object_table.gradient_manning[i]))
 
-    return object_id, surge
+        surge = (float(gradient) * (float(length) / 1000.0))  # gradient in cm/km and length in m.
+        df_temp = pd.DataFrame([[object_id, surge]], columns=['object_id', 'surge'])
+
+        surge_table = surge_table.append(df_temp)
+
+    surge_table = surge_table.reset_index(drop=True)
+    enriched_table = pd.merge(hydro_object_table, surge_table, on='object_id', how='left')
+
+    return enriched_table
 
 
 def calc_profile_variants(hydro_objects_satisfy):
@@ -259,7 +272,7 @@ def calc_profile_variants(hydro_objects_satisfy):
         if count == 0:
             # When normative flow is small,
             # the necessary profile dimensions are smaller than the minimum requirements.
-            print ("minimum profile dimensions suffices for object " + str(object_id))
+            # print ("minimum profile dimensions suffices for object " + str(object_id))
             ditch_bottom_width = 0.5
             ditch_width = ditch_bottom_width + slope * water_depth
 
@@ -293,8 +306,8 @@ def print_failed_hydro_objects(input_table):
                 for i, rows in input_table.iterrows():
                     if max(float(input_table.gradient_bos_bijkerke[i]),
                            float(input_table.gradient_manning[i])) > gradient_norm:
-                        print str(input_table.object_id[i]) + " doesn't comply to the norm of " + \
-                              str(gradient_norm) + " cm/km."
+                                print (str(input_table.object_id[i]) + " doesn't comply to the norm of "
+                                     + str(gradient_norm) + " cm/km.")
             else:
                 print ("No 'gradient_manning' data")
         else:
@@ -336,15 +349,16 @@ min_ditch_bottom_width = 0.5  # (m) Ditch bottom width can not be smaller dan 0,
 
 
 def create_theoretical_profiles(legger_db_filepath):
-    print ("\n")
 
     # Part 1: read SpatiaLite
     # The original Spatialite database is read into Python for further analysis.
     hydro_objects = read_spatialite(legger_db_filepath)  # print (Hydro_objects)
+    print ("\nFinished 1: SpatiaLite Database read successfully\n")
 
     # Part 2: Filter the table for hydro objects that can not be analyzed due to incomplete data.
     column = "BREEDTE"  # or any column name
     hydro_objects = filter_unused(hydro_objects, column)
+    print ("\nFinished 2: Hydro database filtered successfully\n")
 
     # Part 3: Calculate per hydro object the legger profile based on maximum ditch width
 
@@ -373,54 +387,47 @@ def create_theoretical_profiles(legger_db_filepath):
     # When all the results are stored in the table, re-index the table.
         profile_max_ditch_width = profile_max_ditch_width.reset_index(drop=True)
 
+    print ("\nFinished 3: Successfully calculated profiles based on max ditch width\n")
+
     # Part 4: Print the hydro objects where no suitable legger can be calculated.
     print_failed_hydro_objects(profile_max_ditch_width)
-
+    print ("\nFinished 4: Finished printing hydro objects without a suitable legger\n")
     """
     Up to here the hydro object information is translated to a legger profile using maximum ditch width.
     """
 
     # Part 5: add surge.
-    surge_table = pd.DataFrame(columns=['object_id', 'surge'])
-
-    for i, rows in profile_max_ditch_width.iterrows():
-        object_id = profile_max_ditch_width.object_id[i]
-        length = profile_max_ditch_width.length[i]
-        gradient = max(float(profile_max_ditch_width.gradient_bos_bijkerke[i]),
-                       float(profile_max_ditch_width.gradient_manning[i]))
-
-        surge = calc_surge(object_id, length, gradient)
-        df_temp = pd.DataFrame([surge], columns=['object_id', 'surge'])
-
-        surge_table = surge_table.append(df_temp)
-
-    surge_table = surge_table.reset_index(drop=True)
-    profile_max_ditch_width = pd.merge(profile_max_ditch_width, surge_table, on='object_id', how='left')
+    profile_max_ditch_width = add_surge(profile_max_ditch_width)
+    print ("\nFinished 5: surge added\n")
 
     # Part 6: show a table with some statistics on the hydro objects
     surge_comparison = 5  # (cm) What total surge is interesting to compare it to?
     show_summary(profile_max_ditch_width, surge_comparison)
+    print ("\nFinished 6: summary printed\n")
 
     # Part 7: From the suitable profiles based on max ditch width, all the other suitable profiles are calculated.
-    # 2 tables are created:
+
+    """ 
+    2 tables are created:
     # - a table with the number of available profiles per hydro object
     # - a table with information on every available profile.
 
     # Uncomment these lines if started from here
     # profile_max_ditch_width = pd.read_excel('whatever name of table with profiles based on max width is')
+    """
 
     # Separate the hydro objects in two groups: hydro objects that satisfy requirements from the ones that don't.
-
     hydro_objects_satisfy = profile_max_ditch_width[profile_max_ditch_width['gradient_bos_bijkerke'] <= 3.0]
 
-    print (str(len(hydro_objects_satisfy)) + " of the " + str(len(profile_max_ditch_width))
-           + " hydro objects satisfy the norm")
+    # print (str(len(hydro_objects_satisfy)) + " of the " + str(len(profile_max_ditch_width))
+    # + " hydro objects satisfy the norm")
 
     profile_variants = calc_profile_variants(hydro_objects_satisfy)
-    print profile_variants
 
+    #print profile_variants
+
+    print ("\nFinished 7: variants created\n")
     return profile_variants
-
 
 def write_theoretical_profile_results_to_db(profile_results, path_legger_db):
     db = LeggerDatabase(
