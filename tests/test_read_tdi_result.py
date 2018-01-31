@@ -36,13 +36,13 @@ class TestReadTdiResults(unittest.TestCase):
         self.legger_db = os.path.join(
             os.path.dirname(__file__),
             'data',
-            'test_spatialite_output_join_with_tdi_results.sqlite'
+            'test_spatialite_output_join_with_tdi_results_31012018.sqlite'
         )
 
         legger_db_original = os.path.join(
             os.path.dirname(__file__),
             'data',
-            'test_spatialite.sqlite'
+            'HHW_20180123_Linestring.sqlite'
         )
 
         copyfile(legger_db_original, self.legger_db)
@@ -59,7 +59,7 @@ class TestReadTdiResults(unittest.TestCase):
                                 self.legger_db)
 
         con_legger = dbapi.connect(self.legger_db)
-        create_legger_views(con_legger)
+#        create_legger_views(con_legger)
         
         results = read_tdi_culvert_results(
             self.model_db,
@@ -91,7 +91,7 @@ class TestReadTdiResults(unittest.TestCase):
                                 self.legger_db)
 
         con_legger = dbapi.connect(self.legger_db)
-        create_legger_views(con_legger)
+#        create_legger_views(con_legger)
 
         # todo: check results
 

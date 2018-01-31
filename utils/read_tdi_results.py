@@ -108,8 +108,8 @@ def read_tdi_results(path_model_db, path_result_db,
 
     hydro_cursor = con_legger.execute(
         'SELECT '
-        'OGC_FID , '
-        'objectid AS id, '
+        'objectid , '
+        'id, '
         'ASGEOJSON(geometry) AS geojson, '
         'ST_LENGTH(geometry) AS length '
         'FROM hydroobject '

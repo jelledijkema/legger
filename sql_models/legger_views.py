@@ -20,7 +20,7 @@ def create_legger_views(session):
         """
             INSERT INTO views_geometry_columns (view_name, view_geometry, view_rowid, f_table_name, 
               f_geometry_column)
-            VALUES('hydroobject_with_results', 'GEOMETRY', 'OGC_FID', 'hydroobject', 'GEOMETRY');         
+            VALUES('hydroobject_with_results', 'GEOMETRY', 'objectid', 'hydroobject', 'GEOMETRY');         
         """)
 
     session.commit()

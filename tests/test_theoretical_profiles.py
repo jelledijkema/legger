@@ -12,12 +12,12 @@ class TestTheoreticalProfiles(unittest.TestCase):
 
         self.legger_db = os.path.join(
             test_dir,
-            'test_spatialite_output_with_theoretical_profiles.sqlite'
+            'test_spatialite_output_with_theoretical_profiles_31012018.sqlite'
         )
 
         legger_db_original = os.path.join(
             test_dir,
-            'test_spatialite_with_3di_results.sqlite'
+            'test_spatialite_output_join_with_tdi_results_31012018.sqlite' #'test_spatialite_with_3di_results.sqlite'
         )
 
         copyfile(legger_db_original, self.legger_db)
