@@ -3,9 +3,10 @@ import os
 
 import numpy as np
 import pyqtgraph as pg
-from PyQt4.QtCore import QEvent, QMetaObject, QSize, Qt, pyqtSignal
+from PyQt4 import QtCore
+from PyQt4.QtCore import QEvent, QMetaObject, QSize, Qt, pyqtSignal, pyqtSlot
 from PyQt4.QtGui import (QApplication, QColor, QDockWidget, QHBoxLayout, QPushButton, QSizePolicy, QSpacerItem,
-                         QTableView, QVBoxLayout, QWidget)
+                         QTableView, QVBoxLayout, QWidget, QTreeView)
 from legger.qt_models.legger_item import LeggerItemModel
 from legger.utils.network import Network
 from legger.utils.network_utils import LeggerDistancePropeter, LeggerMapVisualisation, NetworkTool
@@ -17,6 +18,7 @@ from qgis.core import (QgsPoint, QgsRectangle, QgsCoordinateTransform,
                        QGis, QgsFeatureRequest, QgsDistanceArea, QgsCoordinateReferenceSystem)
 
 from qgis.core import QgsDataSourceURI
+from legger.qt_models.legger_tree import LeggerTreeModel
 
 log = logging.getLogger('legger.' + __name__)
 
@@ -200,6 +202,23 @@ class LeggerPlotWidget(pg.PlotWidget):
                             pg.mkBrush(item.color.value))
 
 
+class LeggerTreeWidget(QTreeView):
+
+    def __init__(self, parent=None, tree_model=None):
+        super(LeggerTreeWidget, self).__init__(parent)
+
+        if tree_model:
+            self.setModel(tree_model)
+
+        QtCore.QObject.connect(self.selectionModel(),
+                               QtCore.SIGNAL('selectionChanged(QItemSelection, QItemSelection)'),
+                               self.select_leaf)
+
+    @pyqtSlot("QItemSelection, QItemSelection")
+    def select_leaf(self, selected, deselected):
+        pass
+
+
 class LeggerWidget(QDockWidget):
     closingWidget = pyqtSignal()
 
@@ -210,6 +229,7 @@ class LeggerWidget(QDockWidget):
 
         # init class params
         self.network_tool_active = False
+        self.legger_tree_model = LeggerTreeModel()
 
         # setup ui
         self.setup_ui(self)
@@ -218,6 +238,9 @@ class LeggerWidget(QDockWidget):
         self.plot_item_table.setModel(self.model)
         self.plot_item_table.setModel(self.model)
         self.plot_widget.setModel(self.model)
+
+
+
 
         self.line_layer = self.get_line_layer()
 
@@ -406,6 +429,10 @@ class LeggerWidget(QDockWidget):
 
         # add tabWidget for graphWidgets
         self.contentLayout = QHBoxLayout(self)
+
+        # Tree
+        self.legger_tree_widget = LeggerTreeWidget(self, self.legger_tree_model)
+        self.contentLayout.addWidget(self.legger_tree_widget)
 
         # Graph
         self.plot_widget = LeggerPlotWidget(self)
