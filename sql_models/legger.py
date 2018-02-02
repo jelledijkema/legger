@@ -11,157 +11,167 @@ logger = logging.getLogger('legger.sql_models.legger')
 Base = declarative_base()
 
 
-class waterdeel(Base):
+class Waterdeel(Base):
     __tablename__ = 'waterdeel'
     extend_existing = True
 
-    ogc_fid = Column("OGC_FID", Integer, primary_key=True)
-    objectid = Column(Integer, index=True)
-    geometry = Column("GEOMETRY", Geometry(geometry_type='POLYGON', srid=28992))
-
-    def __str__(self):
-        return u'Hydro object {0}'.format(
-            self.code)
-
-
-class PeilgebiedPraktijk(Base):
-    __tablename__ = 'peilgebiedpraktijk'
-    extend_existing = True
-
-    ogc_fid = Column("OGC_FID", Integer, primary_key=True)
-    geometry = Column("GEOMETRY", Geometry(geometry_type='POLYGON', srid=28992))
     objectid = Column(Integer)
-    code = Column(String(), index=True)
-    naam = Column(String())
-
-    hydro_objects = relationship("HydroObject",
-                                 # foreign_keys='code',
-                                 back_populates="peilgebied")
+    id = Column(Integer, primary_key=True)
+    shape_length = Column(Float)
+    shape_area = Column(Float)
+    geometry = Column("GEOMETRY", Geometry(geometry_type='POLYGON', srid=28992))
 
     def __str__(self):
-        return u'Hydro object {0}'.format(
-            self.code)
+        return u'Waterdeel {0}'.format(
+            self.id)
 
 
 class HydroObject(Base):
     __tablename__ = 'hydroobject'
     extend_existing = True
 
-    ogc_fid = Column("OGC_FID", Integer, primary_key=True)
+    objectid = Column(Integer)
+    id = Column(Integer, primary_key=True)
     geometry = Column("GEOMETRY", Geometry(geometry_type='LINESTRING', srid=28992))
-    objectid = Column(Integer, index=True)
-    code = Column(String(), index=True)
-    categorieoppwaterlichaam = Column(String())
-    ws_in_peilgebied = Column(String(),
-                              ForeignKey(PeilgebiedPraktijk.__tablename__ + ".code"))
+    code = Column(String(50), index=True)
+    categorieoppwaterlichaam = Column(Integer)
+    streefpeil = Column(Float)
+    debiet = Column(Float)
+    channnel_id = Column(Integer)  # link to 3di id
+    flowline_id = Column(Integer)  # link to 3di id
+    # shape_length = Column(Float)
 
-    peilgebied = relationship(PeilgebiedPraktijk,
-                              # foreign_keys='ws_in_peilgebied',
-                              back_populates="hydro_objects")
+    varianten = relationship("Varianten",
+                             back_populates="hydro")
 
-    tdi_result = relationship("TdiHydroObjectResults",
-                              uselist=False,
-                              back_populates="hydroobject")
+    profielen = relationship("Profielen",
+                             back_populates="hydro")
+
+    kenmerken = relationship("Kenmerken",
+                             back_populates="hydro")
 
     def __str__(self):
         return u'Hydro object {0}'.format(
             self.code)
 
 
-class TdiHydroObjectResults(Base):
-    __tablename__ = 'tdi_hydro_object_results'
+class Profielen(Base):
+    __tablename__ = 'profielen'
 
-    hydroobject_id = Column(Integer,
-                            ForeignKey(HydroObject.__tablename__ + ".objectid"),
-                            primary_key=True)
-    qend = Column(Float)
-    channel_id = Column(Integer)
-    flowline_id = Column(Integer)
-    nr_candidates = Column(Integer)
-    score = Column(Float)
+    objectid = Column(Integer)
+    id = Column(Integer, primary_key=True)  # varchar??
+    proident = Column(String(24))
+    bron_profiel = Column(String(50))
+    pro_id = Column(Integer, index=True)
+    hydro_id = Column(Integer,
+                      ForeignKey(HydroObject.__tablename__ + ".id"))
+    # shape_lengte = Column(Float)
+    hydro = relationship(HydroObject,
+                         back_populates="profielen")
 
-    hydroobject = relationship(HydroObject,
-                               back_populates="tdi_result")
+    profielpunten = relationship(
+        "Profielpunten",
+        back_populates="profiel")
 
     def __str__(self):
-        return u'Hydro object 3di result {0}'.format(
-            self.hydrobject)
+        return u'profiel {0} - {1}'.format(
+            self.id, self.proident)
+
+
+class Profielpunten(Base):
+    __tablename__ = 'profielpunten'
+
+    objectid = Column(Integer, primary_key=True)
+    pbp_id = Column(Integer)
+    prw_id = Column(Integer)
+    pbpident = Column(String(24))
+    osmomsch = Column(String(60))
+    iws_volgnr = Column(Integer)
+    iws_hoogte = Column(Float)
+    afstand = Column(Float)
+    pro_pro_id = Column(Integer,
+                        ForeignKey(Profielen.__tablename__ + '.pro_id'))
+    geometry = Column("GEOMETRY", Geometry(geometry_type='POINT', srid=28992))
+
+    profiel = relationship(
+        "Profielen",
+        back_populates="profielpunten")
+
+    def __str__(self):
+        return u'profielpunt {0}'.format(
+            self.pbpident)
+
+
+class Kenmerken(Base):
+    __tablename__ = 'kenmerken'
+
+    objectid = Column(Integer)
+    id = Column(Integer, primary_key=True)
+    diepte = Column(Float)
+    bron_diepte = Column(String(50))
+    bodemhoogte = Column(Float)
+    breedte = Column(Float)
+    bron_breedte = Column(String(50))
+    lengte = Column(Float)
+    taludvoorkeur = Column(Float)
+    steilste_talud = Column(Float)
+    grondsoort = Column(String(50))
+    bron_grondsoort = Column(String(50))
+    hydro_id = Column(Integer,
+                      ForeignKey(HydroObject.__tablename__ + ".objectid"))
+
+    hydro = relationship(HydroObject,
+                         # foreign_keys='ws_in_peilgebied',
+                         back_populates="kenmerken")
+
+    def __str__(self):
+        return u'kenmerken {0}'.format(
+            self.id)
+
+
+class Varianten(Base):
+    __tablename__ = 'varianten'
+
+    id = Column(String(), primary_key=True)
+    diepte = Column(Float)
+    waterbreedte = Column(Float)
+    bodembreedte = Column(Float)
+    talud = Column(Float)
+    # maatgevend_debiet = Column(Float)
+    verhang_bos_bijkerk = Column(Float)
+    hydro_id = Column(Integer,
+                      ForeignKey(HydroObject.__tablename__ + ".id"))
+
+    hydro = relationship(HydroObject,
+                         # foreign_keys='ws_in_peilgebied',
+                         back_populates="varianten")
+
+    def __str__(self):
+        return u'profiel_variant {0}'.format(
+            self.id)
 
 
 class DuikerSifonHevel(Base):
     __tablename__ = 'duikersifonhevel'
     extend_existing = True
 
-    ogc_fid = Column("OGC_FID", Integer, primary_key=True)
+    objectid = Column(Integer)
+    id = Column(Integer, primary_key=True)
     geometry = Column("GEOMETRY", Geometry(geometry_type='LINESTRING', srid=28992))
-    objectid = Column(Integer, index=True)
-    code = Column(String(), index=True)
+    code = Column(String(50), index=True)
     categorie = Column(Integer)
     lengte = Column(Float)
     hoogteopening = Column(Float)
     breedteopening = Column(Float)
+    hoogtebinnenonderkantbene = Column(Float)
     hoogtebinnenonderkantbov = Column(Float)
     vormkoker = Column(Float)
+    # shape_lengte = Column(Float)
 
-    tdi_culvert_result = relationship("TdiCulvertResults",
-                                      uselist=False,
-                                      back_populates="duiker_sifon_hevel")
+    debiet = Column(Float)  # extra?
+    channnel_id = Column(Integer)  # extra?
+    flowline_id = Column(Integer)  # extra?
 
     def __str__(self):
         return u'DuikerSifonHevel {0}'.format(
             self.code)
-
-
-class TdiCulvertResults(Base):
-    __tablename__ = 'tdi_culvert_results'
-
-    id = Column(Integer,
-                primary_key=True)
-    code = Column(String(),
-                  ForeignKey(DuikerSifonHevel.__tablename__ + ".code"))
-    source = Column(String())
-    qend = Column(Float)
-
-    duiker_sifon_hevel = relationship(DuikerSifonHevel,
-                                      back_populates="tdi_culvert_result")
-
-    def __str__(self):
-        return u'Culvert 3di result {0}'.format(
-            self.code)
-
-
-class Streefpeil(Base):
-    __tablename__ = 'streefpeil'
-    extend_existing = True
-
-    ogc_fid = Column("OGC_FID", Integer, primary_key=True)
-    objectid = Column(Integer)
-    soortstreefpeil = Column(Integer)
-    waterhoogte = Column(Float)
-    peilgebiedpraktijkid = Column(Integer)
-    peilafwijkinggebiedid = Column(Integer)
-
-    def __str__(self):
-        return u'Hydro object {0}'.format(
-            self.code)
-
-# todo: add prw, pro, pbp, profielpunten
-
-
-class ProfielVarianten(Base):
-    __tablename__ = 'profiel_varianten'
-
-    hydro_object_id = Column(Integer,
-                           ForeignKey(HydroObject.__tablename__ + ".objectid"))
-    id = Column(String(), primary_key=True)
-    talud = Column(Float)
-    waterdiepte = Column(Float)
-    waterbreedte = Column(Float)
-    bodembreedte = Column(Float)
-    maatgevend_debiet = Column(Float)
-    verhang_bos_bijkerk = Column(Float)
-
-    def __str__(self):
-        return u'profiel_variant {0}'.format(
-            self.id)
-
