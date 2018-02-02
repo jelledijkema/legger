@@ -389,13 +389,11 @@ def prof_in_prof(profgem, proftheo, aantstap=100, delta=0.001, obdiepte=0.3, deb
                     print hlijn
                     pass
             except:
-                if debug:
-                    print "hlijn is geen MultiLindeString"
+                logger.warning( "hlijn is geen MultiLineString")
                 pass  # hlijn is geen MultiLineString
         except:
-            if debug:
-                print "clijn is geen LineString"
-            pass  # clijn is geen LineString (mogelijk een MultiLineString)
+            logger.warning("clijn is geen LineString")
+            # clijn is geen LineString (mogelijk een MultiLineString)
     if debug:
         print fit, optimaal, fractie, overdiepte, linksover, rechtsover
     return fit, optimaal, fractie, overdiepte, linksover, rechtsover
@@ -468,16 +466,29 @@ def controlefig(gemprof, theoprof, afstand, fit, fractie, overdiepte, overlinks,
 
 def doe_profinprof(cur0, cur1, aantalstappen=200, precisie=0.0001, codevastebodem="Z1", peilcriterium="min",
                            projectiecriterium="eindpunt", obdiepte=0.3, debug=0):
+    """
+
+    :param cur0: cursor naar de legger database
+    :param cur1: cursor naar de legger database
+    :param aantalstappen:
+    :param precisie:
+    :param codevastebodem:
+    :param peilcriterium:
+    :param projectiecriterium:
+    :param obdiepte:
+    :param debug:
+    :return:
+    """
     try:
         # maaktabellen(cur0) # IS NIET MEER NODIG
-        print 'voor gemeten profielen'
+        logger.debug('voor gemeten profielen')
         gemetenprofielen = haal_meetprofielen1(cur0, codevastebodem, peilcriterium, debug)
         gemetenprofielen = projecteerprofielen(gemetenprofielen, projectiecriterium, debug)
         # verrijkgemprof(cur0, gemetenprofielen) NIET MEER NODIG
 
         # alleen theoretische profielen die liggen in hydro-objecten waar ook gemeten profielen zijn ophalen
-        q = """select ROWID, id, talud, diepte, bodembreedte from varianten where hydro_object_id='%s'"""
-        qm = """insert into profielfiguren (id_hydro, profid, type_prof, coord, peil) values(%d, "%s", "m", "%s", %f)"""
+        q = """select id, id, talud, diepte, bodembreedte from varianten where hydro_id='%s'"""
+        qm = """insert into profielfiguren (id_hydro, profid, type_prof, coord, peil) values (%d, "%s", "m", "%s", %f)"""
         qt = """insert into profielfiguren (id_hydro, profid, type_prof, coord, peil, t_talud, t_waterdiepte, t_bodembreedte, 
                 t_fit, t_afst, g_rest, t_overdiepte, t_overbreedte_l, t_overbreedte_r) values 
                 (%d, "%s", "t", "%s", %f, %f, %f, %f, %f, %f, %f, %f, %f, %f)"""
@@ -488,7 +499,7 @@ def doe_profinprof(cur0, cur1, aantalstappen=200, precisie=0.0001, codevastebode
 
             h = qm % (gemetenprofielen[profielid]['hydroid'], gemetenprofielen[profielid]['proident'],
                       gemprofshapely.wkt, gemetenprofielen[profielid]['peil'])
-            print h
+            logger.debug(h)
             cur1.execute(h)
             for theo_data in cur0.execute(q % gemetenprofielen[profielid]['hydroid']):
                 # mkmogelijkprofiel aanroepen met talud, waterdiepte, bodembreedte en peil, levert een shapely polygon
@@ -503,7 +514,7 @@ def doe_profinprof(cur0, cur1, aantalstappen=200, precisie=0.0001, codevastebode
                                    shapely.affinity.translate(theoprofshapely, afstand, 0.0, 0.0).wkt,
                                    gemetenprofielen[profielid]['peil'], theo_data[2], theo_data[3], theo_data[4],
                                    fit, afstand, fractie, overdiepte, overlinks, overrechts))
-                print 'na insert'
+                logger.debug('na insert')
         if debug:
             controlefig(gemprofshapely, theoprofshapely, afstand, fit, fractie, overdiepte, overlinks,
                         overrechts, gemetenprofielen[profielid]['hydroid'], profielid,
@@ -512,28 +523,28 @@ def doe_profinprof(cur0, cur1, aantalstappen=200, precisie=0.0001, codevastebode
         cur0.execute('create index profielfiguren1 on profielfiguren(profid)')
         cur0.execute('vacuum')
         resultaat = "klaar"
-    except:
+    except ImportError:
         resultaat = "Niet correct, run evt opnieuw met debug = 1 om te onderzoeken"
     return resultaat
 
-
-#   start van het  programma
-#   Variabelen
-aantalstappen = 200  # Het aantal stappen dat gebruikt wordt door prof_in_prof (stapgrootte is:
-                     # (breedte gemeten profiel + 2 * breedte theoretisch profiel) / aantalstappen
-precisie = 0.0001  # De afwijking die aanvaardbaar is voor de vaststelling van gelijkheid van oppervlakken
-codevastebodem = "Z1"  # de code in de profieldata voor de vaste bodem
-peilcriterium = "min"  # het criterium om het peil voor een hydroobject te kiezen, geldige waarden min en max
-projectiecriterium = 'eindpunt'  # het criterium voor de projectie van de profielpunten, geldige waarden eindpunt
-obdiepte = 0.3  # de diepte waarop de overbreedte bepaald moet worden
-debug = 0  # vlag om extra output te genereren, geldige waarden 0 of 1
-
-con = sql.connect('../tests/data/HHW_20180129.sqlite')
-cur0 = con.cursor()
-cur1 = con.cursor()
-
-resultaat = doe_profinprof(cur0, cur1, aantalstappen, precisie, codevastebodem, peilcriterium,
-                           projectiecriterium, obdiepte, debug)
-print resultaat
-con.commit()
-con.close()
+#
+# #   start van het  programma
+# #   Variabelen
+# aantalstappen = 200  # Het aantal stappen dat gebruikt wordt door prof_in_prof (stapgrootte is:
+#                      # (breedte gemeten profiel + 2 * breedte theoretisch profiel) / aantalstappen
+# precisie = 0.0001  # De afwijking die aanvaardbaar is voor de vaststelling van gelijkheid van oppervlakken
+# codevastebodem = "Z1"  # de code in de profieldata voor de vaste bodem
+# peilcriterium = "min"  # het criterium om het peil voor een hydroobject te kiezen, geldige waarden min en max
+# projectiecriterium = 'eindpunt'  # het criterium voor de projectie van de profielpunten, geldige waarden eindpunt
+# obdiepte = 0.3  # de diepte waarop de overbreedte bepaald moet worden
+# debug = 0  # vlag om extra output te genereren, geldige waarden 0 of 1
+#
+# con = sql.connect('../tests/data/HHW_20180129.sqlite')
+# cur0 = con.cursor()
+# cur1 = con.cursor()
+#
+# resultaat = doe_profinprof(cur0, cur1, aantalstappen, precisie, codevastebodem, peilcriterium,
+#                            projectiecriterium, obdiepte, debug)
+# print resultaat
+# con.commit()
+# con.close()
