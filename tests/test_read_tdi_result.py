@@ -36,13 +36,14 @@ class TestReadTdiResults(unittest.TestCase):
         self.legger_db = os.path.join(
             os.path.dirname(__file__),
             'data',
-            'test_spatialite_output_join_with_tdi_results.sqlite'
+            'test_spatialite_with_3di_results.sqlite'
+            #'test_spatialite_output_join_with_tdi_results.sqlite'
         )
 
         legger_db_original = os.path.join(
             os.path.dirname(__file__),
             'data',
-            'test_spatialite.sqlite'
+            'HHW_20180129.sqlite'
         )
 
         copyfile(legger_db_original, self.legger_db)

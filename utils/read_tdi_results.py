@@ -5,7 +5,7 @@ from ThreeDiToolbox.datasource.netcdf import NetcdfDataSource
 from geometry_tools.geom_collections.lines import LineCollection
 from geometry_tools.geometries import LineString
 from geometry_tools.geometries import shape
-from legger.sql_models.legger import TdiHydroObjectResults, TdiCulvertResults
+from legger.sql_models.legger import DuikerSifonHevel, HydroObject
 from legger.sql_models.legger_database import LeggerDatabase
 from pyspatialite import dbapi2 as dbapi
 
@@ -108,12 +108,11 @@ def read_tdi_results(path_model_db, path_result_db,
 
     hydro_cursor = con_legger.execute(
         'SELECT '
-        'OGC_FID , '
-        'objectid AS id, '
+        'id, '
         'ASGEOJSON(geometry) AS geojson, '
         'ST_LENGTH(geometry) AS length '
         'FROM hydroobject '
-        # 'WHERE objectid=216360 ' # for testing and debugging
+        # 'WHERE objectid=454401 ' # for testing and debugging
     )
     hydroobjects = []
 
@@ -165,11 +164,12 @@ def read_tdi_results(path_model_db, path_result_db,
             # hydroobject can have an other orientation than channel
             dist1 = geom_channel.project(line.startpoint())
             dist2 = geom_channel.project(line.endpoint())
-            rev_flow_dir = False
-            if (dist1 > dist2):
-                rev_flow_dir = True
             dist_startpoint = min(dist1, dist2)
             dist_endpoint = max(dist1, dist2)
+            if dist2 < dist1:
+                factor = -1
+            else:
+                factor = 1
             # get best flowline
 
             flowline_candidates = []
@@ -182,8 +182,7 @@ def read_tdi_results(path_model_db, path_result_db,
 
                     flowline_candidates.append((
                         matching_length,
-                        fl,
-                        rev_flow_dir
+                        fl
                     ))
 
             if len(flowline_candidates) == 0:
@@ -194,20 +193,15 @@ def read_tdi_results(path_model_db, path_result_db,
                     selected['properties']['id'])
 
             else:
-                matching_length, selected_fl, rev_flow_dir = sorted(
+                matching_length, selected_fl = sorted(
                     flowline_candidates,
                     key=lambda item: item[0],
                     reverse=True
                 )[0]
 
-                if rev_flow_dir:
-                    qend = -1 * selected_fl['q_end']
-                else:
-                    qend = selected_fl['q_end']
-
                 hydroobjects.append({
-                    'hydroobject_id': hydroobject['id'],
-                    'qend': qend,
+                    'id': hydroobject['id'],
+                    'qend': selected_fl['q_end'] * factor,
                     'channel_id': selected['properties']['id'],
                     'flowline_id': selected_fl['id'],
                     'nr_candidates': len(candidates),
@@ -227,23 +221,16 @@ def write_tdi_results_to_db(hydroobject_results, path_legger_db):
     db.create_and_check_fields()
     session = db.get_session()
 
-    hydroobjects = []
+    results = {hydro['id']: hydro for hydro in hydroobject_results}
 
-    for hydroobj in hydroobject_results:
-        hydroobjects.append(TdiHydroObjectResults(
-            hydroobject_id=hydroobj['hydroobject_id'],
-            qend=hydroobj['qend'],
-            channel_id=hydroobj['channel_id'],
-            flowline_id=hydroobj['flowline_id'],
-            nr_candidates=hydroobj['nr_candidates'],
-            score=hydroobj['score']
-        ))
+    for hydroobj in session.query(HydroObject):
+        if hydroobj.id in results:
+            result = results[hydroobj.id]
+            hydroobj.debiet = result['qend']
+            hydroobj.channel_id = result['channel_id']
+            hydroobj.flowline_id = result['flowline_id']
 
-    log.info('delete old results from database')
-    session.execute("Delete from {0}".format(TdiHydroObjectResults.__tablename__))
-
-    log.info("Save 3di results instances to database ")
-    session.bulk_save_objects(hydroobjects)
+    log.info("Save 3di results (update hydro objects) to database ")
     session.commit()
 
 
@@ -299,19 +286,13 @@ def write_tdi_culvert_results_to_db(culvert_results, path_legger_db):
     db.create_and_check_fields()
     session = db.get_session()
 
-    culverts = []
+    results = {culvert['id']: culvert for culvert in culvert_results}
 
-    for culvert in culvert_results:
-        culverts.append(TdiCulvertResults(
-            id=culvert['id'],
-            code=culvert['code'],
-            source=culvert['source'],
-            qend=culvert['qend']
-        ))
+    for culvert in session.query(DuikerSifonHevel):
+        if culvert.id in results:
+            culvert.debiet = results[culvert.id]['qend']
+            # culvert['source']
+            # culvert['code']
 
-    log.info('delete old results from database')
-    session.execute("Delete from {0}".format(TdiCulvertResults.__tablename__))
-
-    log.info("Save 3di results instances to database ")
-    session.bulk_save_objects(culverts)
+    log.info("Save 3di result (update) to database ")
     session.commit()
