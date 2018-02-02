@@ -1,34 +1,36 @@
 from pyspatialite import dbapi2 as sql
 import pandas as pd
 import numpy as np
-import math
+# import math
 # import matplotlib.pyplot as plt
-from pandas import DataFrame, Series
-
+from pandas import DataFrame  # Series
 from legger.sql_models.legger import ProfielVarianten
 from legger.sql_models.legger_database import LeggerDatabase
 
-Km = 25  # coefficient van Manning in m**(1/3/s)
-Kb = 23  # coefficient van Bos en Bijkerk in 1/s
 
-""" Overige randvoorwaarden"""
-Waterdiepte_initieel = 0.30  # (m) Watergangen ondieper dan 30cm niet wenselijk.
-verhang_norm = 3.0  # (cm/km) Maximum verhangnorm voor Bos en Bijkerke en Manning.
-Bodembreedte_minimaal = 0.50  # (m) Bodembreedte kan niet kleiner dan 50cm zijn.
+"""
+Definitions
+"""
 
 
-def read_SpatiaLite(legger_db_filepath):
-    table_name = "hydrokenmerken"
+def read_spatialite(legger_db_filepath):
+    """
+    Read the database where all the information on hydro objects for the legger
+    calculations are found.
+    Return a database to be used in Python.
+
+    Following information is collected:
+    - object id
+    - normative_flow
+    - ditch depth
+    - slope (talud), initial and maximum
+    - maximum ditch width
+    - length of hydro object
+    - soil type of area ditch is located
+    """
 
     conn = sql.connect(legger_db_filepath)
     c = conn.cursor()
-
-    col1 = 'OBJECTID'
-    col2 = 'DIEPTE'
-    col3 = 'BREEDTE'
-    col4 = 'INITIEELTALUD'
-    col5 = 'STEILSTETALUD'
-    col6 = 'GRONDSOORT'
 
     c.execute("Select ho.objectid, hk.diepte, hk.breedte, hk.initieeltalud, hk.steilstetalud, hk.grondsoort, "
               "ST_LENGTH(TRANSFORM(ho.geometry, 28992)) as length, tr.qend "
@@ -49,423 +51,383 @@ def read_SpatiaLite(legger_db_filepath):
         'QEND'])
 
 
-def filter_Onbruikbaar(dataframe_in, kolom):
-    """ In de dataset zitten onvolmaaktheden, zoals informatie die ontbreekt of
-    0 waarden. Deze worden eruit gefilterd en in een apart dataframe opgeslagen.
+def filter_unused(df_in, column):
+    """ The data set includes data that are incorrect or sometimes data is missing.
+    In order for the analysis to work well these objects should be removed from the set.
+    With this function the rows in the data frame where this occurs can be deleted from the data frame.
+    The result is a new data frame that includes all the dropped rows from the original data frame.
+
+    The input here is an input data frame (df_in), and a column name where the check should be on (i.e. slope, or width)
+    Checks include: is the value 0? is the value NaN? D
     """
-    Onbruikbaar = dataframe_in[dataframe_in[kolom] == 0]  # Identificeer onbruikbare hydro-objecten met een waarde van 0
-    Onbruikbaar = Onbruikbaar.append(
-        dataframe_in[np.isnan(dataframe_in[kolom])])  # Er zitten wat NaN waarden in maxWaterbreedte.
+    df_unused = df_in[df_in[column] == 0]
+    df_unused = df_unused.append(
+        df_in[np.isnan(df_in[column])])
 
-    Onbruikbaar = Onbruikbaar.drop_duplicates()  # In het geval er dezelfde rij meerdere keren voorkomt.
+    df_unused = df_unused.drop_duplicates()  # In the case the same row occurs twice.
 
-    if (Onbruikbaar['OBJECTID'].count() == 0):
-        print ("Er zijn geen Hydro objecten verwijderd.")
+    if df_unused['OBJECTID'].count() == 0:
+        print ("No hydro objects removed.")
     else:
-        print (str(Onbruikbaar['OBJECTID'].count()) + " Hydro object(en) verwijderd.")
+        print (str(df_unused['OBJECTID'].count()) + " Hydro object(s) removed b/o missing data.")
 
-    dataframe_uit = dataframe_in.drop(Onbruikbaar.index)
+    df_out = df_in.drop(df_unused.index)
 
-    return dataframe_uit
+    return df_out
 
 
-def bereken_BosBijkerke(Maatgevend_Debiet, Bodembreedte, Waterdiepte, Talud):
+def calc_bos_bijkerke(normative_flow, ditch_bottom_width, water_depth, slope):
     """
-    bla bla
+    A calculation of the formula for gradient in the water level according to De Bos and Bijkerk.
+    Based on physical parameters like normative flow, ditch width, water depth and slope.
     """
-    Natte_Omtrek = (Bodembreedte
-                    + (np.sqrt(Waterdiepte ** 2 + (Talud * Waterdiepte) ** 2))
-                    + (np.sqrt(Waterdiepte ** 2 + (Talud * Waterdiepte) ** 2)))
+    ditch_circumference = (ditch_bottom_width
+                           + (np.sqrt(water_depth ** 2 + (slope * water_depth) ** 2))
+                           + (np.sqrt(water_depth ** 2 + (slope * water_depth) ** 2)))
 
-    Oppervlak = (Bodembreedte * Waterdiepte
-                 + (0.5 * (Waterdiepte * Talud) * Waterdiepte)
-                 + (0.5 * (Waterdiepte * Talud) * Waterdiepte))
+    ditch_cross_section_area = (ditch_bottom_width * water_depth
+                                + (0.5 * (water_depth * slope) * water_depth)
+                                + (0.5 * (water_depth * slope) * water_depth))
 
-    Hydraulische_Straal = Oppervlak / Natte_Omtrek
+    hydraulic_radius = ditch_cross_section_area / ditch_circumference
+    # Or: Hydraulische Straal = Nat Oppervlak/ Natte Omtrek
 
-    Verhang_Bos_Bijkerke = ((Maatgevend_Debiet / (
-        Oppervlak * Kb * (Waterdiepte ** (0.333333)) * (Hydraulische_Straal ** 0.5))) ** 2) * 100000
+    gradient_bos_bijkerke = ((normative_flow / (
+        ditch_cross_section_area * Kb * (water_depth ** 0.333333) * (hydraulic_radius ** 0.5))) ** 2) * 100000
+    # Gradient = Q / (((A*Kb*(waterdiepte^1/3))*(hydraulische straal^1/2)^2)*100000)
 
-    return Verhang_Bos_Bijkerke
-
-
-def bereken_Manning(Maatgevend_Debiet, Bodembreedte, Waterdiepte, Talud):
-    Natte_Omtrek = (Bodembreedte
-                    + (np.sqrt(Waterdiepte ** 2 + (Talud * Waterdiepte) ** 2))
-                    + (np.sqrt(Waterdiepte ** 2 + (Talud * Waterdiepte) ** 2)))
-
-    Oppervlak = (Bodembreedte * Waterdiepte
-                 + (0.5 * (Waterdiepte * Talud) * Waterdiepte)
-                 + (0.5 * (Waterdiepte * Talud) * Waterdiepte))
-
-    Hydraulische_Straal = Oppervlak / Natte_Omtrek
-
-    Verhang_Manning = ((Maatgevend_Debiet / (Oppervlak * Km * (Hydraulische_Straal ** (0.666667)))) ** 2) * 100000
-
-    return Verhang_Manning
+    return gradient_bos_bijkerke
 
 
-def bereken_profielMaxWaterbreedte(ObjectID, Maatgevend_Debiet, Lengte, Talud, Maximale_Waterbreedte,
-                                   Waterdiepte_initieel):
-    """ Berekenen van een dwarsprofiel op basis van maximale breedte en minimale diepte die
-        aan de norm voldoet.
+def calc_manning(normative_flow, ditch_bottom_width, water_depth, slope):
+    ditch_circumference = (ditch_bottom_width
+                           + (np.sqrt(water_depth ** 2 + (slope * water_depth) ** 2))
+                           + (np.sqrt(water_depth ** 2 + (slope * water_depth) ** 2)))
+
+    ditch_cross_section_area = (ditch_bottom_width * water_depth
+                                + (0.5 * (water_depth * slope) * water_depth)
+                                + (0.5 * (water_depth * slope) * water_depth))
+
+    hydraulic_radius = ditch_cross_section_area / ditch_circumference
+    # Or: Hydraulische Straal = Nat Oppervlak/ Natte Omtrek
+
+    gradient_manning = ((normative_flow /
+                         (ditch_cross_section_area * Km * (hydraulic_radius ** 0.666667))) ** 2) * 100000
+    # Verhang = ((Q / (A*Km*(hydraulische straal^(2/3)))^2)*100000
+
+    return gradient_manning
+
+
+def calc_profile_max_ditch_width(object_id, normative_flow, length, slope, max_ditch_width):
+    """
+    Calculate a ditch profile that suffices to the gradient norm, which is based on the maximum ditch width.
+    Starting with some initial profile requirements (minimum water depth, minimum ditch bottom width), the calculation
+    is done.
+    A result is the necessary water depth that is necessary to keep a the gradient low enough.
+
+    If it's possible to calculate a profile that complies to all the norms, the output can be saved
+    in a new dataframe.
     """
 
-    # initiele waarden
-    Waterdiepte = Waterdiepte_initieel
-    Bodembreedte = Maximale_Waterbreedte - Talud * Waterdiepte - Talud * Waterdiepte
+    # initial values
+    water_depth = ini_waterdepth
+    ditch_bottom_width = max_ditch_width - slope * water_depth - slope * water_depth
 
-    Verhang_Bos_Bijkerke = bereken_BosBijkerke(Maatgevend_Debiet, Bodembreedte, Waterdiepte, Talud)
-    Verhang_Manning = bereken_Manning(Maatgevend_Debiet, Bodembreedte, Waterdiepte, Talud)
+    gradient_bos_bijkerke = calc_bos_bijkerke(normative_flow, ditch_bottom_width, water_depth, slope)
+    gradient_manning = calc_manning(normative_flow, ditch_bottom_width, water_depth, slope)
 
-    # iteratie
-    while Verhang_Bos_Bijkerke > verhang_norm or Verhang_Manning > verhang_norm:
+    # iteration
+    while gradient_bos_bijkerke > gradient_norm or gradient_manning > gradient_norm:
 
-        Waterdiepte = Waterdiepte + 0.05
+        water_depth = water_depth + 0.05
 
-        # Als de taluds elkaar raken (bodembreedte = minimum bodembreedte) dan is de iteratie klaar.
-        if Maximale_Waterbreedte - Talud * Waterdiepte - Talud * Waterdiepte >= Bodembreedte_minimaal:
+        # If the minimum ditch bottom width is NOT reached yet, then:
+        if max_ditch_width - slope * water_depth - slope * water_depth >= min_ditch_bottom_width:
 
-            Bodembreedte = Maximale_Waterbreedte - Talud * Waterdiepte - Talud * Waterdiepte
+            ditch_bottom_width = max_ditch_width - slope * water_depth - slope * water_depth
 
-            # Daarna volgt een update van het verhang:
+            gradient_bos_bijkerke = calc_bos_bijkerke(normative_flow, ditch_bottom_width, water_depth, slope)
+            gradient_manning = calc_manning(normative_flow, ditch_bottom_width, water_depth, slope)
 
-            Verhang_Bos_Bijkerke = bereken_BosBijkerke(Maatgevend_Debiet, Bodembreedte, Waterdiepte, Talud)
-            Verhang_Manning = bereken_Manning(Maatgevend_Debiet, Bodembreedte, Waterdiepte, Talud)
-
-        # Tenzij de bodembreedte te klein is geworden.
+        # If the minimum ditch bottom width is reached, then the iteration is done.
         else:
+            # print ("Ditch bottom width became too small for " + str(object_id))
 
-            print ("De bodembreedte is te klein geworden voor " + str(ObjectID))
+            # Water depth was increased for the calculation that now failed, so has to be restored to previous value.
+            water_depth = water_depth - 0.05
 
-            Waterdiepte = Waterdiepte - 0.05  # De originele diepte weer "terugzetten"
-
-            # Gevolgd door een update van het verhang:
-
-            Verhang_Bos_Bijkerke = bereken_BosBijkerke(Maatgevend_Debiet, Bodembreedte, Waterdiepte, Talud)
-            Verhang_Manning = bereken_Manning(Maatgevend_Debiet, Bodembreedte, Waterdiepte, Talud)
+            # Same goes for the gradient calculations:
+            gradient_bos_bijkerke = calc_bos_bijkerke(normative_flow, ditch_bottom_width, water_depth, slope)
+            gradient_manning = calc_manning(normative_flow, ditch_bottom_width, water_depth, slope)
             break
 
-    profiel = pd.DataFrame([[ObjectID,
-                             Maatgevend_Debiet,
-                             Lengte,
-                             Talud,
-                             Maximale_Waterbreedte,
-                             Waterdiepte,
-                             Bodembreedte,
-                             Verhang_Bos_Bijkerke,
-                             Verhang_Manning]],
-                           columns=['ObjectID', 'Maatgevend_Debiet', 'Lengte', 'Talud',
-                                    'Maximale_Waterbreedte', 'Waterdiepte', 'Bodembreedte',
-                                    'Verhang_Bos_Bijkerke', 'Verhang_Manning'])
-    return profiel
+    profile = pd.DataFrame([[object_id,
+                             normative_flow,
+                             length,
+                             slope,
+                             max_ditch_width,
+                             water_depth,
+                             ditch_bottom_width,
+                             gradient_bos_bijkerke,
+                             gradient_manning]],
+                           columns=['object_id', 'normative_flow', 'length', 'slope',
+                                    'max_ditch_width', 'water_depth', 'ditch_bottom_width',
+                                    'gradient_bos_bijkerke', 'gradient_manning'])
+    return profile
 
 
-def bereken_Opstuwing(ObjectID, Lengte, Verhang):
-    """ bereken de Opstuwing die uit het berekende Verhang volgt."""
+def add_surge(hydro_object_table):
+    """
+    Calculates the absolute water surge that is the result of the gradient in water level and ditch length.
+    The gradient is the max of the gradient calculated with Manning and Bos and Bijkerke equations.
+    """
+    surge_table = pd.DataFrame(columns=['object_id', 'surge'])
 
-    Opstuwing = (float(Verhang) * (
-        float(Lengte) / 1000.0))  # Verhang (in cm/km) wordt vermenigvuldigt met (Lengte (in m) / 1000 (in m/km))
+    for i, rows in hydro_object_table.iterrows():
+        object_id = hydro_object_table.object_id[i]
+        length = hydro_object_table.length[i]
+        gradient = max(float(hydro_object_table.gradient_bos_bijkerke[i]),
+                       float(hydro_object_table.gradient_manning[i]))
 
-    if Verhang > verhang_norm:
-        print str(ObjectID) + " voldoet niet aan de norm van " + str(
-            verhang_norm) + " cm/km."  # hydro objecten met een te grote opstuwing
+        surge = (float(gradient) * (float(length) / 1000.0))  # gradient in cm/km and length in m.
+        df_temp = pd.DataFrame([[object_id, surge]], columns=['object_id', 'surge'])
 
-    return ObjectID, Opstuwing
+        surge_table = surge_table.append(df_temp)
+
+    surge_table = surge_table.reset_index(drop=True)
+    enriched_table = pd.merge(hydro_object_table, surge_table, on='object_id', how='left')
+
+    return enriched_table
 
 
-def bereken_Varianten(HO_Voldoen):
-    # Tabel met hydro_Objecten codes en hoeveel "opties" er zijn.
-    Opties_tabel = DataFrame(data=HO_Voldoen.ObjectID, columns=['ObjectID', 'aantal'])
+def calc_profile_variants(hydro_objects_satisfy):
+    """
+    In this formula the different variants of suitable profiles are generated.
+    The output is twofold:
+    - a table with the hydro object ID, followed by a number of possible outcomes
+    - a table where every variant is added.
+    """
+    # First two empty tables:
+    # 1st one with hydro objects that shows the amount of table variants pssoible.
+    options_table = DataFrame(data=hydro_objects_satisfy.object_id, columns=['object_id', 'possibilities_count'])
 
-    # Tabel waarin de varianten worden opgenomen, eerst wordt een leeg dataframe aangemaakt.
-    Varianten_tabel = DataFrame(columns=['ObjectID', 'Object_DiepteID', 'Talud',
-                                         'Waterdiepte', 'Waterbreedte', 'Bodembreedte',
-                                         'Maatgevend_Debiet', 'Verhang_Bos_Bijkerke'])
-    # De kern van de iteratie:
+    # 2nd one a table where variants are saved.
+    variants_table = DataFrame(columns=['object_id', 'object_waterdepth_id', 'slope',
+                                        'water_depth', 'ditch_width', 'ditch_bottom_width',
+                                        'normative_flow', 'gradient_bos_bijkerke'])
 
-    for i, rows in HO_Voldoen.iterrows():
+    for i, rows in hydro_objects_satisfy.iterrows():
         count = 0
+        object_id = hydro_objects_satisfy.object_id[i]
+        slope = hydro_objects_satisfy.slope[i]
+        water_depth = hydro_objects_satisfy.water_depth[i] + 0.05 * count
+        normative_flow = hydro_objects_satisfy.normative_flow[i]
 
-        # Harde stop: als bodembreedte 0.5 is, dan kan de iteratie niet plaatsvinden
-        while (round(HO_Voldoen.Maximale_Waterbreedte[i], 1) -
-                           (HO_Voldoen.Waterdiepte[i] + 0.05 * count) * HO_Voldoen.Talud[i] * 2 > 0.5):
+        # Only if ditch bottom width is bigger than the minimum an iteration can take place:
+        while (round(hydro_objects_satisfy.max_ditch_width[i], 1)
+               - (hydro_objects_satisfy.water_depth[i] + 0.05 * count) *
+               hydro_objects_satisfy.slope[i] * 2 > min_ditch_bottom_width):
 
-            ObjectID = HO_Voldoen.ObjectID[i]
-            Object_DiepteID = (str(HO_Voldoen.ObjectID[i]) + "_" +
-                               str(round(HO_Voldoen.Waterdiepte[i] * 100 + (count * 5), 0)))
+            water_depth = hydro_objects_satisfy.water_depth[i] + 0.05 * count
+            ditch_width = round(hydro_objects_satisfy.max_ditch_width[i], 1)
+            ditch_bottom_width = ditch_width - (water_depth * slope * 2)
 
-            Talud = HO_Voldoen.Talud[i]
-            Waterdiepte = HO_Voldoen.Waterdiepte[i] + 0.05 * count
-            Waterbreedte = round(HO_Voldoen.Maximale_Waterbreedte[i], 1)
-            Bodembreedte = Waterbreedte - (Waterdiepte * Talud * 2)
+            gradient_bos_bijkerke = calc_bos_bijkerke(normative_flow, ditch_bottom_width, water_depth, slope)
 
-            Maatgevend_Debiet = HO_Voldoen.Maatgevend_Debiet[i]
+            # Only iterate if the surge is less than 2,5 cm/km.
+            tolerance = 0.5  # will be substracted from the gradient norm
+            while gradient_bos_bijkerke < (gradient_norm-tolerance):
+                ditch_width = ditch_width - 0.05
+                ditch_bottom_width = ditch_width - (water_depth * slope * 2)
 
-            Verhang_BB = bereken_BosBijkerke(Maatgevend_Debiet, Bodembreedte, Waterdiepte, Talud)
+                gradient_bos_bijkerke = calc_bos_bijkerke(normative_flow, ditch_bottom_width, water_depth, slope)
 
-            # Er mag een iteratie plaatsvinden als verhang onder de 2,5 is. Niet absoluut nauwkeurig, maar bij benadering werkt het.
-            while (Verhang_BB < 2.5):
-                Waterbreedte = Waterbreedte - 0.05
-                Bodembreedte = Waterbreedte - (Waterdiepte * Talud * 2)
+                ditch_bottom_width = round(ditch_bottom_width, 2)
 
-                Verhang_BB = bereken_BosBijkerke(Maatgevend_Debiet, Bodembreedte, Waterdiepte, Talud)
-
-            Bodembreedte = round(Bodembreedte, 2)
-
-            if Bodembreedte < 0.50:
-                print(Object_DiepteID + ": iteratie stopt vanwege te smalle bodembreedte")
+            if ditch_bottom_width < min_ditch_bottom_width:
+                # print(str(object_id) + ": iteration ends because of a too small ditch bottom width")
                 break
-            print ("Voor " + str(ObjectID) + " bij een diepte van " + str(Waterdiepte) +
-                   " is de bodembreedte " + str(Bodembreedte) + " en het verhang " + str(Verhang_BB))
-            df_temp = pd.DataFrame([[ObjectID,
-                                     Object_DiepteID,
-                                     Talud,
-                                     Waterdiepte,
-                                     Waterbreedte,
-                                     Bodembreedte,
-                                     Maatgevend_Debiet,
-                                     Verhang_BB]],
-                                   columns=['ObjectID', 'Object_DiepteID', 'Talud',
-                                            'Waterdiepte', 'Waterbreedte', 'Bodembreedte',
-                                            'Maatgevend_Debiet', 'Verhang_Bos_Bijkerke'])
 
-            Varianten_tabel = Varianten_tabel.append(df_temp)
+            object_waterdepth_id = (str(hydro_objects_satisfy.object_id[i]) + "_" +
+                                    str(round(hydro_objects_satisfy.water_depth[i] * 100 + (count * 5), 0)))
+            # print (str(object_id) + " at " + str(water_depth) + " has width " + str(ditch_bottom_width))
+            df_temp = pd.DataFrame([[object_id,
+                                     object_waterdepth_id,
+                                     slope,
+                                     water_depth,
+                                     ditch_width,
+                                     ditch_bottom_width,
+                                     normative_flow,
+                                     gradient_bos_bijkerke]],
+                                   columns=['object_id', 'object_waterdepth_id', 'slope',
+                                            'water_depth', 'ditch_width', 'ditch_bottom_width',
+                                            'normative_flow', 'gradient_bos_bijkerke'])
+
+            variants_table = variants_table.append(df_temp)
 
             count = count + 1
 
+        object_waterdepth_id = (str(hydro_objects_satisfy.object_id[i]) + "_" +
+                                str(round(hydro_objects_satisfy.water_depth[i] * 100 + (count * 5), 0)))
         if count == 0:
-            # Komt voor bij hele lage maatgevende debieten, dan is er maar een hele kleine legger nodig.
-            # Door de iteratie met een kleiner wordende waterbreedte als dat mogelijk is onder het verhang, wordt de bodembreedte
-            # negatief en faalt de iteratie. Voor deze hydro_objecten wordt er apart 1 legger gemaakt.
-            print ("minimaal bakje!")
-            Bodembreedte = 0.5
-            Waterbreedte = Bodembreedte + Talud * Waterdiepte
+            # When normative flow is small,
+            # the necessary profile dimensions are smaller than the minimum requirements.
+            # print ("minimum profile dimensions suffices for object " + str(object_id))
+            ditch_bottom_width = 0.5
+            ditch_width = ditch_bottom_width + slope * water_depth
 
-            Verhang_BB = bereken_BosBijkerke(Maatgevend_Debiet, Bodembreedte, Waterdiepte, Talud)
+            gradient_bos_bijkerke = calc_bos_bijkerke(normative_flow, ditch_bottom_width, water_depth, slope)
 
-            df_temp = pd.DataFrame([[ObjectID,
-                                     Object_DiepteID,
-                                     Talud,
-                                     Waterdiepte,
-                                     Waterbreedte,
-                                     Bodembreedte,
-                                     Maatgevend_Debiet,
-                                     Verhang_BB]],
-                                   columns=['ObjectID', 'Object_DiepteID', 'Talud',
-                                            'Waterdiepte', 'Waterbreedte', 'Bodembreedte',
-                                            'Maatgevend_Debiet', 'Verhang_Bos_Bijkerke'])
+            df_temp = pd.DataFrame([[object_id,
+                                     object_waterdepth_id,
+                                     slope,
+                                     water_depth,
+                                     ditch_width,
+                                     ditch_bottom_width,
+                                     normative_flow,
+                                     gradient_bos_bijkerke]],
+                                   columns=['object_id', 'object_waterdepth_id', 'slope',
+                                            'water_depth', 'ditch_width', 'ditch_bottom_width',
+                                            'normative_flow', 'gradient_bos_bijkerke'])
 
-            Varianten_tabel = Varianten_tabel.append(df_temp)
+            variants_table = variants_table.append(df_temp)
             count = 1
 
-        Opties_tabel.aantal[Opties_tabel.ObjectID == Opties_tabel.ObjectID[i]] = count
-    Varianten_tabel = Varianten_tabel.reset_index(drop=True)
+        options_table.possibilities_count[options_table.object_id == options_table.object_id[i]] = count
+    variants_table = variants_table.reset_index(drop=True)
 
-    return Varianten_tabel
+    return variants_table
 
 
-def print_Objecten_VoldoenNiet(input_tabel):
-    if "ObjectID" in input_tabel.columns:
-        if "Verhang_Bos_Bijkerke" in input_tabel.columns:
-            if "Verhang_Manning" in input_tabel.columns:
-
-                for i, rows in input_tabel.iterrows():
-                    if max(float(input_tabel.Verhang_Bos_Bijkerke[i]),
-                           float(input_tabel.Verhang_Manning[i])) > verhang_norm:
-                        print input_tabel.ObjectID[i]
-
+def print_failed_hydro_objects(input_table):
+    if "object_id" in input_table.columns:
+        if "gradient_bos_bijkerke" in input_table.columns:
+            if "gradient_manning" in input_table.columns:
+                for i, rows in input_table.iterrows():
+                    if max(float(input_table.gradient_bos_bijkerke[i]),
+                           float(input_table.gradient_manning[i])) > gradient_norm:
+                                print (str(input_table.object_id[i]) + " doesn't comply to the norm of "
+                                     + str(gradient_norm) + " cm/km.")
             else:
-                print ("Geen Verhang data in de vorm van 'Verhang_Manning' als kolom")
+                print ("No 'gradient_manning' data")
         else:
-            print ("Geen Verhang data in de vorm van 'Verhang_Bos_Bijkerke' als kolom")
+            print ("No 'gradient_bos_bijkerke' data")
     else:
-        print ("Geen 'ObjectID'")
+        print ("No 'object_id' data")
 
 
-""" Van elk hydro-Object is de volgende informatie verzameld:
-- ID
-- Maatgevende afvoer
-- Taludhelling
-- Maximale Waterbreedte
-- Lengte (dit is nodig om iets te kunnen zeggen over de impact op het geheel)
+def show_summary(tablename, surge_comparison):
+    summary_table = pd.DataFrame({'how many hydro objects do not suffice': pd.Series(
+        [(len(tablename[tablename['gradient_manning'] > gradient_norm])),
+         (len(tablename[tablename['gradient_bos_bijkerke'] > gradient_norm])),
+         (len(tablename[tablename['surge'] > surge_comparison])),
+         len(tablename['object_id'])],
+        index=[("# objects with Manning > " + str(gradient_norm)),
+               "# objects with Bos and Bijkerke > " + str(gradient_norm),
+               "total surge is at least " + str(surge_comparison) + " cm over hydro object",
+               "total amount of hydro objects"]
+    )})
+    print summary_table
 
-Hieruit wordt berekend:
-- Wat de minimale benodigde waterdiepte is bij de berekende waterbreedte om aan de opstuwingsnorm (3 cm/km) te voldoen.
-- Wat de bijbehorende bodembreedte is. De bodembreedte moet minimaal 0,5 m zijn.
-
-Er wordt begonnen met een initiele waterdiepte van 0,3m. 
-
-Verhang wordt berekend met Bos en Bijkerke en Manning. Ook het absolute verhang (verhang*lengte hydro-object) wordt berekend.
-
-Als het mogelijk is om een dwarsprofiel te genereren die aan de opstuwingsnorm voldoet, dan wordt deze opgeslagen als
-"dwarsprofiel met maximale waterbreedte en minimale waterdiepte" in een aparte excel.
-
-In een volgende berekening wordt dit profiel verdiept (met een vaste waarde) en versmald (middels een iteratie).
-De nieuw berekende breedte bij deze verdieping van het dwarsprofiel wordt gevonden door breedte af te laten nemen totdat 
-de opstuwing groter is dan de norm.
-De iteratie stopt dus als:
-- opstuwing > norm
-- de bodembreedte kleiner wordt dan 0,5m.
-"""
 
 """
-Deel 1: inlezen SpatiaLite
+This is were the main code starts:
+2 functions:
+- create_theoretical_profiles
+- write_theoretical profiles to database
 
-zie definitie read_SpatiaLite(polder)
-
+But first:
+Boundary conditions
 """
 
-"""
-Oude Manier:
-Dataframe in elkaar zetten.
-Dit stuk gaat vervangen worden door een plugin naar een database in SQLite.
-Uitkomst: Database in Python met de volgende info
-- ObjectID
-- Maatgevend Debiet door het object
-- Lengte van het object
-- Talud helling
-- Waterbreedte (maximaal)
+Km = 25  # Manning coefficient in m**(1/3/s)
+Kb = 23  # Bos and Bijkerke coefficient in 1/s
 
-
-frame1 = pd.read_excel('reach_waterlopen_spatialjoin_Marken.xlsx')
-frame2 = pd.read_excel('Tabel_Waterbreedte_Marken.xlsx')
-
-
-Hydro_objecten = DataFrame(frame1,columns=['ID','Discharge','LENGTE','WS_TALUD_L']) # Alle interessante kolommen in een dataframe
-Hydro_objecten.columns = ['ObjectID','Maatgevend_Debiet','Lengte','Talud'] # Herbenoemen kolommen
-
-Aanvulling = DataFrame(frame2,columns=['CODE','width']) # Aanmaken van een dataframe
-Aanvulling.columns = ['ObjectID','Maximale_Waterbreedte']
-
-Hydro_objecten = pd.merge(Hydro_objecten,Aanvulling,on='ObjectID',how='left') # Samenvoegen van beide tabellen, op de ObjectID data
-
-del frame1
-del frame2
-"""
-
-""" De benodigde coefficienten voor verhang berekening van Manning en Bos en Bijkerke (mag varieren):"""
+ini_waterdepth = 0.30  # Initial water depth (m).
+gradient_norm = 3.0  # (cm/km) The norm for maximum gradient according to Bos and Bijkerke or Manning formula.
+min_ditch_bottom_width = 0.5  # (m) Ditch bottom width can not be smaller dan 0,5m.
 
 
 def create_theoretical_profiles(legger_db_filepath):
-    Hydro_objecten = read_SpatiaLite(legger_db_filepath)
-    print (Hydro_objecten)
 
+    # Part 1: read SpatiaLite
+    # The original Spatialite database is read into Python for further analysis.
+    hydro_objects = read_spatialite(legger_db_filepath)  # print (Hydro_objects)
+    print ("\nFinished 1: SpatiaLite Database read successfully\n")
+
+    # Part 2: Filter the table for hydro objects that can not be analyzed due to incomplete data.
+    column = "BREEDTE"  # or any column name
+    hydro_objects = filter_unused(hydro_objects, column)
+    print ("\nFinished 2: Hydro database filtered successfully\n")
+
+    # Part 3: Calculate per hydro object the legger profile based on maximum ditch width
+
+    # Create an empty table to store the results:
+    profile_max_ditch_width = pd.DataFrame(
+        columns=['object_id', 'normative_flow', 'length', 'slope', 'max_ditch_width', 'water_depth',
+                 'ditch_bottom_width', 'gradient_bos_bijkerke', 'gradient_manning'])
+
+    # Loop over the hydro objects table so hydro object specific information is temporarily saved to variables
+    for i, rows in hydro_objects.iterrows():
+        object_id = hydro_objects.OBJECTID[i]
+        if hydro_objects.GRONDSOORT[i] == "veenweide":  # initial slope of ditch based on soil type
+            slope = 3.0
+        else:
+            slope = 2.0
+        max_ditch_width = hydro_objects.BREEDTE[i]
+        normative_flow = 0.01  # (m3 / s) hydro_objects.normative_flow[i]  # todo: is not a constant
+        length = 10  # (m) hydro_objects.length[i]  # todo: is not a constant
+
+        # Calculate a profile
+        profile = calc_profile_max_ditch_width(object_id, normative_flow, length, slope, max_ditch_width)
+
+        # Add the profile to the existing table where the results are stored
+        profile_max_ditch_width = profile_max_ditch_width.append(profile)
+
+    # When all the results are stored in the table, re-index the table.
+        profile_max_ditch_width = profile_max_ditch_width.reset_index(drop=True)
+
+    print ("\nFinished 3: Successfully calculated profiles based on max ditch width\n")
+
+    # Part 4: Print the hydro objects where no suitable legger can be calculated.
+    print_failed_hydro_objects(profile_max_ditch_width)
+    print ("\nFinished 4: Finished printing hydro objects without a suitable legger\n")
     """
-    Er zitten hydro objecten tussen waarvan geen opstuwing kan worden berekend omdat er "cruciale" data ontbreekt. 
-    Specificeer de naam van de kolom
-    
+    Up to here the hydro object information is translated to a legger profile using maximum ditch width.
     """
 
-    kolom = "BREEDTE"
-    Hydro_objecten = filter_Onbruikbaar(Hydro_objecten, kolom)
+    # Part 5: add surge.
+    profile_max_ditch_width = add_surge(profile_max_ditch_width)
+    print ("\nFinished 5: surge added\n")
 
-    # In[43]:
+    # Part 6: show a table with some statistics on the hydro objects
+    surge_comparison = 5  # (cm) What total surge is interesting to compare it to?
+    show_summary(profile_max_ditch_width, surge_comparison)
+    print ("\nFinished 6: summary printed\n")
+
+    # Part 7: From the suitable profiles based on max ditch width, all the other suitable profiles are calculated.
 
     """ 
-    Het bereken van een leggerprofiel per hydro-object op basis van de maximale waterbreedte.
-    """
-    HO = pd.DataFrame(
-        columns=['ObjectID', 'Maatgevend_Debiet', 'Lengte', 'Talud', 'Maximale_Waterbreedte', 'Waterdiepte',
-                 'Bodembreedte', 'Verhang_Bos_Bijkerke', 'Verhang_Manning'])
+    2 tables are created:
+    # - a table with the number of available profiles per hydro object
+    # - a table with information on every available profile.
 
-    for i, rows in Hydro_objecten.iterrows():
-
-        ObjectID = Hydro_objecten.OBJECTID[i]
-
-        if Hydro_objecten.GRONDSOORT[i] == "veenweide":
-            Talud = 3.0
-        else:
-            Talud = 2.0
-        Maximale_Waterbreedte = Hydro_objecten.BREEDTE[i]
-
-        Maatgevend_Debiet = 0.05  # Hydro_objecten.Maatgevend_Debiet[i]
-        Lengte = 10  # Hydro_objecten.Lengte[i]
-
-        profiel = bereken_profielMaxWaterbreedte(ObjectID, Maatgevend_Debiet, Lengte, Talud, Maximale_Waterbreedte,
-                                                 Waterdiepte_initieel)
-
-        HO = HO.append(profiel)
-    HO = HO.reset_index(drop=True)
-
-    # Identificeer profielen die niet voldoen
-    print_Objecten_VoldoenNiet(HO)
-
-    """ Toevoegen van opstuwing"""
-    Opstuwing = pd.DataFrame(columns=['ObjectID', 'Opstuwing'])
-
-    for i, rows in HO.iterrows():
-        ObjectID = HO.ObjectID[i]
-        Lengte = HO.Lengte[i]
-        Verhang = max(float(HO.Verhang_Bos_Bijkerke[i]),
-                      float(HO.Verhang_Manning[i]))  # maximum van de twee berekeningen
-
-        resultaat = bereken_Opstuwing(ObjectID, Lengte, Verhang)
-
-        """ Opnemen resultaten in tabel"""
-        df_temp = pd.DataFrame([resultaat],
-                               columns=['ObjectID', 'Opstuwing'])
-
-        Opstuwing = Opstuwing.append(df_temp)
-
-    Opstuwing = Opstuwing.reset_index(drop=True)
-
-    HO = pd.merge(HO, Opstuwing, on='ObjectID', how='left')
-
-    """Tabel waarbij wat statistieken zichtbaar kunnen worden gemaakt """
-
-    # todo: maak er een functie van
-    # todo: beschrijving toevoegen.
-
-    e = 0.5  # Welke totale opstuwing is interessant?
-
-    pd.DataFrame({'hoeveel hydro_objecten niet voldoen': pd.Series(
-        [(len(HO[HO['Verhang_Manning'] > verhang_norm])),
-         (len(HO[HO['Verhang_Bos_Bijkerke'] > verhang_norm])),
-         (len(HO[HO['Opstuwing'] > e])),
-         len(HO['ObjectID'])],
-        index=[("# watergangen met Verhang Manning > " + str(verhang_norm)),
-               "# watergangen met Verhang Bos Bijkerke > " + str(verhang_norm),
-               "Verhang absoluut => " + str(e) + " cm over hydro object",
-               "Totaal aantal watergangen"]
-    )})
-
-    """Einde deel 1
-    Tot hier is de informatie in de hydro-objecten vertaald naar een leggerprofiel waarbij
-    de maximum waterbreedte als uitgangspunt is genomen.
-    Van elk hydro-object is de opstuwing berekend en ook een absolute opstuwing.
-    Er zijn excel exports gemaakt waarbij deze informatie is vastgelegd als tussenstap.
-    En een tabel met de hydro-objecten waar geen voldoende data is voor deze tussenstap.
-    ~~~~
+    # Uncomment these lines if started from here
+    # profile_max_ditch_width = pd.read_excel('whatever name of table with profiles based on max width is')
     """
 
-    # HO.to_excel(
-    #     'bereken_En_Visualiseren_Dwarsprofielen_v3.xlsx')  # Exporteer de waardes van de dwarsprofielen met een zo breed mogelijk profiel
-    # Onbruikbaar.to_excel(
-    #     'Onbruikbaar_bereken_En_Visualiseren_Dwarsprofielen_v3.xlsx')  # Exporteer de onbruikbare hydro-objecten
+    # Separate the hydro objects in two groups: hydro objects that satisfy requirements from the ones that don't.
+    hydro_objects_satisfy = profile_max_ditch_width[profile_max_ditch_width['gradient_bos_bijkerke'] <= 3.0]
 
-    """
-    ~~~~
-    Deel 2: Van een profiel met maximale breedte en minimale diepte, naar Opties en Varianten.
-    In dit gedeelte worden er voor de hydro-objecten meerdere leggerprofielen berekend.
-    Uitgangspositie is het profiel met de maximale breedte en minimale diepte.
-    """
+    # print (str(len(hydro_objects_satisfy)) + " of the " + str(len(profile_max_ditch_width))
+    # + " hydro objects satisfy the norm")
 
-    # Uncomment de volgende lijn als er vanaf dit punt wordt aangevangen
-    # HO = pd.read_excel('bereken_En_Visualiseren_Dwarsprofielen_v3.xlsx')
+    profile_variants = calc_profile_variants(hydro_objects_satisfy)
 
-    # Scheidt de profielen die voldoen van die niet voldoen
-    HO_Voldoen = HO[HO['Verhang_Manning'] <= verhang_norm]
-    HO_Voldoen_niet = HO[HO['Verhang_Manning'] > verhang_norm]
+    #print profile_variants
 
-    # todo: maak universeler door het toevoegen van Verhang_BB als limiterende factor.
-    HO_Varianten = bereken_Varianten(HO_Voldoen)
-
-    # Exporteer de onbruikbare hydro-objecten
-    # HO_Varianten.to_excel('Export_Dwarsprofielen_Marken_v2.xlsx')
-
-    return HO_Varianten
-
+    print ("\nFinished 7: variants created\n")
+    return profile_variants
 
 def write_theoretical_profile_results_to_db(profile_results, path_legger_db):
     db = LeggerDatabase(
@@ -481,14 +443,14 @@ def write_theoretical_profile_results_to_db(profile_results, path_legger_db):
 
     for i, rows in profile_results.iterrows():
         profiles.append(ProfielVarianten(
-            hydro_object_id=profile_results.ObjectID[i],
-            id=profile_results.Object_DiepteID[i],
-            talud=profile_results.Talud[i],
-            waterdiepte=profile_results.Waterdiepte[i],
-            waterbreedte=profile_results.Waterbreedte[i],
-            bodembreedte=profile_results.Bodembreedte[i],
-            maatgevend_debiet=profile_results.Maatgevend_Debiet[i],
-            verhang_bos_bijkerk=profile_results.Verhang_Bos_Bijkerke[i],
+            hydro_object_id=profile_results.object_id[i],
+            id=profile_results.object_waterdepth_id[i],
+            talud=profile_results.slope[i],
+            waterdiepte=profile_results.water_depth[i],
+            waterbreedte=profile_results.ditch_width[i],
+            bodembreedte=profile_results.ditch_bottom_width[i],
+            maatgevend_debiet=profile_results.normative_flow[i],
+            verhang_bos_bijkerk=profile_results.gradient_bos_bijkerke[i],
         ))
 
     session.execute("Delete from {0}".format(ProfielVarianten.__tablename__))
