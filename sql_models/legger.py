@@ -139,6 +139,7 @@ class Varianten(Base):
     talud = Column(Float)
     # maatgevend_debiet = Column(Float)
     verhang_bos_bijkerk = Column(Float)
+    opmerkingen = Column(String())
     hydro_id = Column(Integer,
                       ForeignKey(HydroObject.__tablename__ + ".id"))
 
