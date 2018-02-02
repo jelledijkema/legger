@@ -275,7 +275,7 @@ class LeggerWidget(QDockWidget):
             raise NotImplementedError("director '%s' not implemented" % director_type)
 
         self.network = Network(
-            self.line_layer, director, id_field='OGC_FID',
+            self.line_layer, director, id_field='id',
             weight_properter=LeggerDistancePropeter(),  # 'q_end'
             distance_properter=LeggerDistancePropeter())  # 'q_end'
         #
@@ -316,10 +316,10 @@ class LeggerWidget(QDockWidget):
                 os.path.dirname(__file__),
                 os.path.pardir,
                 'tests', 'data',
-                'test_spatialite_with_3di_results.sqlite'
+                'test_spatialite_output_with_theoretical_profiles.sqlite'
             ),
-            'hydroobject_with_results',
-            'GEOMETRY'
+            'hydroobjects_kenmerken',
+            'geometry'
         )
 
     def unset_network_tool(self):
