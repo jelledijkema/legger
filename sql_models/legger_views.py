@@ -9,7 +9,7 @@ def create_legger_views(session):
         """
             CREATE VIEW hydroobjects_kenmerken AS
             SELECT *,
-                   CASE WHEN t.qend > 0
+                   CASE WHEN h.debiet > 0
                        THEN 1 ELSE 2
                    END AS direction
             FROM hydroobject h 
