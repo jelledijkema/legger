@@ -5,13 +5,11 @@ import sys
 log = logging.getLogger('legger')
 log.setLevel(logging.DEBUG)
 
-sys.path.insert(
-    0,
+sys.path.append(
     os.path.join(os.path.dirname(os.path.realpath(__file__)), 'external')
 )
 
-sys.path.insert(
-    0,
+sys.path.append(
     os.path.join(os.path.dirname(os.path.realpath(__file__)),
                  os.path.pardir,
                  'ThreeDiToolbox',
