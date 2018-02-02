@@ -32,11 +32,12 @@ def read_spatialite(legger_db_filepath):
     conn = sql.connect(legger_db_filepath)
     c = conn.cursor()
 
-    c.execute("Select ho.objectid, hk.diepte, hk.breedte, hk.initieeltalud, hk.steilstetalud, hk.grondsoort, "
+    c.execute("Select ho.id, af.diepte, af.breedte, hk.initieel_talud, hk.steilste_talud, hk.grondsoort, "
               "ST_LENGTH(TRANSFORM(ho.geometry, 28992)) as length, tr.qend "
               "from hydroobject ho "
-              "left outer join hydrokenmerken hk on ho.objectid = hk.objectid "
-              "left outer join tdi_hydro_object_results tr on tr.hydroobject_id = hk.objectid")
+              "left outer join kenmerken hk on ho.id = hk.hydro_id "
+              "left outer join afmetingen af on ho.id = af.hydro_id "
+              "left outer join tdi_hydro_object_results tr on tr.hydroobject_id = hk.id")
 
     all_hits = c.fetchall()
 
@@ -307,7 +308,7 @@ def print_failed_hydro_objects(input_table):
                     if max(float(input_table.gradient_bos_bijkerke[i]),
                            float(input_table.gradient_manning[i])) > gradient_norm:
                                 print (str(input_table.object_id[i]) + " doesn't comply to the norm of "
-                                     + str(gradient_norm) + " cm/km.")
+                                       + str(gradient_norm) + " cm/km.")
             else:
                 print ("No 'gradient_manning' data")
         else:
@@ -353,15 +354,14 @@ def create_theoretical_profiles(legger_db_filepath):
     # Part 1: read SpatiaLite
     # The original Spatialite database is read into Python for further analysis.
     hydro_objects = read_spatialite(legger_db_filepath)  # print (Hydro_objects)
-    print ("\nFinished 1: SpatiaLite Database read successfully\n")
+    print ("\n\nFinished 1: SpatiaLite Database read successfully\n")
 
     # Part 2: Filter the table for hydro objects that can not be analyzed due to incomplete data.
-    column = "BREEDTE"  # or any column name
+    column = "BREEDTE"  # in this case filter on width, but can be any column name
     hydro_objects = filter_unused(hydro_objects, column)
     print ("\nFinished 2: Hydro database filtered successfully\n")
 
-    # Part 3: Calculate per hydro object the legger profile based on maximum ditch width
-
+    # Part 3: Calculate per hydro object the legger profile based on maximum ditch width.
     # Create an empty table to store the results:
     profile_max_ditch_width = pd.DataFrame(
         columns=['object_id', 'normative_flow', 'length', 'slope', 'max_ditch_width', 'water_depth',
@@ -373,15 +373,15 @@ def create_theoretical_profiles(legger_db_filepath):
         if hydro_objects.GRONDSOORT[i] == "veenweide":  # initial slope of ditch based on soil type
             slope = 3.0
         else:
-            slope = 2.0
+            slope = hydro_objects.STEILSTETALUD[i]
         max_ditch_width = hydro_objects.BREEDTE[i]
-        normative_flow = 0.01  # (m3 / s) hydro_objects.normative_flow[i]  # todo: is not a constant
-        length = 10  # (m) hydro_objects.length[i]  # todo: is not a constant
+        normative_flow = abs(hydro_objects.QEND[i])  # (m3 / s) hydro_objects.normative_flow[i]
+        length = hydro_objects.LENGTH[i]  # (m) hydro_objects.length[i]
 
         # Calculate a profile
         profile = calc_profile_max_ditch_width(object_id, normative_flow, length, slope, max_ditch_width)
 
-        # Add the profile to the existing table where the results are stored
+        # Add the profile to the previous made table where the results are stored
         profile_max_ditch_width = profile_max_ditch_width.append(profile)
 
     # When all the results are stored in the table, re-index the table.
@@ -423,11 +423,11 @@ def create_theoretical_profiles(legger_db_filepath):
     # + " hydro objects satisfy the norm")
 
     profile_variants = calc_profile_variants(hydro_objects_satisfy)
-
-    #print profile_variants
+    # print profile_variants
 
     print ("\nFinished 7: variants created\n")
     return profile_variants
+
 
 def write_theoretical_profile_results_to_db(profile_results, path_legger_db):
     db = LeggerDatabase(

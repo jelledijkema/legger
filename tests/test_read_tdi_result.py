@@ -82,15 +82,15 @@ class TestReadTdiResults(unittest.TestCase):
         # todo: check results
 
     def test_read_write_tdi_results(self):
-        # result = read_tdi_results(
-        #     self.model_db,
-        #     self.result_db,
-        #     self.result_nc,
-        #     self.legger_db
-        # )
-        # write_tdi_results_to_db(result,
-        #                         self.legger_db)
-        #
+        result = read_tdi_results(
+            self.model_db,
+            self.result_db,
+            self.result_nc,
+            self.legger_db
+        )
+        write_tdi_results_to_db(result,
+                                self.legger_db)
+
         con_legger = dbapi.connect(self.legger_db)
         create_legger_views(con_legger)
 
