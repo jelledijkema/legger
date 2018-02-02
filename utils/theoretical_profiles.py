@@ -4,7 +4,7 @@ import numpy as np
 # import math
 # import matplotlib.pyplot as plt
 from pandas import DataFrame  # Series
-from legger.sql_models.legger import ProfielVarianten
+from legger.sql_models.legger import Varianten
 from legger.sql_models.legger_database import LeggerDatabase
 
 
@@ -32,12 +32,10 @@ def read_spatialite(legger_db_filepath):
     conn = sql.connect(legger_db_filepath)
     c = conn.cursor()
 
-    c.execute("Select ho.id, af.diepte, af.breedte, hk.initieel_talud, hk.steilste_talud, hk.grondsoort, "
-              "ST_LENGTH(TRANSFORM(ho.geometry, 28992)) as length, tr.qend "
+    c.execute("Select ho.id, km.diepte, km.breedte, km.taludvoorkeur, km.steilste_talud, km.grondsoort, "
+              "ST_LENGTH(TRANSFORM(ho.geometry, 28992)) as length, ho.debiet "
               "from hydroobject ho "
-              "left outer join kenmerken hk on ho.id = hk.hydro_id "
-              "left outer join afmetingen af on ho.id = af.hydro_id "
-              "left outer join tdi_hydro_object_results tr on tr.hydroobject_id = hk.id")
+              "left outer join kenmerken km on ho.id = km.hydro_id ")
 
     all_hits = c.fetchall()
 
@@ -442,18 +440,18 @@ def write_theoretical_profile_results_to_db(profile_results, path_legger_db):
     profiles = []
 
     for i, rows in profile_results.iterrows():
-        profiles.append(ProfielVarianten(
-            hydro_object_id=profile_results.object_id[i],
+        profiles.append(Varianten(
+            hydro_id=profile_results.object_id[i],
             id=profile_results.object_waterdepth_id[i],
             talud=profile_results.slope[i],
-            waterdiepte=profile_results.water_depth[i],
+            diepte=profile_results.water_depth[i],
             waterbreedte=profile_results.ditch_width[i],
             bodembreedte=profile_results.ditch_bottom_width[i],
-            maatgevend_debiet=profile_results.normative_flow[i],
             verhang_bos_bijkerk=profile_results.gradient_bos_bijkerke[i],
+            opmerkingen=""
         ))
 
-    session.execute("Delete from {0}".format(ProfielVarianten.__tablename__))
+    session.execute("Delete from {0}".format(Varianten.__tablename__))
 
     session.bulk_save_objects(profiles)
     session.commit()
