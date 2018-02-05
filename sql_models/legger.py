@@ -50,6 +50,12 @@ class HydroObject(Base):
     kenmerken = relationship("Kenmerken",
                              back_populates="hydro")
 
+    figuren = relationship("ProfielFiguren",
+                           primaryjoin="HydroObject.id == ProfielFiguren.hydro_id",
+                           lazy='dynamic',
+                           #foreign_keys=[id],
+                           back_populates="hydro")
+
     def __str__(self):
         return u'Hydro object {0}'.format(
             self.code)
@@ -150,6 +156,36 @@ class Varianten(Base):
     def __str__(self):
         return u'profiel_variant {0}'.format(
             self.id)
+
+
+class ProfielFiguren(Base):
+    __tablename__ = 'profielfiguren'
+
+    # object_id = Column(Integer, primary_key=True)
+    hydro_id = Column('id_hydro', Integer,
+                      ForeignKey(HydroObject.__tablename__ + ".id"))
+    profid = Column(String(16), primary_key=True)
+    type_prof = Column(String(1))
+    coord = Column(String())
+    peil = Column(Float)
+    t_talud = Column(Float)
+    t_waterdiepte = Column(Float)
+    t_bodembreedte = Column(Float)
+    t_fit = Column(Float)
+    t_afst = Column(Float)
+    g_rest = Column(Float)
+    t_overdiepte = Column(Float)
+    t_overbreedte_l = Column(Float)
+    t_overbreedte_r = Column(Float)
+
+    hydro = relationship(HydroObject,
+                         primaryjoin="HydroObject.id == ProfielFiguren.hydro_id",
+                         #foreign_keys=[hydro_id],
+                         back_populates="figuren")
+
+    def __str__(self):
+        return u'profiel_figuren {0} - {1}'.format(
+            self.hydro_id, self.profid)
 
 
 class DuikerSifonHevel(Base):

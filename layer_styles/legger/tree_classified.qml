@@ -1,5 +1,5 @@
 <!DOCTYPE qgis PUBLIC 'http://mrcc.com/qgis.dtd' 'SYSTEM'>
-<qgis version="2.18.12" simplifyAlgorithm="0" minimumScale="0" maximumScale="1e+08" simplifyDrawingHints="1" minLabelScale="0" maxLabelScale="1e+08" simplifyDrawingTol="1" readOnly="0" simplifyMaxScale="1" hasScaleBasedVisibilityFlag="0" simplifyLocal="1" scaleBasedLabelVisibilityFlag="0">
+<qgis version="2.18.16" simplifyAlgorithm="0" minimumScale="0" maximumScale="1e+08" simplifyDrawingHints="1" minLabelScale="0" maxLabelScale="1e+08" simplifyDrawingTol="1" readOnly="0" simplifyMaxScale="1" hasScaleBasedVisibilityFlag="0" simplifyLocal="1" scaleBasedLabelVisibilityFlag="0">
   <edittypes>
     <edittype widgetv2type="TextEdit" name="weight">
       <widgetv2config IsMultiline="0" fieldEditable="1" constraint="" UseHtml="0" labelOnTop="0" constraintDescription="" notNull="0"/>
@@ -14,265 +14,318 @@
   <renderer-v2 attr="case when  &quot;value&quot;  is NULL then -999 else &quot;value&quot; end" forceraster="0" symbollevels="0" type="graduatedSymbol" graduatedMethod="GraduatedColor" enableorderby="0">
     <ranges>
       <range render="true" symbol="0" lower="-inf" upper="0.000000000000000" label="NULL"/>
-      <range render="true" symbol="1" lower="0.000000000000000" upper="2.000000000000000" label="0-2"/>
-      <range render="true" symbol="2" lower="2.000000000000000" upper="4.000000000000000" label="2-4"/>
-      <range render="true" symbol="3" lower="4.000000000000000" upper="6.000000000000000" label="4-6"/>
-      <range render="true" symbol="4" lower="6.000000000000000" upper="8.000000000000000" label="6-8"/>
-      <range render="true" symbol="5" lower="8.000000000000000" upper="100.000000000000000" label="8-10"/>
+      <range render="true" symbol="1" lower="0.000000000000000" upper="0.300000000000000" label=" 0.00 - 0.30 "/>
+      <range render="true" symbol="2" lower="0.300000000000000" upper="0.600000000000000" label=" 0.30 - 0.60 "/>
+      <range render="true" symbol="3" lower="0.600000000000000" upper="0.900000000000000" label=" 0.60 - 0.90 "/>
+      <range render="true" symbol="4" lower="0.900000000000000" upper="1.200000000000000" label=" 0.90 - 1.20 "/>
+      <range render="true" symbol="5" lower="1.200000000000000" upper="1.600000000000000" label=" 1.20 - 1.60 "/>
+      <range render="true" symbol="6" lower="1.600000000000000" upper="inf" label=" 1.60 - inf "/>
     </ranges>
     <symbols>
       <symbol alpha="1" clip_to_extent="1" type="line" name="0">
-        <layer pass="0" class="SimpleLine" locked="1">
-          <prop k="capstyle" v="round"/>
-          <prop k="customdash" v="5;2"/>
-          <prop k="customdash_map_unit_scale" v="0,0,0,0,0,0"/>
-          <prop k="customdash_unit" v="MM"/>
-          <prop k="draw_inside_polygon" v="0"/>
-          <prop k="joinstyle" v="round"/>
-          <prop k="line_color" v="76,38,0,255"/>
-          <prop k="line_style" v="solid"/>
-          <prop k="line_width" v="1.2"/>
-          <prop k="line_width_unit" v="MM"/>
+        <layer pass="0" class="ArrowLine" locked="0">
+          <prop k="arrow_start_width" v="1"/>
+          <prop k="arrow_start_width_unit" v="MM"/>
+          <prop k="arrow_start_width_unit_scale" v="0,0,0,0,0,0"/>
+          <prop k="arrow_type" v="0"/>
+          <prop k="arrow_width" v="1"/>
+          <prop k="arrow_width_unit" v="MM"/>
+          <prop k="arrow_width_unit_scale" v="0,0,0,0,0,0"/>
+          <prop k="head_length" v="1.5"/>
+          <prop k="head_length_unit" v="MM"/>
+          <prop k="head_length_unit_scale" v="0,0,0,0,0,0"/>
+          <prop k="head_thickness" v="1.5"/>
+          <prop k="head_thickness_unit" v="MM"/>
+          <prop k="head_thickness_unit_scale" v="0,0,0,0,0,0"/>
+          <prop k="head_type" v="0"/>
+          <prop k="is_curved" v="1"/>
+          <prop k="is_repeated" v="1"/>
           <prop k="offset" v="0"/>
-          <prop k="offset_map_unit_scale" v="0,0,0,0,0,0"/>
           <prop k="offset_unit" v="MM"/>
-          <prop k="use_custom_dash" v="0"/>
-          <prop k="width_map_unit_scale" v="0,0,0,0,0,0"/>
-        </layer>
-        <layer pass="16" class="SimpleLine" locked="0">
-          <prop k="capstyle" v="round"/>
-          <prop k="customdash" v="5;2"/>
-          <prop k="customdash_map_unit_scale" v="0,0,0,0,0,0"/>
-          <prop k="customdash_unit" v="MM"/>
-          <prop k="draw_inside_polygon" v="0"/>
-          <prop k="joinstyle" v="round"/>
-          <prop k="line_color" v="165,165,165,255"/>
-          <prop k="line_style" v="solid"/>
-          <prop k="line_width" v="1.08571"/>
-          <prop k="line_width_unit" v="MM"/>
-          <prop k="offset" v="0"/>
-          <prop k="offset_map_unit_scale" v="0,0,0,0,0,0"/>
-          <prop k="offset_unit" v="MM"/>
-          <prop k="use_custom_dash" v="0"/>
-          <prop k="width_map_unit_scale" v="0,0,0,0,0,0"/>
+          <prop k="offset_unit_scale" v="0,0,0,0,0,0"/>
+          <symbol alpha="1" clip_to_extent="1" type="fill" name="@0@0">
+            <layer pass="0" class="SimpleFill" locked="0">
+              <prop k="border_width_map_unit_scale" v="0,0,0,0,0,0"/>
+              <prop k="color" v="165,165,165,255"/>
+              <prop k="joinstyle" v="bevel"/>
+              <prop k="offset" v="0,0"/>
+              <prop k="offset_map_unit_scale" v="0,0,0,0,0,0"/>
+              <prop k="offset_unit" v="MM"/>
+              <prop k="outline_color" v="0,0,0,255"/>
+              <prop k="outline_style" v="solid"/>
+              <prop k="outline_width" v="0.26"/>
+              <prop k="outline_width_unit" v="MM"/>
+              <prop k="style" v="solid"/>
+            </layer>
+          </symbol>
         </layer>
       </symbol>
       <symbol alpha="1" clip_to_extent="1" type="line" name="1">
-        <layer pass="0" class="SimpleLine" locked="1">
-          <prop k="capstyle" v="round"/>
-          <prop k="customdash" v="5;2"/>
-          <prop k="customdash_map_unit_scale" v="0,0,0,0,0,0"/>
-          <prop k="customdash_unit" v="MM"/>
-          <prop k="draw_inside_polygon" v="0"/>
-          <prop k="joinstyle" v="round"/>
-          <prop k="line_color" v="76,38,0,255"/>
-          <prop k="line_style" v="solid"/>
-          <prop k="line_width" v="1.2"/>
-          <prop k="line_width_unit" v="MM"/>
+        <layer pass="0" class="ArrowLine" locked="0">
+          <prop k="arrow_start_width" v="1"/>
+          <prop k="arrow_start_width_unit" v="MM"/>
+          <prop k="arrow_start_width_unit_scale" v="0,0,0,0,0,0"/>
+          <prop k="arrow_type" v="0"/>
+          <prop k="arrow_width" v="1"/>
+          <prop k="arrow_width_unit" v="MM"/>
+          <prop k="arrow_width_unit_scale" v="0,0,0,0,0,0"/>
+          <prop k="head_length" v="1.5"/>
+          <prop k="head_length_unit" v="MM"/>
+          <prop k="head_length_unit_scale" v="0,0,0,0,0,0"/>
+          <prop k="head_thickness" v="1.5"/>
+          <prop k="head_thickness_unit" v="MM"/>
+          <prop k="head_thickness_unit_scale" v="0,0,0,0,0,0"/>
+          <prop k="head_type" v="0"/>
+          <prop k="is_curved" v="1"/>
+          <prop k="is_repeated" v="1"/>
           <prop k="offset" v="0"/>
-          <prop k="offset_map_unit_scale" v="0,0,0,0,0,0"/>
           <prop k="offset_unit" v="MM"/>
-          <prop k="use_custom_dash" v="0"/>
-          <prop k="width_map_unit_scale" v="0,0,0,0,0,0"/>
-        </layer>
-        <layer pass="16" class="SimpleLine" locked="0">
-          <prop k="capstyle" v="round"/>
-          <prop k="customdash" v="5;2"/>
-          <prop k="customdash_map_unit_scale" v="0,0,0,0,0,0"/>
-          <prop k="customdash_unit" v="MM"/>
-          <prop k="draw_inside_polygon" v="0"/>
-          <prop k="joinstyle" v="round"/>
-          <prop k="line_color" v="202,0,32,255"/>
-          <prop k="line_style" v="solid"/>
-          <prop k="line_width" v="1.08571"/>
-          <prop k="line_width_unit" v="MM"/>
-          <prop k="offset" v="0"/>
-          <prop k="offset_map_unit_scale" v="0,0,0,0,0,0"/>
-          <prop k="offset_unit" v="MM"/>
-          <prop k="use_custom_dash" v="0"/>
-          <prop k="width_map_unit_scale" v="0,0,0,0,0,0"/>
+          <prop k="offset_unit_scale" v="0,0,0,0,0,0"/>
+          <symbol alpha="1" clip_to_extent="1" type="fill" name="@1@0">
+            <layer pass="0" class="SimpleFill" locked="0">
+              <prop k="border_width_map_unit_scale" v="0,0,0,0,0,0"/>
+              <prop k="color" v="202,0,32,255"/>
+              <prop k="joinstyle" v="bevel"/>
+              <prop k="offset" v="0,0"/>
+              <prop k="offset_map_unit_scale" v="0,0,0,0,0,0"/>
+              <prop k="offset_unit" v="MM"/>
+              <prop k="outline_color" v="0,0,0,255"/>
+              <prop k="outline_style" v="solid"/>
+              <prop k="outline_width" v="0.26"/>
+              <prop k="outline_width_unit" v="MM"/>
+              <prop k="style" v="solid"/>
+            </layer>
+          </symbol>
         </layer>
       </symbol>
       <symbol alpha="1" clip_to_extent="1" type="line" name="2">
-        <layer pass="0" class="SimpleLine" locked="1">
-          <prop k="capstyle" v="round"/>
-          <prop k="customdash" v="5;2"/>
-          <prop k="customdash_map_unit_scale" v="0,0,0,0,0,0"/>
-          <prop k="customdash_unit" v="MM"/>
-          <prop k="draw_inside_polygon" v="0"/>
-          <prop k="joinstyle" v="round"/>
-          <prop k="line_color" v="76,38,0,255"/>
-          <prop k="line_style" v="solid"/>
-          <prop k="line_width" v="1.2"/>
-          <prop k="line_width_unit" v="MM"/>
+        <layer pass="0" class="ArrowLine" locked="0">
+          <prop k="arrow_start_width" v="1"/>
+          <prop k="arrow_start_width_unit" v="MM"/>
+          <prop k="arrow_start_width_unit_scale" v="0,0,0,0,0,0"/>
+          <prop k="arrow_type" v="0"/>
+          <prop k="arrow_width" v="1"/>
+          <prop k="arrow_width_unit" v="MM"/>
+          <prop k="arrow_width_unit_scale" v="0,0,0,0,0,0"/>
+          <prop k="head_length" v="1.5"/>
+          <prop k="head_length_unit" v="MM"/>
+          <prop k="head_length_unit_scale" v="0,0,0,0,0,0"/>
+          <prop k="head_thickness" v="1.5"/>
+          <prop k="head_thickness_unit" v="MM"/>
+          <prop k="head_thickness_unit_scale" v="0,0,0,0,0,0"/>
+          <prop k="head_type" v="0"/>
+          <prop k="is_curved" v="1"/>
+          <prop k="is_repeated" v="1"/>
           <prop k="offset" v="0"/>
-          <prop k="offset_map_unit_scale" v="0,0,0,0,0,0"/>
           <prop k="offset_unit" v="MM"/>
-          <prop k="use_custom_dash" v="0"/>
-          <prop k="width_map_unit_scale" v="0,0,0,0,0,0"/>
-        </layer>
-        <layer pass="16" class="SimpleLine" locked="0">
-          <prop k="capstyle" v="round"/>
-          <prop k="customdash" v="5;2"/>
-          <prop k="customdash_map_unit_scale" v="0,0,0,0,0,0"/>
-          <prop k="customdash_unit" v="MM"/>
-          <prop k="draw_inside_polygon" v="0"/>
-          <prop k="joinstyle" v="round"/>
-          <prop k="line_color" v="244,165,130,255"/>
-          <prop k="line_style" v="solid"/>
-          <prop k="line_width" v="1.08571"/>
-          <prop k="line_width_unit" v="MM"/>
-          <prop k="offset" v="0"/>
-          <prop k="offset_map_unit_scale" v="0,0,0,0,0,0"/>
-          <prop k="offset_unit" v="MM"/>
-          <prop k="use_custom_dash" v="0"/>
-          <prop k="width_map_unit_scale" v="0,0,0,0,0,0"/>
+          <prop k="offset_unit_scale" v="0,0,0,0,0,0"/>
+          <symbol alpha="1" clip_to_extent="1" type="fill" name="@2@0">
+            <layer pass="0" class="SimpleFill" locked="0">
+              <prop k="border_width_map_unit_scale" v="0,0,0,0,0,0"/>
+              <prop k="color" v="236,132,110,255"/>
+              <prop k="joinstyle" v="bevel"/>
+              <prop k="offset" v="0,0"/>
+              <prop k="offset_map_unit_scale" v="0,0,0,0,0,0"/>
+              <prop k="offset_unit" v="MM"/>
+              <prop k="outline_color" v="0,0,0,255"/>
+              <prop k="outline_style" v="solid"/>
+              <prop k="outline_width" v="0.26"/>
+              <prop k="outline_width_unit" v="MM"/>
+              <prop k="style" v="solid"/>
+            </layer>
+          </symbol>
         </layer>
       </symbol>
       <symbol alpha="1" clip_to_extent="1" type="line" name="3">
-        <layer pass="0" class="SimpleLine" locked="1">
-          <prop k="capstyle" v="round"/>
-          <prop k="customdash" v="5;2"/>
-          <prop k="customdash_map_unit_scale" v="0,0,0,0,0,0"/>
-          <prop k="customdash_unit" v="MM"/>
-          <prop k="draw_inside_polygon" v="0"/>
-          <prop k="joinstyle" v="round"/>
-          <prop k="line_color" v="76,38,0,255"/>
-          <prop k="line_style" v="solid"/>
-          <prop k="line_width" v="1.2"/>
-          <prop k="line_width_unit" v="MM"/>
+        <layer pass="0" class="ArrowLine" locked="0">
+          <prop k="arrow_start_width" v="1"/>
+          <prop k="arrow_start_width_unit" v="MM"/>
+          <prop k="arrow_start_width_unit_scale" v="0,0,0,0,0,0"/>
+          <prop k="arrow_type" v="0"/>
+          <prop k="arrow_width" v="1"/>
+          <prop k="arrow_width_unit" v="MM"/>
+          <prop k="arrow_width_unit_scale" v="0,0,0,0,0,0"/>
+          <prop k="head_length" v="1.5"/>
+          <prop k="head_length_unit" v="MM"/>
+          <prop k="head_length_unit_scale" v="0,0,0,0,0,0"/>
+          <prop k="head_thickness" v="1.5"/>
+          <prop k="head_thickness_unit" v="MM"/>
+          <prop k="head_thickness_unit_scale" v="0,0,0,0,0,0"/>
+          <prop k="head_type" v="0"/>
+          <prop k="is_curved" v="1"/>
+          <prop k="is_repeated" v="1"/>
           <prop k="offset" v="0"/>
-          <prop k="offset_map_unit_scale" v="0,0,0,0,0,0"/>
           <prop k="offset_unit" v="MM"/>
-          <prop k="use_custom_dash" v="0"/>
-          <prop k="width_map_unit_scale" v="0,0,0,0,0,0"/>
-        </layer>
-        <layer pass="16" class="SimpleLine" locked="0">
-          <prop k="capstyle" v="round"/>
-          <prop k="customdash" v="5;2"/>
-          <prop k="customdash_map_unit_scale" v="0,0,0,0,0,0"/>
-          <prop k="customdash_unit" v="MM"/>
-          <prop k="draw_inside_polygon" v="0"/>
-          <prop k="joinstyle" v="round"/>
-          <prop k="line_color" v="247,247,185,255"/>
-          <prop k="line_style" v="solid"/>
-          <prop k="line_width" v="1.08571"/>
-          <prop k="line_width_unit" v="MM"/>
-          <prop k="offset" v="0"/>
-          <prop k="offset_map_unit_scale" v="0,0,0,0,0,0"/>
-          <prop k="offset_unit" v="MM"/>
-          <prop k="use_custom_dash" v="0"/>
-          <prop k="width_map_unit_scale" v="0,0,0,0,0,0"/>
+          <prop k="offset_unit_scale" v="0,0,0,0,0,0"/>
+          <symbol alpha="1" clip_to_extent="1" type="fill" name="@3@0">
+            <layer pass="0" class="SimpleFill" locked="0">
+              <prop k="border_width_map_unit_scale" v="0,0,0,0,0,0"/>
+              <prop k="color" v="246,215,200,255"/>
+              <prop k="joinstyle" v="bevel"/>
+              <prop k="offset" v="0,0"/>
+              <prop k="offset_map_unit_scale" v="0,0,0,0,0,0"/>
+              <prop k="offset_unit" v="MM"/>
+              <prop k="outline_color" v="0,0,0,255"/>
+              <prop k="outline_style" v="solid"/>
+              <prop k="outline_width" v="0.26"/>
+              <prop k="outline_width_unit" v="MM"/>
+              <prop k="style" v="solid"/>
+            </layer>
+          </symbol>
         </layer>
       </symbol>
       <symbol alpha="1" clip_to_extent="1" type="line" name="4">
-        <layer pass="0" class="SimpleLine" locked="1">
-          <prop k="capstyle" v="round"/>
-          <prop k="customdash" v="5;2"/>
-          <prop k="customdash_map_unit_scale" v="0,0,0,0,0,0"/>
-          <prop k="customdash_unit" v="MM"/>
-          <prop k="draw_inside_polygon" v="0"/>
-          <prop k="joinstyle" v="round"/>
-          <prop k="line_color" v="76,38,0,255"/>
-          <prop k="line_style" v="solid"/>
-          <prop k="line_width" v="1.2"/>
-          <prop k="line_width_unit" v="MM"/>
+        <layer pass="0" class="ArrowLine" locked="0">
+          <prop k="arrow_start_width" v="1"/>
+          <prop k="arrow_start_width_unit" v="MM"/>
+          <prop k="arrow_start_width_unit_scale" v="0,0,0,0,0,0"/>
+          <prop k="arrow_type" v="0"/>
+          <prop k="arrow_width" v="1"/>
+          <prop k="arrow_width_unit" v="MM"/>
+          <prop k="arrow_width_unit_scale" v="0,0,0,0,0,0"/>
+          <prop k="head_length" v="1.5"/>
+          <prop k="head_length_unit" v="MM"/>
+          <prop k="head_length_unit_scale" v="0,0,0,0,0,0"/>
+          <prop k="head_thickness" v="1.5"/>
+          <prop k="head_thickness_unit" v="MM"/>
+          <prop k="head_thickness_unit_scale" v="0,0,0,0,0,0"/>
+          <prop k="head_type" v="0"/>
+          <prop k="is_curved" v="1"/>
+          <prop k="is_repeated" v="1"/>
           <prop k="offset" v="0"/>
-          <prop k="offset_map_unit_scale" v="0,0,0,0,0,0"/>
           <prop k="offset_unit" v="MM"/>
-          <prop k="use_custom_dash" v="0"/>
-          <prop k="width_map_unit_scale" v="0,0,0,0,0,0"/>
-        </layer>
-        <layer pass="16" class="SimpleLine" locked="0">
-          <prop k="capstyle" v="round"/>
-          <prop k="customdash" v="5;2"/>
-          <prop k="customdash_map_unit_scale" v="0,0,0,0,0,0"/>
-          <prop k="customdash_unit" v="MM"/>
-          <prop k="draw_inside_polygon" v="0"/>
-          <prop k="joinstyle" v="round"/>
-          <prop k="line_color" v="146,197,222,255"/>
-          <prop k="line_style" v="solid"/>
-          <prop k="line_width" v="1.08571"/>
-          <prop k="line_width_unit" v="MM"/>
-          <prop k="offset" v="0"/>
-          <prop k="offset_map_unit_scale" v="0,0,0,0,0,0"/>
-          <prop k="offset_unit" v="MM"/>
-          <prop k="use_custom_dash" v="0"/>
-          <prop k="width_map_unit_scale" v="0,0,0,0,0,0"/>
+          <prop k="offset_unit_scale" v="0,0,0,0,0,0"/>
+          <symbol alpha="1" clip_to_extent="1" type="fill" name="@4@0">
+            <layer pass="0" class="SimpleFill" locked="0">
+              <prop k="border_width_map_unit_scale" v="0,0,0,0,0,0"/>
+              <prop k="color" v="207,227,237,255"/>
+              <prop k="joinstyle" v="bevel"/>
+              <prop k="offset" v="0,0"/>
+              <prop k="offset_map_unit_scale" v="0,0,0,0,0,0"/>
+              <prop k="offset_unit" v="MM"/>
+              <prop k="outline_color" v="0,0,0,255"/>
+              <prop k="outline_style" v="solid"/>
+              <prop k="outline_width" v="0.26"/>
+              <prop k="outline_width_unit" v="MM"/>
+              <prop k="style" v="solid"/>
+            </layer>
+          </symbol>
         </layer>
       </symbol>
       <symbol alpha="1" clip_to_extent="1" type="line" name="5">
-        <layer pass="0" class="SimpleLine" locked="1">
-          <prop k="capstyle" v="round"/>
-          <prop k="customdash" v="5;2"/>
-          <prop k="customdash_map_unit_scale" v="0,0,0,0,0,0"/>
-          <prop k="customdash_unit" v="MM"/>
-          <prop k="draw_inside_polygon" v="0"/>
-          <prop k="joinstyle" v="round"/>
-          <prop k="line_color" v="76,38,0,255"/>
-          <prop k="line_style" v="solid"/>
-          <prop k="line_width" v="1.2"/>
-          <prop k="line_width_unit" v="MM"/>
+        <layer pass="0" class="ArrowLine" locked="0">
+          <prop k="arrow_start_width" v="1"/>
+          <prop k="arrow_start_width_unit" v="MM"/>
+          <prop k="arrow_start_width_unit_scale" v="0,0,0,0,0,0"/>
+          <prop k="arrow_type" v="0"/>
+          <prop k="arrow_width" v="1"/>
+          <prop k="arrow_width_unit" v="MM"/>
+          <prop k="arrow_width_unit_scale" v="0,0,0,0,0,0"/>
+          <prop k="head_length" v="1.5"/>
+          <prop k="head_length_unit" v="MM"/>
+          <prop k="head_length_unit_scale" v="0,0,0,0,0,0"/>
+          <prop k="head_thickness" v="1.5"/>
+          <prop k="head_thickness_unit" v="MM"/>
+          <prop k="head_thickness_unit_scale" v="0,0,0,0,0,0"/>
+          <prop k="head_type" v="0"/>
+          <prop k="is_curved" v="1"/>
+          <prop k="is_repeated" v="1"/>
           <prop k="offset" v="0"/>
-          <prop k="offset_map_unit_scale" v="0,0,0,0,0,0"/>
           <prop k="offset_unit" v="MM"/>
-          <prop k="use_custom_dash" v="0"/>
-          <prop k="width_map_unit_scale" v="0,0,0,0,0,0"/>
+          <prop k="offset_unit_scale" v="0,0,0,0,0,0"/>
+          <symbol alpha="1" clip_to_extent="1" type="fill" name="@5@0">
+            <layer pass="0" class="SimpleFill" locked="0">
+              <prop k="border_width_map_unit_scale" v="0,0,0,0,0,0"/>
+              <prop k="color" v="118,180,213,255"/>
+              <prop k="joinstyle" v="bevel"/>
+              <prop k="offset" v="0,0"/>
+              <prop k="offset_map_unit_scale" v="0,0,0,0,0,0"/>
+              <prop k="offset_unit" v="MM"/>
+              <prop k="outline_color" v="0,0,0,255"/>
+              <prop k="outline_style" v="solid"/>
+              <prop k="outline_width" v="0.26"/>
+              <prop k="outline_width_unit" v="MM"/>
+              <prop k="style" v="solid"/>
+            </layer>
+          </symbol>
         </layer>
-        <layer pass="16" class="SimpleLine" locked="0">
-          <prop k="capstyle" v="round"/>
-          <prop k="customdash" v="5;2"/>
-          <prop k="customdash_map_unit_scale" v="0,0,0,0,0,0"/>
-          <prop k="customdash_unit" v="MM"/>
-          <prop k="draw_inside_polygon" v="0"/>
-          <prop k="joinstyle" v="round"/>
-          <prop k="line_color" v="5,113,176,255"/>
-          <prop k="line_style" v="solid"/>
-          <prop k="line_width" v="1.08571"/>
-          <prop k="line_width_unit" v="MM"/>
+      </symbol>
+      <symbol alpha="1" clip_to_extent="1" type="line" name="6">
+        <layer pass="0" class="ArrowLine" locked="0">
+          <prop k="arrow_start_width" v="1"/>
+          <prop k="arrow_start_width_unit" v="MM"/>
+          <prop k="arrow_start_width_unit_scale" v="0,0,0,0,0,0"/>
+          <prop k="arrow_type" v="0"/>
+          <prop k="arrow_width" v="1"/>
+          <prop k="arrow_width_unit" v="MM"/>
+          <prop k="arrow_width_unit_scale" v="0,0,0,0,0,0"/>
+          <prop k="head_length" v="1.5"/>
+          <prop k="head_length_unit" v="MM"/>
+          <prop k="head_length_unit_scale" v="0,0,0,0,0,0"/>
+          <prop k="head_thickness" v="1.5"/>
+          <prop k="head_thickness_unit" v="MM"/>
+          <prop k="head_thickness_unit_scale" v="0,0,0,0,0,0"/>
+          <prop k="head_type" v="0"/>
+          <prop k="is_curved" v="1"/>
+          <prop k="is_repeated" v="1"/>
           <prop k="offset" v="0"/>
-          <prop k="offset_map_unit_scale" v="0,0,0,0,0,0"/>
           <prop k="offset_unit" v="MM"/>
-          <prop k="use_custom_dash" v="0"/>
-          <prop k="width_map_unit_scale" v="0,0,0,0,0,0"/>
+          <prop k="offset_unit_scale" v="0,0,0,0,0,0"/>
+          <symbol alpha="1" clip_to_extent="1" type="fill" name="@6@0">
+            <layer pass="0" class="SimpleFill" locked="0">
+              <prop k="border_width_map_unit_scale" v="0,0,0,0,0,0"/>
+              <prop k="color" v="5,113,176,255"/>
+              <prop k="joinstyle" v="bevel"/>
+              <prop k="offset" v="0,0"/>
+              <prop k="offset_map_unit_scale" v="0,0,0,0,0,0"/>
+              <prop k="offset_unit" v="MM"/>
+              <prop k="outline_color" v="0,0,0,255"/>
+              <prop k="outline_style" v="solid"/>
+              <prop k="outline_width" v="0.26"/>
+              <prop k="outline_width_unit" v="MM"/>
+              <prop k="style" v="solid"/>
+            </layer>
+          </symbol>
         </layer>
       </symbol>
     </symbols>
     <source-symbol>
       <symbol alpha="1" clip_to_extent="1" type="line" name="0">
-        <layer pass="0" class="SimpleLine" locked="1">
-          <prop k="capstyle" v="round"/>
-          <prop k="customdash" v="5;2"/>
-          <prop k="customdash_map_unit_scale" v="0,0,0,0,0,0"/>
-          <prop k="customdash_unit" v="MM"/>
-          <prop k="draw_inside_polygon" v="0"/>
-          <prop k="joinstyle" v="round"/>
-          <prop k="line_color" v="76,38,0,255"/>
-          <prop k="line_style" v="solid"/>
-          <prop k="line_width" v="1.2"/>
-          <prop k="line_width_unit" v="MM"/>
+        <layer pass="0" class="ArrowLine" locked="0">
+          <prop k="arrow_start_width" v="1"/>
+          <prop k="arrow_start_width_unit" v="MM"/>
+          <prop k="arrow_start_width_unit_scale" v="0,0,0,0,0,0"/>
+          <prop k="arrow_type" v="0"/>
+          <prop k="arrow_width" v="1"/>
+          <prop k="arrow_width_unit" v="MM"/>
+          <prop k="arrow_width_unit_scale" v="0,0,0,0,0,0"/>
+          <prop k="head_length" v="1.5"/>
+          <prop k="head_length_unit" v="MM"/>
+          <prop k="head_length_unit_scale" v="0,0,0,0,0,0"/>
+          <prop k="head_thickness" v="1.5"/>
+          <prop k="head_thickness_unit" v="MM"/>
+          <prop k="head_thickness_unit_scale" v="0,0,0,0,0,0"/>
+          <prop k="head_type" v="0"/>
+          <prop k="is_curved" v="1"/>
+          <prop k="is_repeated" v="1"/>
           <prop k="offset" v="0"/>
-          <prop k="offset_map_unit_scale" v="0,0,0,0,0,0"/>
           <prop k="offset_unit" v="MM"/>
-          <prop k="use_custom_dash" v="0"/>
-          <prop k="width_map_unit_scale" v="0,0,0,0,0,0"/>
-        </layer>
-        <layer pass="16" class="SimpleLine" locked="0">
-          <prop k="capstyle" v="round"/>
-          <prop k="customdash" v="5;2"/>
-          <prop k="customdash_map_unit_scale" v="0,0,0,0,0,0"/>
-          <prop k="customdash_unit" v="MM"/>
-          <prop k="draw_inside_polygon" v="0"/>
-          <prop k="joinstyle" v="round"/>
-          <prop k="line_color" v="105,161,239,255"/>
-          <prop k="line_style" v="solid"/>
-          <prop k="line_width" v="1.08571"/>
-          <prop k="line_width_unit" v="MM"/>
-          <prop k="offset" v="0"/>
-          <prop k="offset_map_unit_scale" v="0,0,0,0,0,0"/>
-          <prop k="offset_unit" v="MM"/>
-          <prop k="use_custom_dash" v="0"/>
-          <prop k="width_map_unit_scale" v="0,0,0,0,0,0"/>
+          <prop k="offset_unit_scale" v="0,0,0,0,0,0"/>
+          <symbol alpha="1" clip_to_extent="1" type="fill" name="@0@0">
+            <layer pass="0" class="SimpleFill" locked="0">
+              <prop k="border_width_map_unit_scale" v="0,0,0,0,0,0"/>
+              <prop k="color" v="105,161,239,255"/>
+              <prop k="joinstyle" v="bevel"/>
+              <prop k="offset" v="0,0"/>
+              <prop k="offset_map_unit_scale" v="0,0,0,0,0,0"/>
+              <prop k="offset_unit" v="MM"/>
+              <prop k="outline_color" v="0,0,0,255"/>
+              <prop k="outline_style" v="solid"/>
+              <prop k="outline_width" v="0.26"/>
+              <prop k="outline_width_unit" v="MM"/>
+              <prop k="style" v="solid"/>
+            </layer>
+          </symbol>
         </layer>
       </symbol>
     </source-symbol>
@@ -517,7 +570,7 @@
   <excludeAttributesWMS/>
   <excludeAttributesWFS/>
   <attributeactions default="-1"/>
-  <attributetableconfig actionWidgetStyle="dropDown" sortExpression="" sortOrder="0">
+  <attributetableconfig actionWidgetStyle="dropDown" sortExpression="&quot;value&quot;" sortOrder="0">
     <columns>
       <column width="-1" hidden="0" type="field" name="weight"/>
       <column width="-1" hidden="0" type="field" name="line_id"/>

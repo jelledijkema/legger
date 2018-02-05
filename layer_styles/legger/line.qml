@@ -1,10 +1,10 @@
 <!DOCTYPE qgis PUBLIC 'http://mrcc.com/qgis.dtd' 'SYSTEM'>
-<qgis version="2.18.12" simplifyAlgorithm="0" minimumScale="0" maximumScale="1e+08" simplifyDrawingHints="1" minLabelScale="0" maxLabelScale="1e+08" simplifyDrawingTol="1" readOnly="0" simplifyMaxScale="1" hasScaleBasedVisibilityFlag="0" simplifyLocal="1" scaleBasedLabelVisibilityFlag="0">
+<qgis version="2.18.16" simplifyAlgorithm="0" minimumScale="0" maximumScale="1e+08" simplifyDrawingHints="1" minLabelScale="0" maxLabelScale="1e+08" simplifyDrawingTol="1" readOnly="0" simplifyMaxScale="1" hasScaleBasedVisibilityFlag="0" simplifyLocal="1" scaleBasedLabelVisibilityFlag="0">
   <edittypes>
-    <edittype widgetv2type="TextEdit" name="OGC_FID">
+    <edittype widgetv2type="TextEdit" name="objectid">
       <widgetv2config IsMultiline="0" fieldEditable="1" constraint="" UseHtml="0" labelOnTop="0" constraintDescription="" notNull="0"/>
     </edittype>
-    <edittype widgetv2type="TextEdit" name="objectid">
+    <edittype widgetv2type="TextEdit" name="id">
       <widgetv2config IsMultiline="0" fieldEditable="1" constraint="" UseHtml="0" labelOnTop="0" constraintDescription="" notNull="0"/>
     </edittype>
     <edittype widgetv2type="TextEdit" name="code">
@@ -13,13 +13,10 @@
     <edittype widgetv2type="TextEdit" name="categorieoppwaterlichaam">
       <widgetv2config IsMultiline="0" fieldEditable="1" constraint="" UseHtml="0" labelOnTop="0" constraintDescription="" notNull="0"/>
     </edittype>
-    <edittype widgetv2type="TextEdit" name="ws_in_peilgebied">
+    <edittype widgetv2type="TextEdit" name="streefpeil">
       <widgetv2config IsMultiline="0" fieldEditable="1" constraint="" UseHtml="0" labelOnTop="0" constraintDescription="" notNull="0"/>
     </edittype>
-    <edittype widgetv2type="TextEdit" name="hydroobject_id">
-      <widgetv2config IsMultiline="0" fieldEditable="1" constraint="" UseHtml="0" labelOnTop="0" constraintDescription="" notNull="0"/>
-    </edittype>
-    <edittype widgetv2type="TextEdit" name="qend">
+    <edittype widgetv2type="TextEdit" name="debiet">
       <widgetv2config IsMultiline="0" fieldEditable="1" constraint="" UseHtml="0" labelOnTop="0" constraintDescription="" notNull="0"/>
     </edittype>
     <edittype widgetv2type="TextEdit" name="channel_id">
@@ -28,17 +25,59 @@
     <edittype widgetv2type="TextEdit" name="flowline_id">
       <widgetv2config IsMultiline="0" fieldEditable="1" constraint="" UseHtml="0" labelOnTop="0" constraintDescription="" notNull="0"/>
     </edittype>
-    <edittype widgetv2type="TextEdit" name="nr_candidates">
+    <edittype widgetv2type="TextEdit" name="shape_length">
       <widgetv2config IsMultiline="0" fieldEditable="1" constraint="" UseHtml="0" labelOnTop="0" constraintDescription="" notNull="0"/>
     </edittype>
-    <edittype widgetv2type="TextEdit" name="score">
+    <edittype widgetv2type="TextEdit" name="channnel_id">
+      <widgetv2config IsMultiline="0" fieldEditable="1" constraint="" UseHtml="0" labelOnTop="0" constraintDescription="" notNull="0"/>
+    </edittype>
+    <edittype widgetv2type="TextEdit" name="objectid:1">
+      <widgetv2config IsMultiline="0" fieldEditable="1" constraint="" UseHtml="0" labelOnTop="0" constraintDescription="" notNull="0"/>
+    </edittype>
+    <edittype widgetv2type="TextEdit" name="id:1">
+      <widgetv2config IsMultiline="0" fieldEditable="1" constraint="" UseHtml="0" labelOnTop="0" constraintDescription="" notNull="0"/>
+    </edittype>
+    <edittype widgetv2type="TextEdit" name="diepte">
+      <widgetv2config IsMultiline="0" fieldEditable="1" constraint="" UseHtml="0" labelOnTop="0" constraintDescription="" notNull="0"/>
+    </edittype>
+    <edittype widgetv2type="TextEdit" name="bron_diepte">
+      <widgetv2config IsMultiline="0" fieldEditable="1" constraint="" UseHtml="0" labelOnTop="0" constraintDescription="" notNull="0"/>
+    </edittype>
+    <edittype widgetv2type="TextEdit" name="bodemhoogte">
+      <widgetv2config IsMultiline="0" fieldEditable="1" constraint="" UseHtml="0" labelOnTop="0" constraintDescription="" notNull="0"/>
+    </edittype>
+    <edittype widgetv2type="TextEdit" name="breedte">
+      <widgetv2config IsMultiline="0" fieldEditable="1" constraint="" UseHtml="0" labelOnTop="0" constraintDescription="" notNull="0"/>
+    </edittype>
+    <edittype widgetv2type="TextEdit" name="bron_breedte">
+      <widgetv2config IsMultiline="0" fieldEditable="1" constraint="" UseHtml="0" labelOnTop="0" constraintDescription="" notNull="0"/>
+    </edittype>
+    <edittype widgetv2type="TextEdit" name="lengte">
+      <widgetv2config IsMultiline="0" fieldEditable="1" constraint="" UseHtml="0" labelOnTop="0" constraintDescription="" notNull="0"/>
+    </edittype>
+    <edittype widgetv2type="TextEdit" name="taludvoorkeur">
+      <widgetv2config IsMultiline="0" fieldEditable="1" constraint="" UseHtml="0" labelOnTop="0" constraintDescription="" notNull="0"/>
+    </edittype>
+    <edittype widgetv2type="TextEdit" name="steilste_talud">
+      <widgetv2config IsMultiline="0" fieldEditable="1" constraint="" UseHtml="0" labelOnTop="0" constraintDescription="" notNull="0"/>
+    </edittype>
+    <edittype widgetv2type="TextEdit" name="grondsoort">
+      <widgetv2config IsMultiline="0" fieldEditable="1" constraint="" UseHtml="0" labelOnTop="0" constraintDescription="" notNull="0"/>
+    </edittype>
+    <edittype widgetv2type="TextEdit" name="bron_grondsoort">
+      <widgetv2config IsMultiline="0" fieldEditable="1" constraint="" UseHtml="0" labelOnTop="0" constraintDescription="" notNull="0"/>
+    </edittype>
+    <edittype widgetv2type="TextEdit" name="hydro_id">
+      <widgetv2config IsMultiline="0" fieldEditable="1" constraint="" UseHtml="0" labelOnTop="0" constraintDescription="" notNull="0"/>
+    </edittype>
+    <edittype widgetv2type="TextEdit" name="direction">
       <widgetv2config IsMultiline="0" fieldEditable="1" constraint="" UseHtml="0" labelOnTop="0" constraintDescription="" notNull="0"/>
     </edittype>
   </edittypes>
   <renderer-v2 forceraster="0" symbollevels="0" type="RuleRenderer" enableorderby="0">
     <rules key="{ad033d4e-11b9-4235-ae0b-59badce81b80}">
-      <rule filter=" &quot;qend&quot; > 0" key="{0fcbdc58-eae6-4a9c-a401-51df58155901}" symbol="0"/>
-      <rule filter="&quot;qend&quot; &lt;= 0" key="{1e8e66d6-6e6b-4aa8-9536-aa1a6b1d21a4}" symbol="1"/>
+      <rule filter=" &quot;debiet&quot; > 0" key="{0fcbdc58-eae6-4a9c-a401-51df58155901}" symbol="0"/>
+      <rule filter="&quot;debiet&quot; &lt;= 0" key="{1e8e66d6-6e6b-4aa8-9536-aa1a6b1d21a4}" symbol="1"/>
     </rules>
     <symbols>
       <symbol alpha="1" clip_to_extent="1" type="line" name="0">
@@ -351,35 +390,61 @@
   <DiagramLayerSettings yPosColumn="-1" showColumn="-1" linePlacementFlags="10" placement="2" dist="0" xPosColumn="-1" priority="0" obstacle="0" zIndex="0" showAll="1"/>
   <annotationform>.</annotationform>
   <aliases>
-    <alias field="OGC_FID" index="0" name=""/>
-    <alias field="objectid" index="1" name=""/>
+    <alias field="objectid" index="0" name=""/>
+    <alias field="id" index="1" name=""/>
     <alias field="code" index="2" name=""/>
     <alias field="categorieoppwaterlichaam" index="3" name=""/>
-    <alias field="ws_in_peilgebied" index="4" name=""/>
-    <alias field="hydroobject_id" index="5" name=""/>
-    <alias field="qend" index="6" name=""/>
-    <alias field="channel_id" index="7" name=""/>
-    <alias field="flowline_id" index="8" name=""/>
-    <alias field="nr_candidates" index="9" name=""/>
-    <alias field="score" index="10" name=""/>
+    <alias field="streefpeil" index="4" name=""/>
+    <alias field="debiet" index="5" name=""/>
+    <alias field="channel_id" index="6" name=""/>
+    <alias field="flowline_id" index="7" name=""/>
+    <alias field="shape_length" index="8" name=""/>
+    <alias field="channnel_id" index="9" name=""/>
+    <alias field="objectid:1" index="10" name=""/>
+    <alias field="id:1" index="11" name=""/>
+    <alias field="diepte" index="12" name=""/>
+    <alias field="bron_diepte" index="13" name=""/>
+    <alias field="bodemhoogte" index="14" name=""/>
+    <alias field="breedte" index="15" name=""/>
+    <alias field="bron_breedte" index="16" name=""/>
+    <alias field="lengte" index="17" name=""/>
+    <alias field="taludvoorkeur" index="18" name=""/>
+    <alias field="steilste_talud" index="19" name=""/>
+    <alias field="grondsoort" index="20" name=""/>
+    <alias field="bron_grondsoort" index="21" name=""/>
+    <alias field="hydro_id" index="22" name=""/>
+    <alias field="direction" index="23" name=""/>
   </aliases>
   <excludeAttributesWMS/>
   <excludeAttributesWFS/>
   <attributeactions default="-1"/>
   <attributetableconfig actionWidgetStyle="dropDown" sortExpression="" sortOrder="0">
     <columns>
-      <column width="-1" hidden="0" type="field" name="OGC_FID"/>
       <column width="-1" hidden="0" type="field" name="objectid"/>
       <column width="-1" hidden="0" type="field" name="code"/>
       <column width="-1" hidden="0" type="field" name="categorieoppwaterlichaam"/>
-      <column width="-1" hidden="0" type="field" name="ws_in_peilgebied"/>
-      <column width="-1" hidden="0" type="field" name="hydroobject_id"/>
-      <column width="-1" hidden="0" type="field" name="qend"/>
       <column width="-1" hidden="0" type="field" name="channel_id"/>
       <column width="-1" hidden="0" type="field" name="flowline_id"/>
-      <column width="-1" hidden="0" type="field" name="nr_candidates"/>
-      <column width="-1" hidden="0" type="field" name="score"/>
       <column width="-1" hidden="1" type="actions"/>
+      <column width="-1" hidden="0" type="field" name="id"/>
+      <column width="-1" hidden="0" type="field" name="streefpeil"/>
+      <column width="-1" hidden="0" type="field" name="debiet"/>
+      <column width="-1" hidden="0" type="field" name="shape_length"/>
+      <column width="-1" hidden="0" type="field" name="channnel_id"/>
+      <column width="-1" hidden="0" type="field" name="objectid:1"/>
+      <column width="-1" hidden="0" type="field" name="id:1"/>
+      <column width="-1" hidden="0" type="field" name="diepte"/>
+      <column width="-1" hidden="0" type="field" name="bron_diepte"/>
+      <column width="-1" hidden="0" type="field" name="bodemhoogte"/>
+      <column width="-1" hidden="0" type="field" name="breedte"/>
+      <column width="-1" hidden="0" type="field" name="bron_breedte"/>
+      <column width="-1" hidden="0" type="field" name="lengte"/>
+      <column width="-1" hidden="0" type="field" name="taludvoorkeur"/>
+      <column width="-1" hidden="0" type="field" name="steilste_talud"/>
+      <column width="-1" hidden="0" type="field" name="grondsoort"/>
+      <column width="-1" hidden="0" type="field" name="bron_grondsoort"/>
+      <column width="-1" hidden="0" type="field" name="hydro_id"/>
+      <column width="-1" hidden="0" type="field" name="direction"/>
     </columns>
   </attributetableconfig>
   <editform>.</editform>
@@ -410,17 +475,30 @@ def my_form_open(dialog, layer, feature):
     <fieldstyles/>
   </conditionalstyles>
   <defaults>
-    <default field="OGC_FID" expression=""/>
     <default field="objectid" expression=""/>
+    <default field="id" expression=""/>
     <default field="code" expression=""/>
     <default field="categorieoppwaterlichaam" expression=""/>
-    <default field="ws_in_peilgebied" expression=""/>
-    <default field="hydroobject_id" expression=""/>
-    <default field="qend" expression=""/>
+    <default field="streefpeil" expression=""/>
+    <default field="debiet" expression=""/>
     <default field="channel_id" expression=""/>
     <default field="flowline_id" expression=""/>
-    <default field="nr_candidates" expression=""/>
-    <default field="score" expression=""/>
+    <default field="shape_length" expression=""/>
+    <default field="channnel_id" expression=""/>
+    <default field="objectid:1" expression=""/>
+    <default field="id:1" expression=""/>
+    <default field="diepte" expression=""/>
+    <default field="bron_diepte" expression=""/>
+    <default field="bodemhoogte" expression=""/>
+    <default field="breedte" expression=""/>
+    <default field="bron_breedte" expression=""/>
+    <default field="lengte" expression=""/>
+    <default field="taludvoorkeur" expression=""/>
+    <default field="steilste_talud" expression=""/>
+    <default field="grondsoort" expression=""/>
+    <default field="bron_grondsoort" expression=""/>
+    <default field="hydro_id" expression=""/>
+    <default field="direction" expression=""/>
   </defaults>
   <previewExpression></previewExpression>
   <layerGeometryType>1</layerGeometryType>
