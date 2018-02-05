@@ -20,6 +20,14 @@ from qgis.core import (QgsPoint, QgsRectangle, QgsCoordinateTransform,
 from qgis.core import QgsDataSourceURI
 from legger.qt_models.legger_tree import LeggerTreeModel
 
+from legger.sql_models.legger import HydroObject
+from legger.sql_models.legger_database import LeggerDatabase
+from shapely.geometry import LineString
+from legger.qt_models.profile import ProfileModel
+from shapely.wkt import loads
+
+from sqlalchemy.orm import joinedload
+
 log = logging.getLogger('legger.' + __name__)
 
 try:
@@ -63,44 +71,44 @@ class PlotItemTable(QTableView):
         self.on_close()
         event.accept()
 
-    # def eventFilter(self, widget, event):
-    #     if widget is self.viewport():
-    #
-    #         if QEvent is None:
-    #             return QTableView.eventFilter(self, widget, event)
-    #         elif event.type() == QEvent.MouseMove:
-    #             row = self.indexAt(event.pos()).row()
-    #             if row == 0 and self.model and row > self.model.rowCount():
-    #                 row = None
-    #
-    #         elif event.type() == QEvent.Leave:
-    #             row = None
-    #             self.hoverExitAllRows.emit()
-    #         else:
-    #             row = self._last_hovered_row
-    #
-    #         if row != self._last_hovered_row:
-    #             if self._last_hovered_row is not None:
-    #                 try:
-    #                     self.hover_exit(self._last_hovered_row)
-    #                 except IndexError:
-    #                     log.warning("Hover row index %s out of range",
-    #                                 self._last_hovered_row)
-    #                     # self.hoverExitRow.emit(self._last_hovered_row)
-    #             # self.hoverEnterRow.emit(row)
-    #             if row is not None:
-    #                 try:
-    #                     self.hover_enter(row)
-    #                 except IndexError:
-    #                     log.warning("Hover row index %s out of range", row),
-    #             self._last_hovered_row = row
-    #             pass
-    #     return QTableView.eventFilter(self, widget, event)
+    def eventFilter(self, widget, event):
+        if widget is self.viewport():
+
+            if QEvent is None:
+                return QTableView.eventFilter(self, widget, event)
+            elif event.type() == QEvent.MouseMove:
+                row = self.indexAt(event.pos()).row()
+                if row == 0 and self.model and row > self.model.rowCount():
+                    row = None
+
+            elif event.type() == QEvent.Leave:
+                row = None
+                self.hoverExitAllRows.emit()
+            else:
+                row = self._last_hovered_row
+
+            if row != self._last_hovered_row:
+                if self._last_hovered_row is not None:
+                    try:
+                        self.hover_exit(self._last_hovered_row)
+                    except IndexError:
+                        log.warning("Hover row index %s out of range",
+                                    self._last_hovered_row)
+                        # self.hoverExitRow.emit(self._last_hovered_row)
+                # self.hoverEnterRow.emit(row)
+                if row is not None:
+                    try:
+                        self.hover_enter(row)
+                    except IndexError:
+                        log.warning("Hover row index %s out of range", row),
+                self._last_hovered_row = row
+                pass
+        return QTableView.eventFilter(self, widget, event)
 
     def hover_exit(self, row_nr):
         if row_nr >= 0:
             item = self.model.rows[row_nr]
-            item.color.value = item.color.value[:3] + [150]
+            item.color.value = list(item.color.value)[:3] + [150]
             item.hover.value = False
 
     def hover_enter(self, row_nr):
@@ -108,7 +116,7 @@ class PlotItemTable(QTableView):
             item = self.model.rows[row_nr]
             name = item.name.value
             self.hoverEnterRow.emit(name)
-            item.color.value = item.color.value[:3] + [220]
+            item.color.value = list(item.color.value)[:3] + [220]
             item.hover.value = True
 
     def setModel(self, model):
@@ -131,11 +139,20 @@ class LeggerPlotWidget(pg.PlotWidget):
 
         self.series = {}
 
-    def setModel(self, model):
-        self.model = model
-        self.model.dataChanged.connect(self.data_changed)
-        self.model.rowsInserted.connect(self.on_insert)
-        self.model.rowsAboutToBeRemoved.connect(
+    def setMeasuredModel(self, model):
+        # todo: remove listeners to old model?
+        self.measured_model = model
+        self.measured_model.dataChanged.connect(self.data_changed_measured)
+        self.measured_model.rowsInserted.connect(self.on_insert)
+        self.measured_model.rowsAboutToBeRemoved.connect(
+            self.on_remove)
+
+    def setVariantModel(self, model):
+        # todo: remove listeners to old model?
+        self.variant_model = model
+        self.variant_model.dataChanged.connect(self.data_changed_variant)
+        self.variant_model.rowsInserted.connect(self.on_insert)
+        self.variant_model.rowsAboutToBeRemoved.connect(
             self.on_remove)
 
     def on_remove(self):
@@ -147,59 +164,57 @@ class LeggerPlotWidget(pg.PlotWidget):
     def draw_lines(self):
         self.clear()
 
-        ts = self.model.ts
+        models = [self.measured_model, self.variant_model]
 
-        zeros = np.zeros(shape=(np.size(ts, 0),))
-        zero_serie = pg.PlotDataItem(
-            x=ts,
-            y=zeros,
-            connect='finite',
-            pen=pg.mkPen(color=QColor(0, 0, 0, 220), width=1))
-        self.addItem(zero_serie)
+        for model in models:
+            for item in model.rows:
+                if item.active.value:
+                    midpoint = sum([p[0] for p in item.points.value[-2:]]) / 2
 
-        # todo: implement specific logic
-        # plot_item = pg.PlotDataItem(
-        #     x=width,
-        #     y=height,
-        #     connect='finite',
-        #     pen=pg.mkPen(color=QColor(*item.color.value), width=1))
+                    width = [p[0] - midpoint for p in item.points.value]
+                    height = [p[1] for p in item.points.value]
 
-        # color = item.color.value
-        # fill = pg.FillBetweenItem(prev_pldi,
-        #                           plot_item,
-        #                           pg.mkBrush(*color))
+                    plot_item = pg.PlotDataItem(
+                        x=width,
+                        y=height,
+                        connect='finite',
+                        pen=pg.mkPen(color=QColor(*item.color.value), width=1))
 
-        # # keep reference
-        # item._plots[dir] = plot_item
-        # self.addItem(item._plots[dir])
-        # self.addItem(item._plots[dir + 'fill'])
+                    # keep reference
+                    item._plot = plot_item
+                    self.addItem(item._plot)
 
         self.autoRange()
 
-    def data_changed(self, index):
+    def data_changed_variant(self, index):
+        self.data_changed(self.variant_model, index)
+
+    def data_changed_measured(self, index):
+        self.data_changed(self.measured_model, index)
+
+    def data_changed(self, model, index):
         """
         change graphs based on changes in locations
         :param index: index of changed field
         """
-        if self.model.columns[index.column()].name == 'active':
+        if model.columns[index.column()].name == 'active':
             self.draw_lines()
 
-        elif self.model.columns[index.column()].name == 'hover':
-            item = self.model.rows[index.row()]
+        elif model.columns[index.column()].name == 'hover':
+            for item in model.rows:
+                item._plot.setPen(color=list(item.color.value)[:3] + [20],
+                                  width=1)
+
+            item = model.rows[index.row()]
             if item.hover.value:
                 if item.active.value:
-                    if 'xx' in item._plots:
-                        item._plots['xx'].setPen(color=item.color.value,
-                                                 width=1)
-                        item._plots['xxfill'].setBrush(
-                            pg.mkBrush(item.color.value))
+                    item._plot.setPen(color=item.color.value,
+                                      width=2)
             else:
-                if item.active.value:
-                    if 'xx' in item._plots:
-                        item._plots['xx'].setPen(color=item.color.value,
-                                                 width=1)
-                        item._plots['xxfill'].setBrush(
-                            pg.mkBrush(item.color.value))
+                # if item.active.value:
+                for item in model.rows:
+                    item._plot.setPen(color=item.color.value,
+                                      width=1)
 
 
 class LeggerTreeWidget(QTreeView):
@@ -222,25 +237,26 @@ class LeggerTreeWidget(QTreeView):
 class LeggerWidget(QDockWidget):
     closingWidget = pyqtSignal()
 
-    def __init__(self, parent=None, iface=None):
+    def __init__(self, parent=None, iface=None, path_legger_db=None):
         """Constructor."""
         super(LeggerWidget, self).__init__(parent)
         self.iface = iface
+        self.path_legger_db = path_legger_db
 
         # init class params
         self.network_tool_active = False
+        self.measured_model = ProfileModel()
+        self.variant_model = ProfileModel()
         self.legger_tree_model = LeggerTreeModel()
 
         # setup ui
         self.setup_ui(self)
 
-        self.model = LeggerItemModel()
-        self.plot_item_table.setModel(self.model)
-        self.plot_item_table.setModel(self.model)
-        self.plot_widget.setModel(self.model)
+        # self.model = LeggerItemModel()
 
-
-
+        self.plot_item_table.setModel(self.variant_model)
+        self.plot_widget.setVariantModel(self.variant_model)
+        self.plot_widget.setMeasuredModel(self.measured_model)
 
         self.line_layer = self.get_line_layer()
 
@@ -257,6 +273,15 @@ class LeggerWidget(QDockWidget):
             self.toggle_startpoint_button)
         self.reset_network_tree_button.clicked.connect(
             self.reset_network_tree)
+
+        db = LeggerDatabase(
+            {
+                'db_path': path_legger_db
+            },
+            'spatialite'
+        )
+        # db.create_and_check_fields()
+        self.session = db.get_session()
 
         # initially turn on tool
         # self.select_startpoint_button.toggle()
@@ -312,12 +337,7 @@ class LeggerWidget(QDockWidget):
                                   'spatialite')
 
         return get_layer(
-            os.path.join(
-                os.path.dirname(__file__),
-                os.path.pardir,
-                'tests', 'data',
-                'test_spatialite_output_with_theoretical_profiles.sqlite'
-            ),
+            self.path_legger_db,
             'hydroobjects_kenmerken',
             'geometry'
         )
@@ -351,24 +371,71 @@ class LeggerWidget(QDockWidget):
             """Calculate the distance w.r.t. the clicked location."""
             import math
             xc, yc = clicked_coordinate
-            x, y = coordinate
+            x, y = coordinate[0]
             dist = math.sqrt((x - xc) ** 2 + (y - yc) ** 2)
             return dist
 
         selected_coordinates = reduce(
-            lambda accum, f: accum + [f.geometry().vertexAt(0),
-                                      f.geometry().vertexAt(len(f.geometry().asPolyline())-1)],
+            lambda accum, f: accum + [(f.geometry().vertexAt(0), f),
+                                      (f.geometry().vertexAt(len(f.geometry().asPolyline()) - 1), f)],
             selected_features, [])
 
         if len(selected_coordinates) == 0:
             return
 
-        closest_point = min(selected_coordinates, key=distance)
+        closest_point, feature = min(selected_coordinates, key=distance)
         next_point = QgsPoint(closest_point)
 
         if len(selected_features) > 0:
             self.network.reset()
             self.network.add_point(next_point)
+
+            # todo: add graph functions here
+
+            field_idx = self.network._virtual_tree_layer.fieldNameIndex('line_id')
+            ids = self.network._virtual_tree_layer.uniqueValues(field_idx)
+
+            try:
+                ids.remove(feature['id'])
+            except AttributeError:
+                pass
+            except ValueError:
+                pass
+
+            hydro_objects = self.session.query(HydroObject).filter(HydroObject.id.in_(ids)).all()
+
+            self.measured_model.removeRows(0, len(self.measured_model.rows))
+            profs = []
+            for obj in hydro_objects:
+                for profile in obj.figuren.filter_by(type_prof='m').all():
+                    profs.append({
+                        'name': profile.profid,
+                        'color': (128, 128, 128, 180),
+                        'points': [p for p in loads(profile.coord).exterior.coords]
+                    })
+
+            hydro_object = self.session.query(HydroObject).filter_by(id=feature['id']).first()
+
+            for profile in hydro_object.figuren.filter_by(type_prof='m').all():
+                profs.append({
+                    'name': profile.profid,
+                    'color': (128, 128, 128, 256),
+                    'points': [p for p in loads(profile.coord).exterior.coords]
+                })
+
+            self.measured_model.insertRows(profs)
+
+            self.variant_model.removeRows(0, len(self.variant_model.rows))
+            profs = []
+            for profile in hydro_object.figuren.filter_by(type_prof='t').all():
+                profs.append({
+                    'name': profile.profid,
+                    'color': (243, 132, 0, 180),
+                    'points': [p for p in loads(profile.coord).exterior.coords]
+                })
+            self.variant_model.insertRows(profs)
+
+            # hydro_object.figuren.filter_by(HydroObject.type_prof='m')
 
     def accept(self):
         pass

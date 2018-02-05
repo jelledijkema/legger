@@ -47,8 +47,16 @@ class LeggerNetworkTool:
         """
         # create the dockwidget
         if self.dock_widget is None:
-            self.dock_widget = LeggerWidget(iface=self.iface,
-                                            parent=None)
+            self.dock_widget = LeggerWidget(
+                iface=self.iface,
+                parent=None,
+                path_legger_db=os.path.join(
+                    os.path.dirname(__file__),
+                    os.path.pardir,
+                    'tests', 'data',
+                    'test_spatialite_with_matchprof.sqlite'
+                )
+            )
             # connect cleanup on closing of dockwidget
             self.dock_widget.closingWidget.connect(self.on_close_widget)
 

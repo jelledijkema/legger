@@ -30,8 +30,9 @@ class Network(object):
     def __init__(self, line_layer, director,
                  weight_properter=QgsDistanceArcProperter(),
                  distance_properter=QgsDistanceArcProperter(),
-                 id_field="OGC_FID",
-                 value_field="breedte"):
+                 id_field="id",
+                 value_field="diepte",
+                 direction_field="direction"):
 
         self.line_layer = line_layer
         self.director = director
@@ -41,16 +42,20 @@ class Network(object):
         self.value_field = value_field
         self.value_field_index = self.line_layer.fieldNameIndex(self.value_field)
 
+        self.direction_field = direction_field
+        self.direction_field_index = self.line_layer.fieldNameIndex(self.direction_field)
 
         # build graph for network
         properter_1 = weight_properter
         properter_2 = distance_properter
         properter_3 = AttributeProperter(self.id_field, self.id_field_index)
         properter_4 = AttributeProperter(self.value_field, self.value_field_index)
+        properter_5 = AttributeProperter(self.direction_field, self.direction_field_index)
         self.director.addProperter(properter_1)
         self.director.addProperter(properter_2)
         self.director.addProperter(properter_3)
         self.director.addProperter(properter_4)
+        self.director.addProperter(properter_5)
 
         if not self.line_layer.isValid():
             raise AttributeError('Linelayer is not valid')
@@ -225,6 +230,7 @@ class Network(object):
         self._virtual_tree_layer.dataProvider().deleteFeatures(ids)
 
         features = []
+        done_in_vertex_ids = []
 
         def add_line(arc, value):
             feat = QgsFeature()
@@ -237,11 +243,17 @@ class Network(object):
             feat.setAttributes([
                 float(arc.properties()[1]),
                 int(arc.properties()[2]),
-                value])
+                value,
+                int(arc.properties()[4])])
             features.append(feat)
 
         def loop_recursive(arc_ids, value):
-            for arc_id in arc_ids:
+            def order_func(arc_id):
+                arc = self.graph.arc(arc_id)
+                return arc.properties()[0]
+
+            for arc_id in sorted(arc_ids, key=order_func):
+
                 arc = self.graph.arc(arc_id)
                 # if self.tree[arc.outVertex()] == -1:
                 #     # link is not part of tree (tree taking direction as part of input)
@@ -258,6 +270,14 @@ class Network(object):
                     new_value = min([val for val in [value, branch_value] if val is not None])
                 add_line(arc, new_value)
                 in_vertex_id = arc.inVertex()
+
+                if in_vertex_id in done_in_vertex_ids:
+                    # prevent recursive infinitive loop
+                    # end point
+                    continue
+
+                done_in_vertex_ids.append(in_vertex_id)
+
                 linked_arcs = self.graph.vertex(in_vertex_id).outArc()
 
                 if len(linked_arcs) == 0:
@@ -302,7 +322,8 @@ class Network(object):
             self._virtual_tree_layer.dataProvider().addAttributes([
                 QgsField("weight", QVariant.Double),
                 QgsField("line_id", QVariant.LongLong),
-                QgsField("value", QVariant.Double)])
+                QgsField("value", QVariant.Double),
+                QgsField("direction", QVariant.Int)])
 
             self._virtual_tree_layer.commitChanges()
 
