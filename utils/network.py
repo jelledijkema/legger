@@ -248,17 +248,13 @@ class Network(object):
             features.append(feat)
 
         def loop_recursive(arc_ids, value):
-            def order_func(arc_id):
-                arc = self.graph.arc(arc_id)
-                return arc.properties()[0]
 
-            for arc_id in sorted(arc_ids, key=order_func):
+            for arc_id in arc_ids:
 
                 arc = self.graph.arc(arc_id)
                 # if self.tree[arc.outVertex()] == -1:
                 #     # link is not part of tree (tree taking direction as part of input)
                 #     continue
-
 
                 branch_id = int(arc.properties()[2])
                 branch_value = arc.properties()[3]
@@ -278,12 +274,10 @@ class Network(object):
 
                 done_in_vertex_ids.append(in_vertex_id)
 
+                in_arcs = self.graph.vertex(in_vertex_id).inArc()
                 linked_arcs = self.graph.vertex(in_vertex_id).outArc()
 
-                if len(linked_arcs) == 0:
-                    # end_point
-                    pass
-                else:
+                if arc_id in in_arcs:
                     loop_recursive(
                         linked_arcs,
                         new_value
