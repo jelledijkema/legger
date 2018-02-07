@@ -267,13 +267,6 @@ class Network(object):
                 add_line(arc, new_value)
                 in_vertex_id = arc.inVertex()
 
-                if in_vertex_id in done_in_vertex_ids:
-                    # prevent recursive infinitive loop
-                    # end point
-                    continue
-
-                done_in_vertex_ids.append(in_vertex_id)
-
                 in_arcs = self.graph.vertex(in_vertex_id).inArc()
                 linked_arcs = self.graph.vertex(in_vertex_id).outArc()
 
