@@ -230,7 +230,6 @@ class Network(object):
         self._virtual_tree_layer.dataProvider().deleteFeatures(ids)
 
         features = []
-        done_in_vertex_ids = []
 
         def add_line(arc, value):
             feat = QgsFeature()
@@ -267,10 +266,10 @@ class Network(object):
                 add_line(arc, new_value)
                 in_vertex_id = arc.inVertex()
 
-                in_arcs = self.graph.vertex(in_vertex_id).inArc()
+                in_arc = self.tree[in_vertex_id]
                 linked_arcs = self.graph.vertex(in_vertex_id).outArc()
 
-                if arc_id in in_arcs:
+                if arc_id == in_arc:
                     loop_recursive(
                         linked_arcs,
                         new_value
