@@ -1,9 +1,10 @@
 import logging
 import os
+import sys
 
 import numpy as np
 import pyqtgraph as pg
-from PyQt4 import QtCore
+from PyQt4 import QtCore, QtGui
 from PyQt4.QtCore import QEvent, QMetaObject, QSize, Qt, pyqtSignal, pyqtSlot
 from PyQt4.QtGui import (QApplication, QColor, QDockWidget, QHBoxLayout, QPushButton, QSizePolicy, QSpacerItem,
                          QTableView, QVBoxLayout, QWidget, QTreeView)
@@ -25,8 +26,9 @@ from legger.sql_models.legger_database import LeggerDatabase
 from shapely.geometry import LineString
 from legger.qt_models.profile import ProfileModel
 from shapely.wkt import loads
-
 from sqlalchemy.orm import joinedload
+
+from legger.views.input_widget import NewWindow
 
 log = logging.getLogger('legger.' + __name__)
 
@@ -273,6 +275,8 @@ class LeggerWidget(QDockWidget):
             self.toggle_startpoint_button)
         self.reset_network_tree_button.clicked.connect(
             self.reset_network_tree)
+        self.test_manual_input_button.clicked.connect(
+            self.test_manual_input_window)
 
         db = LeggerDatabase(
             {
@@ -346,6 +350,11 @@ class LeggerWidget(QDockWidget):
         pass
 
     def reset_network_tree(self):
+        pass
+
+    def test_manual_input_window(self):
+        self._new_window = NewWindow()
+        self._new_window.show()
         pass
 
     def unset_tool(self):
@@ -456,6 +465,8 @@ class LeggerWidget(QDockWidget):
             self.toggle_startpoint_button)
         self.reset_network_tree_button.clicked.disconnect(
             self.reset_network_tree)
+        self.test_manual_input_button.clicked.disconnect(
+            self.test_manual_input_window)
 
         self.closingWidget.emit()
         event.accept()
@@ -483,6 +494,9 @@ class LeggerWidget(QDockWidget):
 
         self.reset_network_tree_button = QPushButton(self)
         self.button_bar_hlayout.addWidget(self.reset_network_tree_button)
+
+        self.test_manual_input_button = QPushButton(self)
+        self.button_bar_hlayout.addWidget(self.test_manual_input_button)
 
         self.import_treedi_button = QPushButton(self)
         self.button_bar_hlayout.addWidget(self.import_treedi_button)
@@ -540,3 +554,5 @@ class LeggerWidget(QDockWidget):
             "DockWidget", "Selecteer een startpunt", None))
         self.reset_network_tree_button.setText(_translate(
             "DockWidget", "Verberg netwerk op kaart", None))
+        self.test_manual_input_button.setText(_translate(
+            "DockWidget", "Test Manual input", None))
