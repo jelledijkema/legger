@@ -7,9 +7,20 @@ from pandas import DataFrame  # Series
 from legger.sql_models.legger import Varianten
 from legger.sql_models.legger_database import LeggerDatabase
 
+"""
+Boundary Conditions
+"""
+
+Km = 25  # Manning coefficient in m**(1/3/s)
+Kb = 23  # Bos and Bijkerk coefficient in 1/s
+
+ini_waterdepth = 0.30  # Initial water depth (m).
+gradient_norm = 3.0  # (cm/km) The norm for maximum gradient according to Bos and Bijkerk or Manning formula.
+min_ditch_bottom_width = 0.5  # (m) Ditch bottom width can not be smaller dan 0,5m.
+
 
 """
-Definitions
+General Definitions
 """
 
 
@@ -75,7 +86,7 @@ def filter_unused(df_in, column):
     return df_out
 
 
-def calc_bos_bijkerke(normative_flow, ditch_bottom_width, water_depth, slope):
+def calc_bos_bijkerk(normative_flow, ditch_bottom_width, water_depth, slope):
     """
     A calculation of the formula for gradient in the water level according to De Bos and Bijkerk.
     Based on physical parameters like normative flow, ditch width, water depth and slope.
@@ -91,11 +102,11 @@ def calc_bos_bijkerke(normative_flow, ditch_bottom_width, water_depth, slope):
     hydraulic_radius = ditch_cross_section_area / ditch_circumference
     # Or: Hydraulische Straal = Nat Oppervlak/ Natte Omtrek
 
-    gradient_bos_bijkerke = ((normative_flow / (
+    gradient_bos_bijkerk = ((normative_flow / (
         ditch_cross_section_area * Kb * (water_depth ** 0.333333) * (hydraulic_radius ** 0.5))) ** 2) * 100000
     # Gradient = Q / (((A*Kb*(waterdiepte^1/3))*(hydraulische straal^1/2)^2)*100000)
 
-    return gradient_bos_bijkerke
+    return gradient_bos_bijkerk
 
 
 def calc_manning(normative_flow, ditch_bottom_width, water_depth, slope):
@@ -132,11 +143,11 @@ def calc_profile_max_ditch_width(object_id, normative_flow, length, slope, max_d
     water_depth = ini_waterdepth
     ditch_bottom_width = max_ditch_width - slope * water_depth - slope * water_depth
 
-    gradient_bos_bijkerke = calc_bos_bijkerke(normative_flow, ditch_bottom_width, water_depth, slope)
+    gradient_bos_bijkerk = calc_bos_bijkerk(normative_flow, ditch_bottom_width, water_depth, slope)
     gradient_manning = calc_manning(normative_flow, ditch_bottom_width, water_depth, slope)
 
     # iteration
-    while gradient_bos_bijkerke > gradient_norm or gradient_manning > gradient_norm:
+    while gradient_bos_bijkerk > gradient_norm or gradient_manning > gradient_norm:
 
         water_depth = water_depth + 0.05
 
@@ -145,7 +156,7 @@ def calc_profile_max_ditch_width(object_id, normative_flow, length, slope, max_d
 
             ditch_bottom_width = max_ditch_width - slope * water_depth - slope * water_depth
 
-            gradient_bos_bijkerke = calc_bos_bijkerke(normative_flow, ditch_bottom_width, water_depth, slope)
+            gradient_bos_bijkerk = calc_bos_bijkerk(normative_flow, ditch_bottom_width, water_depth, slope)
             gradient_manning = calc_manning(normative_flow, ditch_bottom_width, water_depth, slope)
 
         # If the minimum ditch bottom width is reached, then the iteration is done.
@@ -156,7 +167,7 @@ def calc_profile_max_ditch_width(object_id, normative_flow, length, slope, max_d
             water_depth = water_depth - 0.05
 
             # Same goes for the gradient calculations:
-            gradient_bos_bijkerke = calc_bos_bijkerke(normative_flow, ditch_bottom_width, water_depth, slope)
+            gradient_bos_bijkerk = calc_bos_bijkerk(normative_flow, ditch_bottom_width, water_depth, slope)
             gradient_manning = calc_manning(normative_flow, ditch_bottom_width, water_depth, slope)
             break
 
@@ -167,25 +178,25 @@ def calc_profile_max_ditch_width(object_id, normative_flow, length, slope, max_d
                              max_ditch_width,
                              water_depth,
                              ditch_bottom_width,
-                             gradient_bos_bijkerke,
+                             gradient_bos_bijkerk,
                              gradient_manning]],
                            columns=['object_id', 'normative_flow', 'length', 'slope',
                                     'max_ditch_width', 'water_depth', 'ditch_bottom_width',
-                                    'gradient_bos_bijkerke', 'gradient_manning'])
+                                    'gradient_bos_bijkerk', 'gradient_manning'])
     return profile
 
 
 def add_surge(hydro_object_table):
     """
     Calculates the absolute water surge that is the result of the gradient in water level and ditch length.
-    The gradient is the max of the gradient calculated with Manning and Bos and Bijkerke equations.
+    The gradient is the max of the gradient calculated with Manning and Bos and Bijkerk equations.
     """
     surge_table = pd.DataFrame(columns=['object_id', 'surge'])
 
     for i, rows in hydro_object_table.iterrows():
         object_id = hydro_object_table.object_id[i]
         length = hydro_object_table.length[i]
-        gradient = max(float(hydro_object_table.gradient_bos_bijkerke[i]),
+        gradient = max(float(hydro_object_table.gradient_bos_bijkerk[i]),
                        float(hydro_object_table.gradient_manning[i]))
 
         surge = (float(gradient) * (float(length) / 1000.0))  # gradient in cm/km and length in m.
@@ -213,7 +224,7 @@ def calc_profile_variants(hydro_objects_satisfy):
     # 2nd one a table where variants are saved.
     variants_table = DataFrame(columns=['object_id', 'object_waterdepth_id', 'slope',
                                         'water_depth', 'ditch_width', 'ditch_bottom_width',
-                                        'normative_flow', 'gradient_bos_bijkerke'])
+                                        'normative_flow', 'gradient_bos_bijkerk'])
 
     for i, rows in hydro_objects_satisfy.iterrows():
         count = 0
@@ -231,15 +242,15 @@ def calc_profile_variants(hydro_objects_satisfy):
             ditch_width = round(hydro_objects_satisfy.max_ditch_width[i], 1)
             ditch_bottom_width = ditch_width - (water_depth * slope * 2)
 
-            gradient_bos_bijkerke = calc_bos_bijkerke(normative_flow, ditch_bottom_width, water_depth, slope)
+            gradient_bos_bijkerk = calc_bos_bijkerk(normative_flow, ditch_bottom_width, water_depth, slope)
 
             # Only iterate if the surge is less than 2,5 cm/km.
             tolerance = 0.5  # will be substracted from the gradient norm
-            while gradient_bos_bijkerke < (gradient_norm-tolerance):
+            while gradient_bos_bijkerk < (gradient_norm-tolerance):
                 ditch_width = ditch_width - 0.05
                 ditch_bottom_width = ditch_width - (water_depth * slope * 2)
 
-                gradient_bos_bijkerke = calc_bos_bijkerke(normative_flow, ditch_bottom_width, water_depth, slope)
+                gradient_bos_bijkerk = calc_bos_bijkerk(normative_flow, ditch_bottom_width, water_depth, slope)
 
                 ditch_bottom_width = round(ditch_bottom_width, 2)
 
@@ -257,10 +268,10 @@ def calc_profile_variants(hydro_objects_satisfy):
                                      ditch_width,
                                      ditch_bottom_width,
                                      normative_flow,
-                                     gradient_bos_bijkerke]],
+                                     gradient_bos_bijkerk]],
                                    columns=['object_id', 'object_waterdepth_id', 'slope',
                                             'water_depth', 'ditch_width', 'ditch_bottom_width',
-                                            'normative_flow', 'gradient_bos_bijkerke'])
+                                            'normative_flow', 'gradient_bos_bijkerk'])
 
             variants_table = variants_table.append(df_temp)
 
@@ -275,7 +286,7 @@ def calc_profile_variants(hydro_objects_satisfy):
             ditch_bottom_width = 0.5
             ditch_width = ditch_bottom_width + slope * water_depth
 
-            gradient_bos_bijkerke = calc_bos_bijkerke(normative_flow, ditch_bottom_width, water_depth, slope)
+            gradient_bos_bijkerk = calc_bos_bijkerk(normative_flow, ditch_bottom_width, water_depth, slope)
 
             df_temp = pd.DataFrame([[object_id,
                                      object_waterdepth_id,
@@ -284,10 +295,10 @@ def calc_profile_variants(hydro_objects_satisfy):
                                      ditch_width,
                                      ditch_bottom_width,
                                      normative_flow,
-                                     gradient_bos_bijkerke]],
+                                     gradient_bos_bijkerk]],
                                    columns=['object_id', 'object_waterdepth_id', 'slope',
                                             'water_depth', 'ditch_width', 'ditch_bottom_width',
-                                            'normative_flow', 'gradient_bos_bijkerke'])
+                                            'normative_flow', 'gradient_bos_bijkerk'])
 
             variants_table = variants_table.append(df_temp)
             count = 1
@@ -300,17 +311,17 @@ def calc_profile_variants(hydro_objects_satisfy):
 
 def print_failed_hydro_objects(input_table):
     if "object_id" in input_table.columns:
-        if "gradient_bos_bijkerke" in input_table.columns:
+        if "gradient_bos_bijkerk" in input_table.columns:
             if "gradient_manning" in input_table.columns:
                 for i, rows in input_table.iterrows():
-                    if max(float(input_table.gradient_bos_bijkerke[i]),
+                    if max(float(input_table.gradient_bos_bijkerk[i]),
                            float(input_table.gradient_manning[i])) > gradient_norm:
                                 print (str(input_table.object_id[i]) + " doesn't comply to the norm of "
                                        + str(gradient_norm) + " cm/km.")
             else:
                 print ("No 'gradient_manning' data")
         else:
-            print ("No 'gradient_bos_bijkerke' data")
+            print ("No 'gradient_bos_bijkerk' data")
     else:
         print ("No 'object_id' data")
 
@@ -318,11 +329,11 @@ def print_failed_hydro_objects(input_table):
 def show_summary(tablename, surge_comparison):
     summary_table = pd.DataFrame({'how many hydro objects do not suffice': pd.Series(
         [(len(tablename[tablename['gradient_manning'] > gradient_norm])),
-         (len(tablename[tablename['gradient_bos_bijkerke'] > gradient_norm])),
+         (len(tablename[tablename['gradient_bos_bijkerk'] > gradient_norm])),
          (len(tablename[tablename['surge'] > surge_comparison])),
          len(tablename['object_id'])],
         index=[("# objects with Manning > " + str(gradient_norm)),
-               "# objects with Bos and Bijkerke > " + str(gradient_norm),
+               "# objects with Bos and Bijkerk > " + str(gradient_norm),
                "total surge is at least " + str(surge_comparison) + " cm over hydro object",
                "total amount of hydro objects"]
     )})
@@ -335,16 +346,7 @@ This is were the main code starts:
 - create_theoretical_profiles
 - write_theoretical profiles to database
 
-But first:
-Boundary conditions
 """
-
-Km = 25  # Manning coefficient in m**(1/3/s)
-Kb = 23  # Bos and Bijkerke coefficient in 1/s
-
-ini_waterdepth = 0.30  # Initial water depth (m).
-gradient_norm = 3.0  # (cm/km) The norm for maximum gradient according to Bos and Bijkerke or Manning formula.
-min_ditch_bottom_width = 0.5  # (m) Ditch bottom width can not be smaller dan 0,5m.
 
 
 def create_theoretical_profiles(legger_db_filepath):
@@ -363,7 +365,7 @@ def create_theoretical_profiles(legger_db_filepath):
     # Create an empty table to store the results:
     profile_max_ditch_width = pd.DataFrame(
         columns=['object_id', 'normative_flow', 'length', 'slope', 'max_ditch_width', 'water_depth',
-                 'ditch_bottom_width', 'gradient_bos_bijkerke', 'gradient_manning'])
+                 'ditch_bottom_width', 'gradient_bos_bijkerk', 'gradient_manning'])
 
     # Loop over the hydro objects table so hydro object specific information is temporarily saved to variables
     for i, rows in hydro_objects.iterrows():
@@ -415,7 +417,7 @@ def create_theoretical_profiles(legger_db_filepath):
     """
 
     # Separate the hydro objects in two groups: hydro objects that satisfy requirements from the ones that don't.
-    hydro_objects_satisfy = profile_max_ditch_width[profile_max_ditch_width['gradient_bos_bijkerke'] <= 3.0]
+    hydro_objects_satisfy = profile_max_ditch_width[profile_max_ditch_width['gradient_bos_bijkerk'] <= 3.0]
 
     # print (str(len(hydro_objects_satisfy)) + " of the " + str(len(profile_max_ditch_width))
     # + " hydro objects satisfy the norm")
@@ -447,7 +449,7 @@ def write_theoretical_profile_results_to_db(profile_results, path_legger_db):
             diepte=profile_results.water_depth[i],
             waterbreedte=profile_results.ditch_width[i],
             bodembreedte=profile_results.ditch_bottom_width[i],
-            verhang_bos_bijkerk=profile_results.gradient_bos_bijkerke[i],
+            verhang_bos_bijkerk=profile_results.gradient_bos_bijkerk[i],
             opmerkingen=""
         ))
 

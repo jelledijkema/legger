@@ -357,6 +357,7 @@ class LeggerWidget(QDockWidget):
         self._new_window.show()
         pass
 
+
     def unset_tool(self):
         pass
 
