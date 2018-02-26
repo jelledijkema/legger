@@ -10,6 +10,9 @@ from PyQt4.QtGui import (QApplication, QColor, QDockWidget, QFormLayout,QHBoxLay
                          QLineEdit, QPushButton, QSizePolicy, QSpacerItem,
                          QTableView, QVBoxLayout, QWidget, QTreeView)
 
+
+from legger.utils.theoretical_profiles import calc_bos_bijkerk
+
 try:
     _fromUtf8 = QtCore.QString.fromUtf8
 except AttributeError:
@@ -31,165 +34,187 @@ class NewWindow(QtGui.QWidget):
 
         self.setWindowIcon(QtGui.QIcon('C:\Users\Jelle\Pictures\cat.png'))
 
+        # Scherm bestaat uit een paar hoofdonderdelen:
+        # VerticalLayout als hoofd layout, bestaande uit 3 rijen:
+        #   - Bovenste rij bestaat uit een Horizontal Layout met 3 kolommen:
+        #       - linkerkolom bestaat uit een Vertical Layout met introtext
+        #       - middenkolom bestaante uit een Vertical Layout met invoer label, invoer parameters, en Bereken knop:
+        #           - invoer parameters worden als spinbox in aparte groupbox toegevoegd om een net label te geven.
+        #       - en rechterkolom bestaande uit een Vertical Layout met uitvoer textbox
+        #   - Middelste rij met grafische weergave van de dwarsdoorsnede als Figuur
+        #   - Onderste rij is ook en Horizontal Layout met 2 knoppen naast elkaar: Opslaan en Annuleren
+
+
+        # Hoofd layout definieren
         self.verticalLayout = QtGui.QVBoxLayout(self)
         self.verticalLayout.setObjectName(_fromUtf8("verticalLayout"))
 
-        self.horizontalLayout = QtGui.QHBoxLayout()
-        self.horizontalLayout.setObjectName(_fromUtf8("horizontalLayout"))
+        # Bovenste rij in hoofd layout definieren
+        self.upper_row = QtGui.QHBoxLayout()
+        self.upper_row.setObjectName(_fromUtf8("Bovenste rij"))
 
-        self.linker_kolom = QtGui.QVBoxLayout()
-        self.linker_kolom.setObjectName(_fromUtf8("linker_kolom"))
+        # Linker kolom in bovenste rij definitie
+        self.left_column = QtGui.QVBoxLayout()
+        self.left_column.setObjectName(_fromUtf8("linker_kolom"))
 
+        # Intro text
         self.intro_text = QtGui.QTextEdit(self)
         self.intro_text.setText("Hier kun je zelf een profiel definieren.\n"
                                 "Vul van boven naar beneden een waarde in voor:\n"
-                                "- waterbreedte;\n"
-                                "- waterdiepte;\n"
-                                "- talud.")
+                                "- Waterbreedte;\n"
+                                "- Waterdiepte;\n"
+                                "- Talud.\n\n"
+                                "Met de knop 'Bereken' kun je het nieuwe profiel doorrekenen.\n"
+                                "Als het profiel naar behoeven is, druk dan op 'Opslaan' om het profiel op te nemen in de database.\n"
+                                "Om het scherm te verlaten kan op 'Annuleren' gedrukt worden.")
         self.intro_text.setObjectName(_fromUtf8("introductie_text"))
-        self.linker_kolom.addWidget(self.intro_text)
 
-        self.spinBoxesgroup = QtGui.QGroupBox(self)
-        self.spinBoxesgroup.setTitle("testje")
-        self.linker_kolom.addWidget(self.spinBoxesgroup)
+        self.left_column.addWidget(self.intro_text) # introtext toevoegen aan linkerkolom
 
-        self.invoer_waterbreedte_label = QtGui.QLabel(self.tr("test"))
+        # Middelste kolom in bovenste rij
+        self.middle_column = QtGui.QVBoxLayout()
+        self.middle_column.setObjectName(_fromUtf8("middelste_kolom"))
 
+        # Invoer van parameters
+        # Titel
+        self.invoer_label = QtGui.QLabel(self.tr("Invoer van parameters:"))
+        self.middle_column.addWidget(self.invoer_label) # label toevoegen aan middenkolom
+
+        # Spinbox waterbreedte
         self.invoer_waterbreedte = QtGui.QDoubleSpinBox(self)
         self.invoer_waterbreedte.setSuffix(" m")
         self.invoer_waterbreedte.setSingleStep(0.1)
-        self.invoer_waterbreedte.setObjectName(_fromUtf8("Invoer1"))
+        self.invoer_waterbreedte.setObjectName(_fromUtf8("Invoer_waterbreedte"))
 
-        self.linker_kolom.addWidget(self.invoer_waterbreedte_label)
-        self.linker_kolom.addWidget(self.invoer_waterbreedte)
+        self.groupBox_waterbreedte = QtGui.QGroupBox(self)
+        self.groupBox_waterbreedte.setTitle("Waterbreedte")
 
+        self.vbox_waterbreedte = QtGui.QVBoxLayout()
+        self.vbox_waterbreedte.addWidget(self.invoer_waterbreedte)
+        self.groupBox_waterbreedte.setLayout(self.vbox_waterbreedte)
+
+        self.middle_column.addWidget(self.groupBox_waterbreedte) # waterbreedte spinner toevoegen
+
+        #Spinbox waterdiepte
         self.invoer_waterdiepte = QtGui.QDoubleSpinBox(self)
         self.invoer_waterdiepte.setSuffix(" m")
         self.invoer_waterdiepte.setSingleStep(0.1)
-        self.invoer_waterdiepte.setObjectName(_fromUtf8("invoer2"))
-        self.linker_kolom.addWidget(self.invoer_waterdiepte)
+        self.invoer_waterdiepte.setObjectName(_fromUtf8("Invoer_waterdiepte"))
 
+        self.groupBox_waterdiepte = QtGui.QGroupBox(self)
+        self.groupBox_waterdiepte.setTitle("Waterdiepte")
+
+        self.vbox_waterdiepte = QtGui.QVBoxLayout()
+        self.vbox_waterdiepte.addWidget(self.invoer_waterdiepte)
+        self.groupBox_waterdiepte.setLayout(self.vbox_waterdiepte)
+
+        self.middle_column.addWidget(self.groupBox_waterdiepte) # waterdiepte spinner toevoegen aan midden kolom
+
+        #Spinbox talud
         self.invoer_talud = QtGui.QDoubleSpinBox(self)
         self.invoer_talud.setSuffix(" m breedte / m hoogteverschil")
         self.invoer_talud.setSingleStep(0.1)
-        self.invoer_talud.setObjectName(_fromUtf8("invoer3"))
-        self.linker_kolom.addWidget(self.invoer_talud)
+        self.invoer_talud.setValue(1) # initieel 1:1
+        self.invoer_talud.setObjectName(_fromUtf8("Invoer_talud"))
 
-        self.invoer_bereken = QtGui.QPushButton(self)
-        self.invoer_bereken.setObjectName(_fromUtf8("invoer_bereken"))
-        self.linker_kolom.addWidget(self.invoer_bereken)
+        self.groupBox_talud = QtGui.QGroupBox(self)
+        self.groupBox_talud.setTitle("Talud")
 
-        spacerItem = QtGui.QSpacerItem(20, 40, QtGui.QSizePolicy.Minimum, QtGui.QSizePolicy.Expanding)
+        self.vbox_talud = QtGui.QVBoxLayout()
+        self.vbox_talud.addWidget(self.invoer_talud)
+        self.groupBox_talud.setLayout(self.vbox_talud)
 
-        self.linker_kolom.addItem(spacerItem)
-        self.horizontalLayout.addLayout(self.linker_kolom)
+        self.middle_column.addWidget(self.groupBox_talud) # talud spinner toevoegen aan midden kolom
 
-        self.verticalLayout_2 = QtGui.QVBoxLayout()
-        self.verticalLayout_2.setObjectName(_fromUtf8("verticalLayout_2"))
+        # Bereken
+        self.bereken_knop = QtGui.QPushButton()
+        self.bereken_knop.setObjectName(_fromUtf8("Bereken_knop"))
+        self.bereken_knop.clicked.connect(self.doe_berekening)
+        self.middle_column.addWidget(self.bereken_knop) # bereken knop toevoegen aan midden kolom
+
+        # Rechterkolom
+        self.right_column = QtGui.QVBoxLayout()
+        self.right_column.setObjectName(_fromUtf8("Rechter Kolom"))
 
         self.output_info = QtGui.QTextEdit(self)
         self.output_info.setObjectName(_fromUtf8("output_info"))
 
-        self.verticalLayout_2.addWidget(self.output_info)
-        self.horizontalLayout.addLayout(self.verticalLayout_2)
+        self.right_column.addWidget(self.output_info)
 
-        self.verticalLayout.addLayout(self.horizontalLayout)
+        # Verticale kolommen toevoegen aan de bovenste rij (horizontale lay-out)
+        self.upper_row.addLayout(self.left_column) # kolom met introtext en invoer parameters toevoegen
+        self.upper_row.addLayout(self.middle_column)
+        self.upper_row.addLayout(self.right_column) # kolom met output toevoegen
 
+
+
+        # Horizontale bovenste rij toevoegen aan bovenkant verticale HOOFD layout.
+        self.verticalLayout.addLayout(self.upper_row)
+
+        #spacerItem = QtGui.QSpacerItem(5, 20, QtGui.QSizePolicy.Minimum, QtGui.QSizePolicy.Expanding)
+        #self.verticalLayout.addItem(spacerItem)
+
+        # FIGUREN MAKEN
+        # Figuur vlak aanmaken
         self.Figuur = QtGui.QTableWidget(self)
         self.Figuur.setObjectName(_fromUtf8("Figuur"))
         self.Figuur.setColumnCount(0)
         self.Figuur.setRowCount(0)
+
+        # Figuurvlak toevoegen in het MIDDEN van de HOOFD lay-out.
         self.verticalLayout.addWidget(self.Figuur)
 
-        self.horizontalLayout_3 = QtGui.QHBoxLayout()
+
+        # OPSLAAN / ANNULEREN KNOPPEN
+        # Vlak maken voor de knoppen
+        self.horizontalLayout_3 = QtGui.QHBoxLayout() # knoppen komen naast elkaar dus een horizontal layout.
         self.horizontalLayout_3.setObjectName(_fromUtf8("horizontalLayout_3"))
 
+        # Opslaan knop
         self.opslaan = QtGui.QPushButton(self)
         self.opslaan.setObjectName(_fromUtf8("opslaan"))
         self.horizontalLayout_3.addWidget(self.opslaan)
 
+        # Sluiten knop
         self.sluiten = QtGui.QPushButton(self)
         self.sluiten.setObjectName(_fromUtf8("sluiten"))
         self.horizontalLayout_3.addWidget(self.sluiten)
-        
+
+
+        # Opslaan / Annuleer knoppen toevoegen aan onderkant verticale HOOFD layout
         self.verticalLayout.addLayout(self.horizontalLayout_3)
         
         self.retranslateUi(self)
         QtCore.QMetaObject.connectSlotsByName(self)
+
     def retranslateUi(self, Dialog):
         Dialog.setWindowTitle(_translate("Dialog", "Dialog", None))
-        self.invoer_bereken.setText(_translate("Dialog", "PushButton", None))
-        self.opslaan.setText(_translate("Dialog", "PushButton", None))
-        self.sluiten.setText(_translate("Dialog", "PushButton", None))
-        #self.home()
 
-    def home(self):
-        # applicatie moet sluiten als je op Quit drukt
-        quitfont = QtGui.QFont()
-        quitfont.setPointSize(22)
-
-        quitbtn = QtGui.QPushButton("Whoa bedankt voor deze vet op maat gemaakte optie", self)
-        quitbtn.clicked.connect(self.close_application)
-
-        quitbtn.setFont(quitfont)
-
-        quitbtn.resize(quitbtn.sizeHint())  # or btn.resize(100,100)
-        quitbtn.move(500, 500)
-
-        lbl = QtGui.QLabel('Wat zijn de afmetingen van het nieuwe hydro-object?', self)
-        lbl.resize(lbl.sizeHint())
-        lbl.move(20,20)
-
-        # Invoer velden
-
-        self.invoer1 = QtGui.QLineEdit('Vul een waarde voor waterbreedte in',self)
-        self.invoer1.resize(250,20)
-        self.invoer1.move(20,50)
-
-        self.invoer2 = QtGui.QLineEdit('Vul een waarde voor waterdiepte in', self)
-        self.invoer2.resize(250,20)
-        self.invoer2.move(20, 80)
-
-        self.invoer3 = QtGui.QLineEdit('Vul een waarde voor talud in', self)
-        self.invoer3.resize(250,20)
-        self.invoer3.move(20, 110)
-
-        # Output
-
-        self.uitvoer1 = QtGui.QLineEdit('Er wordt nog niks berekend',self)
-        self.uitvoer1.resize(500, 100)
-        self.uitvoer1.move(400, 20)
-
-        invoerbtn = QtGui.QPushButton("Maak een berekening", self)
-        invoerbtn.clicked.connect(self.doe_berekening)
-        invoerbtn.resize(invoerbtn.sizeHint())  # or btn.resize(100,100)
-        invoerbtn.move(20, 140)
-
-        self.show()
+        self.bereken_knop.setText(_translate("Dialog", "Berekenen", None))
+        self.opslaan.setText(_translate("Dialog", "Opslaan", None))
+        self.sluiten.setText(_translate("Dialog", "Annuleer", None))
 
     def doe_berekening(self):
         try:
-            input1 = self.invoer1.text()
-            textvar1 = float(input1)
+            waterbreedte = float(self.invoer_waterbreedte.value())
+            waterdiepte = float(self.invoer_waterdiepte.value())
+            talud = float(self.invoer_talud.value())
 
-            input2 = self.invoer2.text()
-            textvar2 = float(input2)
+            bodembreedte = waterbreedte-(talud*waterdiepte)
 
-            input3 = self.invoer3.text()
-            textvar3 = float(input3)
 
-            textvar = textvar1*textvar2*textvar3
-            textvar = str(textvar)
+            placeholder_norm_flow = 0.5
+
+            textvar = calc_bos_bijkerk(placeholder_norm_flow,bodembreedte,waterdiepte,talud)
+            textvar = str(textvar) +str("   ") + str(bodembreedte)
+
 
         except:
             textvar = "kan geen berekening doen."
 
-        self.uitvoer1.setText(textvar)
+        self.output_info.setText(textvar)
 
 
-        self.uitvoer1.setText(textvar)
-        self.uitvoer1.resize(500, 100)
-        self.uitvoer1.move(400, 20)
 
 
     def close_application(self):
