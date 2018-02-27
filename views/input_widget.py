@@ -27,6 +27,18 @@ except AttributeError:
     def _translate(context, text, disambig):
         return QtGui.QApplication.translate(context, text, disambig)
 
+class LeggerPlotWidget(pg.PlotWidget):
+    def __init__(self, parent=None, name=""):
+
+        super(LeggerPlotWidget, self).__init__(parent)
+        self.name = name
+        self.showGrid(True, True, 0.5)
+        self.setLabel("bottom", "breedte", "m")
+        self.setLabel("left", "hoogte", "m tov waterlijn")
+
+        self.series = {}
+
+
 class NewWindow(QtGui.QWidget):
     def __init__(self):
         super(NewWindow, self).__init__()
@@ -122,6 +134,7 @@ class NewWindow(QtGui.QWidget):
 
         self.vbox_talud = QtGui.QVBoxLayout()
         self.vbox_talud.addWidget(self.invoer_talud)
+
         self.groupBox_talud.setLayout(self.vbox_talud)
 
         self.middle_column.addWidget(self.groupBox_talud) # talud spinner toevoegen aan midden kolom
@@ -131,6 +144,10 @@ class NewWindow(QtGui.QWidget):
         self.bereken_knop.setObjectName(_fromUtf8("Bereken_knop"))
         self.bereken_knop.clicked.connect(self.doe_berekening)
         self.middle_column.addWidget(self.bereken_knop) # bereken knop toevoegen aan midden kolom
+
+        # Verticale Spacer om alles naar boven te drukken.
+        spacerItem_middenkolom = QtGui.QSpacerItem(10, 40, QtGui.QSizePolicy.Minimum, QtGui.QSizePolicy.Expanding)
+        self.middle_column.addItem(spacerItem_middenkolom)
 
         # Rechterkolom
         self.right_column = QtGui.QVBoxLayout()
@@ -151,18 +168,13 @@ class NewWindow(QtGui.QWidget):
         # Horizontale bovenste rij toevoegen aan bovenkant verticale HOOFD layout.
         self.verticalLayout.addLayout(self.upper_row)
 
-        #spacerItem = QtGui.QSpacerItem(5, 20, QtGui.QSizePolicy.Minimum, QtGui.QSizePolicy.Expanding)
-        #self.verticalLayout.addItem(spacerItem)
-
         # FIGUREN MAKEN
         # Figuur vlak aanmaken
-        self.Figuur = QtGui.QTableWidget(self)
-        self.Figuur.setObjectName(_fromUtf8("Figuur"))
-        self.Figuur.setColumnCount(0)
-        self.Figuur.setRowCount(0)
+        self.plot_widget = LeggerPlotWidget(self)
+        self.plot_widget.setObjectName(_fromUtf8("Figuur"))
 
         # Figuurvlak toevoegen in het MIDDEN van de HOOFD lay-out.
-        self.verticalLayout.addWidget(self.Figuur)
+        self.verticalLayout.addWidget(self.plot_widget)
 
 
         # OPSLAAN / ANNULEREN KNOPPEN
@@ -170,16 +182,15 @@ class NewWindow(QtGui.QWidget):
         self.horizontalLayout_3 = QtGui.QHBoxLayout() # knoppen komen naast elkaar dus een horizontal layout.
         self.horizontalLayout_3.setObjectName(_fromUtf8("horizontalLayout_3"))
 
-        # Opslaan knop
-        self.opslaan = QtGui.QPushButton(self)
-        self.opslaan.setObjectName(_fromUtf8("opslaan"))
-        self.horizontalLayout_3.addWidget(self.opslaan)
-
         # Sluiten knop
         self.sluiten = QtGui.QPushButton(self)
         self.sluiten.setObjectName(_fromUtf8("sluiten"))
         self.horizontalLayout_3.addWidget(self.sluiten)
 
+        # Opslaan knop
+        self.opslaan = QtGui.QPushButton(self)
+        self.opslaan.setObjectName(_fromUtf8("opslaan"))
+        self.horizontalLayout_3.addWidget(self.opslaan)
 
         # Opslaan / Annuleer knoppen toevoegen aan onderkant verticale HOOFD layout
         self.verticalLayout.addLayout(self.horizontalLayout_3)
@@ -191,7 +202,7 @@ class NewWindow(QtGui.QWidget):
         Dialog.setWindowTitle(_translate("Dialog", "Dialog", None))
 
         self.bereken_knop.setText(_translate("Dialog", "Berekenen", None))
-        self.opslaan.setText(_translate("Dialog", "Opslaan", None))
+        self.opslaan.setText(_translate("Dialog", "Opslaan en sluiten", None))
         self.sluiten.setText(_translate("Dialog", "Annuleer", None))
 
     def doe_berekening(self):
@@ -200,19 +211,20 @@ class NewWindow(QtGui.QWidget):
             waterdiepte = float(self.invoer_waterdiepte.value())
             talud = float(self.invoer_talud.value())
 
-            bodembreedte = waterbreedte-(talud*waterdiepte)
+            bodembreedte = waterbreedte-(talud*waterdiepte)*2
 
 
             placeholder_norm_flow = 0.5
 
-            textvar = calc_bos_bijkerk(placeholder_norm_flow,bodembreedte,waterdiepte,talud)
-            textvar = str(textvar) +str("   ") + str(bodembreedte)
-
+            verhang = str(calc_bos_bijkerk(placeholder_norm_flow,bodembreedte,waterdiepte,talud))
 
         except:
-            textvar = "kan geen berekening doen."
+            verhang = "kan geen berekening doen voor verhang doen."
+            bodembreedte = "door een probleem lukt de berkening niet."
 
-        self.output_info.setText(textvar)
+        self.output_info.setText(verhang + " is het verhang.")
+        self.output_info.append("\n")
+        self.output_info.append(str(bodembreedte)+" is de bodembreedte.")
 
 
 
