@@ -63,11 +63,11 @@ class NewWindow(QtGui.QWidget):
 
         # Bovenste rij in hoofd layout definieren
         self.upper_row = QtGui.QHBoxLayout()
-        self.upper_row.setObjectName(_fromUtf8("Bovenste rij"))
+        self.upper_row.setObjectName(_fromUtf8("Upper row"))
 
         # Linker kolom in bovenste rij definitie
         self.left_column = QtGui.QVBoxLayout()
-        self.left_column.setObjectName(_fromUtf8("linker_kolom"))
+        self.left_column.setObjectName(_fromUtf8("Left column"))
 
         # Intro text
         self.intro_text = QtGui.QTextEdit(self)
@@ -89,65 +89,65 @@ class NewWindow(QtGui.QWidget):
 
         # Invoer van parameters
         # Titel
-        self.invoer_label = QtGui.QLabel(self.tr("Invoer van parameters:"))
-        self.middle_column.addWidget(self.invoer_label) # label toevoegen aan middenkolom
+        self.input_label = QtGui.QLabel(self.tr("Invoer van parameters:"))
+        self.middle_column.addWidget(self.input_label) # label toevoegen aan middenkolom
 
         # Spinbox waterbreedte
-        self.invoer_waterbreedte = QtGui.QDoubleSpinBox(self)
-        self.invoer_waterbreedte.setSuffix(" m")
-        self.invoer_waterbreedte.setSingleStep(0.1)
-        self.invoer_waterbreedte.setObjectName(_fromUtf8("Invoer_waterbreedte"))
+        self.input_ditch_width = QtGui.QDoubleSpinBox(self)
+        self.input_ditch_width.setSuffix(" m")
+        self.input_ditch_width.setSingleStep(0.1)
+        self.input_ditch_width.setObjectName(_fromUtf8("Invoer_waterbreedte"))
 
-        self.groupBox_waterbreedte = QtGui.QGroupBox(self)
-        self.groupBox_waterbreedte.setTitle("Waterbreedte")
+        self.groupBox_ditch_width = QtGui.QGroupBox(self)
+        self.groupBox_ditch_width.setTitle("Waterbreedte")
 
-        self.vbox_waterbreedte = QtGui.QVBoxLayout()
-        self.vbox_waterbreedte.addWidget(self.invoer_waterbreedte)
-        self.groupBox_waterbreedte.setLayout(self.vbox_waterbreedte)
+        self.vbox_ditch_width = QtGui.QVBoxLayout()
+        self.vbox_ditch_width.addWidget(self.input_ditch_width)
+        self.groupBox_ditch_width.setLayout(self.vbox_ditch_width)
 
-        self.middle_column.addWidget(self.groupBox_waterbreedte) # waterbreedte spinner toevoegen
+        self.middle_column.addWidget(self.groupBox_ditch_width) # waterbreedte spinner toevoegen
 
         #Spinbox waterdiepte
-        self.invoer_waterdiepte = QtGui.QDoubleSpinBox(self)
-        self.invoer_waterdiepte.setSuffix(" m")
-        self.invoer_waterdiepte.setSingleStep(0.1)
-        self.invoer_waterdiepte.setObjectName(_fromUtf8("Invoer_waterdiepte"))
+        self.input_waterdepth = QtGui.QDoubleSpinBox(self)
+        self.input_waterdepth.setSuffix(" m")
+        self.input_waterdepth.setSingleStep(0.1)
+        self.input_waterdepth.setObjectName(_fromUtf8("Invoer_waterdiepte"))
 
-        self.groupBox_waterdiepte = QtGui.QGroupBox(self)
-        self.groupBox_waterdiepte.setTitle("Waterdiepte")
+        self.groupBox_waterdepth = QtGui.QGroupBox(self)
+        self.groupBox_waterdepth.setTitle("Waterdiepte")
 
-        self.vbox_waterdiepte = QtGui.QVBoxLayout()
-        self.vbox_waterdiepte.addWidget(self.invoer_waterdiepte)
-        self.groupBox_waterdiepte.setLayout(self.vbox_waterdiepte)
+        self.vbox_waterdepth = QtGui.QVBoxLayout()
+        self.vbox_waterdepth.addWidget(self.input_waterdepth)
+        self.groupBox_waterdepth.setLayout(self.vbox_waterdepth)
 
-        self.middle_column.addWidget(self.groupBox_waterdiepte) # waterdiepte spinner toevoegen aan midden kolom
+        self.middle_column.addWidget(self.groupBox_waterdepth) # waterdiepte spinner toevoegen aan midden kolom
 
         #Spinbox talud
-        self.invoer_talud = QtGui.QDoubleSpinBox(self)
-        self.invoer_talud.setSuffix(" m breedte / m hoogteverschil")
-        self.invoer_talud.setSingleStep(0.1)
-        self.invoer_talud.setValue(1) # initieel 1:1
-        self.invoer_talud.setObjectName(_fromUtf8("Invoer_talud"))
+        self.input_ditch_slope = QtGui.QDoubleSpinBox(self)
+        self.input_ditch_slope.setSuffix(" m breedte / m hoogteverschil")
+        self.input_ditch_slope.setSingleStep(0.1)
+        self.input_ditch_slope.setValue(1) # initieel 1:1
+        self.input_ditch_slope.setObjectName(_fromUtf8("Invoer_talud"))
 
-        self.groupBox_talud = QtGui.QGroupBox(self)
-        self.groupBox_talud.setTitle("Talud")
+        self.groupBox_ditch_slope = QtGui.QGroupBox(self)
+        self.groupBox_ditch_slope.setTitle("Talud")
 
-        self.vbox_talud = QtGui.QVBoxLayout()
-        self.vbox_talud.addWidget(self.invoer_talud)
+        self.vbox_ditch_slope = QtGui.QVBoxLayout()
+        self.vbox_ditch_slope.addWidget(self.input_ditch_slope)
 
-        self.groupBox_talud.setLayout(self.vbox_talud)
+        self.groupBox_ditch_slope.setLayout(self.vbox_ditch_slope)
 
-        self.middle_column.addWidget(self.groupBox_talud) # talud spinner toevoegen aan midden kolom
+        self.middle_column.addWidget(self.groupBox_ditch_slope) # talud spinner toevoegen aan midden kolom
 
         # Bereken
-        self.bereken_knop = QtGui.QPushButton()
-        self.bereken_knop.setObjectName(_fromUtf8("Bereken_knop"))
-        self.bereken_knop.clicked.connect(self.doe_berekening)
-        self.middle_column.addWidget(self.bereken_knop) # bereken knop toevoegen aan midden kolom
+        self.calc_button = QtGui.QPushButton()
+        self.calc_button.setObjectName(_fromUtf8("Bereken_knop"))
+        self.calc_button.clicked.connect(self.calculate)
+        self.middle_column.addWidget(self.calc_button) # bereken knop toevoegen aan midden kolom
 
         # Verticale Spacer om alles naar boven te drukken.
-        spacerItem_middenkolom = QtGui.QSpacerItem(10, 40, QtGui.QSizePolicy.Minimum, QtGui.QSizePolicy.Expanding)
-        self.middle_column.addItem(spacerItem_middenkolom)
+        spacerItem_middle_column = QtGui.QSpacerItem(10, 40, QtGui.QSizePolicy.Minimum, QtGui.QSizePolicy.Expanding)
+        self.middle_column.addItem(spacerItem_middle_column)
 
         # Rechterkolom
         self.right_column = QtGui.QVBoxLayout()
@@ -179,58 +179,67 @@ class NewWindow(QtGui.QWidget):
 
         # OPSLAAN / ANNULEREN KNOPPEN
         # Vlak maken voor de knoppen
-        self.horizontalLayout_3 = QtGui.QHBoxLayout() # knoppen komen naast elkaar dus een horizontal layout.
-        self.horizontalLayout_3.setObjectName(_fromUtf8("horizontalLayout_3"))
+        self.bottom_row = QtGui.QHBoxLayout() # knoppen komen naast elkaar dus een horizontal layout.
+        self.bottom_row.setObjectName(_fromUtf8("Bottom_row"))
 
         # Sluiten knop
-        self.sluiten = QtGui.QPushButton(self)
-        self.sluiten.setObjectName(_fromUtf8("sluiten"))
-        self.horizontalLayout_3.addWidget(self.sluiten)
+        self.cancel_button = QtGui.QPushButton(self)
+        self.cancel_button.setObjectName(_fromUtf8("Sluiten"))
+        self.cancel_button.clicked.connect(self.close_application)
+        self.bottom_row.addWidget(self.cancel_button)
 
         # Opslaan knop
-        self.opslaan = QtGui.QPushButton(self)
-        self.opslaan.setObjectName(_fromUtf8("opslaan"))
-        self.horizontalLayout_3.addWidget(self.opslaan)
+        self.save_button = QtGui.QPushButton(self)
+        self.save_button.setObjectName(_fromUtf8("Opslaan"))
+        self.save_button.clicked.connect(self.calculate)
+        self.bottom_row.addWidget(self.save_button)
 
         # Opslaan / Annuleer knoppen toevoegen aan onderkant verticale HOOFD layout
-        self.verticalLayout.addLayout(self.horizontalLayout_3)
-        
+        self.verticalLayout.addLayout(self.bottom_row)
+
         self.retranslateUi(self)
         QtCore.QMetaObject.connectSlotsByName(self)
 
     def retranslateUi(self, Dialog):
         Dialog.setWindowTitle(_translate("Dialog", "Dialog", None))
 
-        self.bereken_knop.setText(_translate("Dialog", "Berekenen", None))
-        self.opslaan.setText(_translate("Dialog", "Opslaan en sluiten", None))
-        self.sluiten.setText(_translate("Dialog", "Annuleer", None))
+        self.calc_button.setText(_translate("Dialog", "Berekenen", None))
+        self.save_button.setText(_translate("Dialog", "Opslaan en sluiten", None))
+        self.cancel_button.setText(_translate("Dialog", "Annuleer en sluiten", None))
 
-    def doe_berekening(self):
+    def calculate(self):
         try:
-            waterbreedte = float(self.invoer_waterbreedte.value())
-            waterdiepte = float(self.invoer_waterdiepte.value())
-            talud = float(self.invoer_talud.value())
+            ditch_width = float(self.input_ditch_width.value())
+            waterdepth = float(self.input_waterdepth.value())
+            ditch_slope = float(self.input_ditch_slope.value())
 
-            bodembreedte = waterbreedte-(talud*waterdiepte)*2
+            test1 = 1/(ditch_width*waterdepth*ditch_slope)
 
+            bodembreedte = ditch_width-(ditch_slope*waterdepth)*2
+            if bodembreedte <= 0:
+                verhang_message = "Verhang kan nu niet berekend worden, want"
+                bodembreedte_message = "bodembreedte is negatief of 0..."
+            else:
+                placeholder_norm_flow = 0.5
+                verhang_message = str(calc_bos_bijkerk(placeholder_norm_flow,bodembreedte,waterdepth,ditch_slope))+" is het verhang"
+                bodembreedte_message = str(bodembreedte)+" is de bodembreedte"
 
-            placeholder_norm_flow = 0.5
-
-            verhang = str(calc_bos_bijkerk(placeholder_norm_flow,bodembreedte,waterdiepte,talud))
+        except ZeroDivisionError:
+            verhang_message = "Delen door 0!"
+            bodembreedte_message = "Geen berekening mogelijk"
 
         except:
-            verhang = "kan geen berekening doen voor verhang doen."
-            bodembreedte = "door een probleem lukt de berkening niet."
+            verhang_message = "Om onbekende redenen kan er geen berekening voor verhang worden gemaakt."
+            bodembreedte_message = ""
 
-        self.output_info.setText(verhang + " is het verhang.")
-        self.output_info.append("\n")
-        self.output_info.append(str(bodembreedte)+" is de bodembreedte.")
+        finally:
 
-
-
+            self.output_info.setText(verhang_message)
+            self.output_info.append("\n")
+            self.output_info.append(str(bodembreedte_message))
 
     def close_application(self):
-        sys.exit()
+        self.destroy()
 
 
 
