@@ -353,7 +353,7 @@ class LeggerWidget(QDockWidget):
         pass
 
     def test_manual_input_window(self):
-        self._new_window = NewWindow()
+        self._new_window = NewWindow(self.session)
         self._new_window.show()
         pass
 

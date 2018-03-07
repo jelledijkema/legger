@@ -10,6 +10,8 @@ from PyQt4.QtGui import (QApplication, QColor, QDockWidget, QFormLayout,QHBoxLay
                          QLineEdit, QPushButton, QSizePolicy, QSpacerItem,
                          QTableView, QVBoxLayout, QWidget, QTreeView)
 
+from legger.sql_models.legger import Varianten
+
 
 from legger.utils.theoretical_profiles import calc_bos_bijkerk
 
@@ -27,6 +29,7 @@ except AttributeError:
     def _translate(context, text, disambig):
         return QtGui.QApplication.translate(context, text, disambig)
 
+
 class LeggerPlotWidget(pg.PlotWidget):
     def __init__(self, parent=None, name=""):
 
@@ -37,13 +40,122 @@ class LeggerPlotWidget(pg.PlotWidget):
         self.setLabel("left", "hoogte", "m tov waterlijn")
 
         self.series = {}
+        self.hydro_object = None #todo: verwijzing
+
+    def set_data(self,ditch_width,waterdepth,ditch_slope,ditch_bottomwidth):
+        self.ditch_width = ditch_width
+        self.waterdepth = waterdepth
+        self.ditch_slope = ditch_slope
+        self.ditch_bottomwidth = ditch_bottomwidth
+
+        self.draw_lines()
+
+    def draw_lines(self):
+        self.clear()
+
+        x = [
+            - 0.5 * self.ditch_width, -0.5 * self.ditch_bottomwidth, 0.5 * self.ditch_bottomwidth, 0.5 * self.ditch_width
+            ]
+
+        y = [
+            0, -1 * self.waterdepth, -1 * self.waterdepth, 0
+        ]
+
+
+        #Todo: verbinding met bestaand gemeten profiel
+        plot_item = pg.PlotDataItem(
+            x=x,
+            y=y,
+            connect='finite',
+            pen=pg.mkPen(color=(140, 0, 140), width=2)
+        )
+        self.addItem(plot_item)
+        self.autoRange()
 
 
 class NewWindow(QtGui.QWidget):
-    def __init__(self):
+    def __init__(self, db_session):
         super(NewWindow, self).__init__()
         self._new_window = None
 
+        self.session = db_session
+
+        self.setup_ui()
+
+        self.ditch_width = None
+        self.waterdepth = None
+        self.ditch_slope = None
+
+
+    def calculate(self):
+        try:
+            self.ditch_width = float(self.input_ditch_width.value())
+            self.waterdepth = float(self.input_waterdepth.value())
+            self.ditch_slope = float(self.input_ditch_slope.value())
+
+            self.output_info.setText('')
+            self.comments.setText(str(''))
+
+            test1 = 1/(self.ditch_width*self.waterdepth*self.ditch_slope) # een check of er 0 waarden zijn.
+
+            self.ditch_bottomwidth = self.ditch_width-(self.ditch_slope*self.waterdepth)*2
+
+            self.plot_widget.set_data(self.ditch_width,
+                                      self.waterdepth,
+                                      self.ditch_slope,
+                                      self.ditch_bottomwidth)
+
+            if  self.ditch_bottomwidth <= 0:
+                verhang_bericht = "Verhang kan nu niet berekend worden, want"
+                bodembreedte_bericht = "Bodembreedte is negatief of 0"
+            else:
+                placeholder_norm_flow = 0.5
+                self.verhang = calc_bos_bijkerk(placeholder_norm_flow,
+                                                       self.ditch_bottomwidth,
+                                                       self.waterdepth,
+                                                       self.ditch_slope)
+                verhang_bericht = str(self.verhang)+" is het verhang\n"
+                verhang_bericht = verhang_bericht + "\n"+ str(self.ditch_bottomwidth)+" is de bodembreedte"
+                bodembreedte_bericht = ""
+
+        except ZeroDivisionError:
+            verhang_bericht = "Delen door 0!"
+            bodembreedte_bericht = "Geen berekening mogelijk"
+
+        except:
+            verhang_bericht = "Om onbekende redenen kan er geen berekening voor verhang worden gemaakt."
+            bodembreedte_bericht = ""
+
+        finally:
+
+            self.output_info.setText(verhang_bericht)
+            self.comments.setText(str(bodembreedte_bericht))
+
+
+    def cancel_application(self):
+        self.close()
+
+    def save_and_close(self):
+
+        if self.ditch_width is not None and self.waterdepth is not None and self.ditch_slope is not None:
+            import datetime
+            variant = Varianten(
+                id=datetime.datetime.now().isoformat(),
+                diepte = self.waterdepth,
+                waterbreedte = self.ditch_width,
+                bodembreedte = self.ditch_bottomwidth,
+                talud=self.ditch_slope,
+                verhang_bos_bijkerk=self.verhang,
+                opmerkingen='',
+                hydro_id=None
+            )
+
+            self.session.add(variant)
+            self.session.commit()
+
+        self.close()
+
+    def setup_ui(self):
         self.setWindowIcon(QtGui.QIcon('C:\Users\Jelle\Pictures\cat.png'))
 
         # Scherm bestaat uit een paar hoofdonderdelen:
@@ -158,6 +270,11 @@ class NewWindow(QtGui.QWidget):
 
         self.right_column.addWidget(self.output_info)
 
+        self.comments = QtGui.QTextEdit(self)
+        self.comments.setObjectName(_fromUtf8("opmerkingen"))
+
+        self.right_column.addWidget(self.comments)
+
         # Verticale kolommen toevoegen aan de bovenste rij (horizontale lay-out)
         self.upper_row.addLayout(self.left_column) # kolom met introtext en invoer parameters toevoegen
         self.upper_row.addLayout(self.middle_column)
@@ -185,13 +302,13 @@ class NewWindow(QtGui.QWidget):
         # Sluiten knop
         self.cancel_button = QtGui.QPushButton(self)
         self.cancel_button.setObjectName(_fromUtf8("Sluiten"))
-        self.cancel_button.clicked.connect(self.close_application)
+        self.cancel_button.clicked.connect(self.cancel_application)
         self.bottom_row.addWidget(self.cancel_button)
 
         # Opslaan knop
         self.save_button = QtGui.QPushButton(self)
         self.save_button.setObjectName(_fromUtf8("Opslaan"))
-        self.save_button.clicked.connect(self.calculate)
+        self.save_button.clicked.connect(self.save_and_close)
         self.bottom_row.addWidget(self.save_button)
 
         # Opslaan / Annuleer knoppen toevoegen aan onderkant verticale HOOFD layout
@@ -207,39 +324,6 @@ class NewWindow(QtGui.QWidget):
         self.save_button.setText(_translate("Dialog", "Opslaan en sluiten", None))
         self.cancel_button.setText(_translate("Dialog", "Annuleer en sluiten", None))
 
-    def calculate(self):
-        try:
-            ditch_width = float(self.input_ditch_width.value())
-            waterdepth = float(self.input_waterdepth.value())
-            ditch_slope = float(self.input_ditch_slope.value())
-
-            test1 = 1/(ditch_width*waterdepth*ditch_slope)
-
-            bodembreedte = ditch_width-(ditch_slope*waterdepth)*2
-            if bodembreedte <= 0:
-                verhang_message = "Verhang kan nu niet berekend worden, want"
-                bodembreedte_message = "bodembreedte is negatief of 0..."
-            else:
-                placeholder_norm_flow = 0.5
-                verhang_message = str(calc_bos_bijkerk(placeholder_norm_flow,bodembreedte,waterdepth,ditch_slope))+" is het verhang"
-                bodembreedte_message = str(bodembreedte)+" is de bodembreedte"
-
-        except ZeroDivisionError:
-            verhang_message = "Delen door 0!"
-            bodembreedte_message = "Geen berekening mogelijk"
-
-        except:
-            verhang_message = "Om onbekende redenen kan er geen berekening voor verhang worden gemaakt."
-            bodembreedte_message = ""
-
-        finally:
-
-            self.output_info.setText(verhang_message)
-            self.output_info.append("\n")
-            self.output_info.append(str(bodembreedte_message))
-
-    def close_application(self):
-        self.destroy()
 
 
 
