@@ -1,5 +1,11 @@
 <RCC>
     <qresource prefix="/plugins/legger/" >
         <file>media/icon_legger.png</file>
+        <file>media/circle_blue.png</file>
+        <file>media/circle_green.png</file>
+        <file>media/circle_orange.png</file>
+        <file>media/circle_red.png</file>
+        <file>media/circle_white.png</file>
+        <file>media/plus.png</file>
     </qresource>
 </RCC>
