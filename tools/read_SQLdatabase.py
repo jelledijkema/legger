@@ -1,11 +1,26 @@
+import logging
+import os
+import sys
+
+import numpy as np
+import pyqtgraph as pg
+from PyQt4 import QtCore, QtGui
+from PyQt4.QtCore import QEvent, QMetaObject, QSize, Qt, pyqtSignal, pyqtSlot
+from PyQt4.QtGui import (QApplication, QColor, QDockWidget, QFormLayout,QHBoxLayout, QInputDialog,
+                         QLineEdit, QPushButton, QSizePolicy, QSpacerItem,
+                         QTableView, QVBoxLayout, QWidget, QTreeView)
+
+
+
 import os.path
 from PyQt4.QtCore import Qt
 import qgis
 
 from legger.views.legger_network_widget import LeggerWidget
+from legger.views.input_widget import NewWindow
 
 
-class LeggerNetworkTool:
+class ConnectToDatabase:
     """QGIS Plugin Implementation."""
 
     def __init__(self, iface):
@@ -22,13 +37,13 @@ class LeggerNetworkTool:
         self.plugin_dir = os.path.dirname(__file__)
 
         self.icon_path = ':/plugins/legger/media/icon_legger.png'
-        self.menu_text = u'legger berekenen'
+        self.menu_text = u'database inlezen'
 
         self.dock_widget = None
 
     def on_unload(self):
         """
-        on close of graph plugin
+        on close of graph plugin, cleans up when closed
         """
         if self.dock_widget is not None:
             self.dock_widget.close()
@@ -63,4 +78,6 @@ class LeggerNetworkTool:
             # show the dockwidget
             self.iface.addDockWidget(Qt.BottomDockWidgetArea, self.dock_widget)
 
+        self.session = "a"
+        self.dock_widget = NewWindow(self.session)
         self.dock_widget.show()

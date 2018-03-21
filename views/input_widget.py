@@ -40,7 +40,7 @@ class LeggerPlotWidget(pg.PlotWidget):
         self.setLabel("left", "hoogte", "m tov waterlijn")
 
         self.series = {}
-        self.hydro_object = None #todo: verwijzing
+        self.hydro_object = None #todo: verwijzing naar hydro object in kwestie
 
     def set_data(self,ditch_width,waterdepth,ditch_slope,ditch_bottomwidth):
         self.ditch_width = ditch_width

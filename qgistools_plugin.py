@@ -6,6 +6,7 @@ from PyQt4.QtCore import (QSettings, QTranslator, qVersion, QCoreApplication,
 from PyQt4.QtGui import QAction, QIcon
 # Import the code of the tools
 from legger.tools.legger_network_tool import LeggerNetworkTool
+from legger.tools.read_SQLdatabase import ConnectToDatabase
 # from qgis.utils import plugins
 
 
@@ -140,12 +141,26 @@ class Legger(QObject):
         self.toolbar = self.iface.addToolBar(u'Legger')
         self.toolbar.setObjectName(u'Legger')
 
+        #self.toolbar = self.iface.addToolBar(u'Database kiezer')
+        #self.toolbar.setObjectName(u'Database kiezer')
+
         # Init tools
         self.network_tool = LeggerNetworkTool(
             self.iface)
+        self.read_database = ConnectToDatabase(
+            self.iface)
+        self.load_profiles = ConnectToDatabase(
+            self.iface)
+
+        #self.toolbar = self.iface.addToolBar(u'Bereken profielen')
+        #self.toolbar.setObjectName(u'Bereken profielen')
+
+
 
         self.tools = []
         self.tools.append(self.network_tool)
+        self.tools.append(self.read_database)
+        self.tools.append(self.load_profiles)
 
         try:
             import remote_debugger_settings
