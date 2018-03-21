@@ -24,6 +24,7 @@ class TestReadTdiResults(unittest.TestCase):
         session = db.get_session()
 
         hydro_object = session.query(HydroObject).filter_by(objectid=1).first()
+        hydro_objects = session.query(HydroObject).filter(HydroObject.id.in_([])).all()
 
         self.assertIsNotNone(hydro_object)
 

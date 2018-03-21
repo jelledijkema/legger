@@ -9,3 +9,4 @@ The current version depends on the ThreeDiToolbox.
 Put the libary geometry_tools (https://github.com/GetThePointGit/geometry_tools)in the external directory
 
 
+pyrcc4 -o resources.py resources.qrc

@@ -29,7 +29,7 @@ class LeggerDatabase(ThreediDatabase):
                                       ["SPATIALITE=YES"])
             Base.metadata.create_all(self.engine)
 
-    def get_metadata(self, including_existing_tables=True, engine=None):
+    def get_metadata(self, including_existing_tables=False, engine=None):
 
         if including_existing_tables:
             metadata = copy.deepcopy(Base.metadata)

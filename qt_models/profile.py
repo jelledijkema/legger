@@ -78,16 +78,19 @@ class ProfileModel(BaseModel):
         """Fields and functions of ModelItem"""
 
         active = CheckboxField(show=True,
-                               default_value=True,
+                               default_value=False,
                                column_width=20,
                                column_name='')
         color = ColorField(show=True,
                               column_width=30,
                               column_name='',
                               default_value=select_default_color)
-        name = ValueField(show=True,
+        name = ValueField(show=False,
                           column_width=130,
                           column_name='name')
+        depth = ValueField(show=True,
+                          column_width=80,
+                          column_name='diepte')
 
         hover = ValueField(show=False,
                            default_value=False)

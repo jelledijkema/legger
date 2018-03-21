@@ -4,9 +4,9 @@ import os
 import numpy as np
 import pyqtgraph as pg
 from PyQt4 import QtCore
-from PyQt4.QtCore import QEvent, QMetaObject, QSize, Qt, pyqtSignal, pyqtSlot
+from PyQt4.QtCore import QEvent, QMetaObject, QSize, Qt, pyqtSignal, pyqtSlot, QModelIndex
 from PyQt4.QtGui import (QApplication, QColor, QDockWidget, QHBoxLayout, QPushButton, QSizePolicy, QSpacerItem,
-                         QTableView, QVBoxLayout, QWidget, QTreeView)
+                         QTableView, QVBoxLayout, QWidget, QTreeWidget, QTreeView, QTreeWidgetItem)
 from legger.qt_models.legger_item import LeggerItemModel
 from legger.utils.network import Network
 from legger.utils.network_utils import LeggerDistancePropeter, LeggerMapVisualisation, NetworkTool
@@ -25,6 +25,9 @@ from legger.sql_models.legger_database import LeggerDatabase
 from shapely.geometry import LineString
 from legger.qt_models.profile import ProfileModel
 from shapely.wkt import loads
+from graph_widgets import LeggerSideViewPlotWidget, LeggerPlotWidget
+
+from legger.qt_models.legger_tree import TreeItem, LeggerTreeModel
 
 from sqlalchemy.orm import joinedload
 
@@ -108,7 +111,7 @@ class PlotItemTable(QTableView):
     def hover_exit(self, row_nr):
         if row_nr >= 0:
             item = self.model.rows[row_nr]
-            item.color.value = list(item.color.value)[:3] + [150]
+            item.color.value = list(item.color.value)[:3] + [20]
             item.hover.value = False
 
     def hover_enter(self, row_nr):
@@ -116,7 +119,7 @@ class PlotItemTable(QTableView):
             item = self.model.rows[row_nr]
             name = item.name.value
             self.hoverEnterRow.emit(name)
-            item.color.value = list(item.color.value)[:3] + [220]
+            item.color.value = list(item.color.value)[:3] + [255]
             item.hover.value = True
 
     def setModel(self, model):
@@ -128,110 +131,60 @@ class PlotItemTable(QTableView):
         self.model.set_column_sizes_on_view(self)
 
 
-class LeggerPlotWidget(pg.PlotWidget):
-    def __init__(self, parent=None, name=""):
-
-        super(LeggerPlotWidget, self).__init__(parent)
-        self.name = name
-        self.showGrid(True, True, 0.5)
-        self.setLabel("bottom", "breedte", "m")
-        self.setLabel("left", "hoogte", "m tov waterlijn")
-
-        self.series = {}
-
-    def setMeasuredModel(self, model):
-        # todo: remove listeners to old model?
-        self.measured_model = model
-        self.measured_model.dataChanged.connect(self.data_changed_measured)
-        self.measured_model.rowsInserted.connect(self.on_insert)
-        self.measured_model.rowsAboutToBeRemoved.connect(
-            self.on_remove)
-
-    def setVariantModel(self, model):
-        # todo: remove listeners to old model?
-        self.variant_model = model
-        self.variant_model.dataChanged.connect(self.data_changed_variant)
-        self.variant_model.rowsInserted.connect(self.on_insert)
-        self.variant_model.rowsAboutToBeRemoved.connect(
-            self.on_remove)
-
-    def on_remove(self):
-        self.draw_lines()
-
-    def on_insert(self):
-        self.draw_lines()
-
-    def draw_lines(self):
-        self.clear()
-
-        models = [self.measured_model, self.variant_model]
-
-        for model in models:
-            for item in model.rows:
-                if item.active.value:
-                    midpoint = sum([p[0] for p in item.points.value[-2:]]) / 2
-
-                    width = [p[0] - midpoint for p in item.points.value]
-                    height = [p[1] for p in item.points.value]
-
-                    plot_item = pg.PlotDataItem(
-                        x=width,
-                        y=height,
-                        connect='finite',
-                        pen=pg.mkPen(color=QColor(*item.color.value), width=1))
-
-                    # keep reference
-                    item._plot = plot_item
-                    self.addItem(item._plot)
-
-        self.autoRange()
-
-    def data_changed_variant(self, index):
-        self.data_changed(self.variant_model, index)
-
-    def data_changed_measured(self, index):
-        self.data_changed(self.measured_model, index)
-
-    def data_changed(self, model, index):
-        """
-        change graphs based on changes in locations
-        :param index: index of changed field
-        """
-        if model.columns[index.column()].name == 'active':
-            self.draw_lines()
-
-        elif model.columns[index.column()].name == 'hover':
-            for item in model.rows:
-                item._plot.setPen(color=list(item.color.value)[:3] + [20],
-                                  width=1)
-
-            item = model.rows[index.row()]
-            if item.hover.value:
-                if item.active.value:
-                    item._plot.setPen(color=item.color.value,
-                                      width=2)
-            else:
-                # if item.active.value:
-                for item in model.rows:
-                    item._plot.setPen(color=item.color.value,
-                                      width=1)
-
-
 class LeggerTreeWidget(QTreeView):
 
-    def __init__(self, parent=None, tree_model=None):
+    def __init__(self, parent=None, legger_model=None, on_select=None):
         super(LeggerTreeWidget, self).__init__(parent)
 
-        if tree_model:
-            self.setModel(tree_model)
+        self.on_select = on_select
+
+        if legger_model is None:
+            legger_model = LeggerTreeModel()
+
+        # self.model = legger_model
+
+        self.setModel(legger_model)
+        self.setAlternatingRowColors(True)
+
+        # header = QTreeWidgetItem(["type", "diepte", "breedte"])
+        # self.setHeaderItem(header)
+        # self.setColumnWidth(0, 120)
+        # self.setColumnWidth(1, 60)
+        # self.setColumnWidth(2, 60)
 
         QtCore.QObject.connect(self.selectionModel(),
                                QtCore.SIGNAL('selectionChanged(QItemSelection, QItemSelection)'),
                                self.select_leaf)
 
+    # def set_data(self, data_dict):
+    #
+    #     def add_tree_data(parent, children):
+    #         for child in children:
+    #             item = QTreeWidgetItem(parent, [
+    #                 child.get('name'),
+    #                 child.get('depth'),
+    #                 child.get('width')
+    #             ])
+    #             item.setData(3, Qt.EditRole, child.get('feat_id'))
+    #             item.setData(4, Qt.EditRole, child.get('vertex_id'))
+    #
+    #             if child.get('children'):
+    #                 add_tree_data(child, child.get('children'))
+    #
+    #     root = QTreeWidgetItem(self, [
+    #         'root', '', ''
+    #     ])
+    #     add_tree_data(root, data_dict)
+
     @pyqtSlot("QItemSelection, QItemSelection")
     def select_leaf(self, selected, deselected):
-        pass
+        for it in selected.indexes():
+            if it.column() == 0:
+                item = self.model().data(it, Qt.UserRole)
+                ids = item.hydrovak.get('hydro_id')
+                name = item.hydrovak.get('name')
+                log.info('selected hydrovak %s', ids)
+                self.on_select(item, name)
 
 
 class LeggerWidget(QDockWidget):
@@ -247,7 +200,11 @@ class LeggerWidget(QDockWidget):
         self.network_tool_active = False
         self.measured_model = ProfileModel()
         self.variant_model = ProfileModel()
-        self.legger_tree_model = LeggerTreeModel()
+        self.legger_model = LeggerTreeModel()
+
+        self.ep = None
+        self.sp = None
+        self.selected_hydrovak = None
 
         # setup ui
         self.setup_ui(self)
@@ -273,6 +230,8 @@ class LeggerWidget(QDockWidget):
             self.toggle_startpoint_button)
         self.reset_network_tree_button.clicked.connect(
             self.reset_network_tree)
+        self.variant_model.dataChanged.connect(self.data_changed_variant)
+        self.legger_model.dataChanged.connect(self.data_changed_legger_tree)
 
         db = LeggerDatabase(
             {
@@ -289,18 +248,22 @@ class LeggerWidget(QDockWidget):
     def init_network_tool(self, director_type='flow_direction'):
         # init network graph
 
+        # line_direct = self.get_line_layer(geometry_col='line')
+        line_direct = self.get_line_layer(geometry_col='line')
+        full_line_layer = self.get_line_layer(geometry_col='geometry')
+
         if director_type == 'connected':
             director = QgsLineVectorLayerDirector(
-                self.line_layer, -1, '', '', '', 3)
+                line_direct, -1, '', '', '', 3)
         elif director_type == 'flow_direction':
-            field_nr = self.line_layer.fieldNameIndex('direction')
+            field_nr = line_direct.fieldNameIndex('direction')
             director = QgsLineVectorLayerDirector(
-                self.line_layer, field_nr, '2', '1', '3', 3)
+                line_direct, field_nr, '2', '1', '3', 3)
         else:
             raise NotImplementedError("director '%s' not implemented" % director_type)
 
         self.network = Network(
-            self.line_layer, director, id_field='id',
+            line_direct, full_line_layer, director,
             weight_properter=LeggerDistancePropeter(),  # 'q_end'
             distance_properter=LeggerDistancePropeter())  # 'q_end'
         #
@@ -308,13 +271,14 @@ class LeggerWidget(QDockWidget):
         #  link route map tool
         self.network_tool = NetworkTool(
             self.iface.mapCanvas(),
-            self.line_layer,
-            self.on_point_select)
+            line_direct,
+            # self.line_layer,  # for tool, the original one for consistent selection of lines equal to layer visible for user
+            self.on_start_point_select)
 
         self.network_tool.deactivated.connect(self.unset_network_tool)
 
         self.map_visualisation = LeggerMapVisualisation(
-            self.iface, self.line_layer.crs())
+            self.iface, line_direct.crs())
 
         # add tree layer to map (for fun and testing purposes)
         self.vl_tree_layer = self.network.get_virtual_tree_layer()
@@ -325,7 +289,16 @@ class LeggerWidget(QDockWidget):
 
         QgsMapLayerRegistry.instance().addMapLayer(self.vl_tree_layer)
 
-    def get_line_layer(self):
+        # add tree layer to map (for fun and testing purposes)
+        self.vl_endpoint_layer = self.network.get_endpoint_layer()
+
+        self.vl_endpoint_layer.loadNamedStyle(os.path.join(
+            os.path.dirname(os.path.realpath(__file__)), os.pardir,
+            'layer_styles', 'legger', 'end_points.qml'))
+
+        QgsMapLayerRegistry.instance().addMapLayer(self.vl_endpoint_layer)
+
+    def get_line_layer(self, geometry_col='geometry'):
 
         def get_layer(spatialite_path, table_name, geom_column=''):
             uri2 = QgsDataSourceURI()
@@ -336,11 +309,14 @@ class LeggerWidget(QDockWidget):
                                   table_name,
                                   'spatialite')
 
-        return get_layer(
+        layer = get_layer(
             self.path_legger_db,
-            'hydroobjects_kenmerken',
-            'geometry'
+            'hydroobjects_kenmerken14',
+            geometry_col
         )
+
+        layer.setSubsetString('"categorieoppwaterlichaam"=1')
+        return layer
 
     def unset_network_tool(self):
         pass
@@ -359,7 +335,146 @@ class LeggerWidget(QDockWidget):
             self.network_tool_active = True
             self.iface.mapCanvas().setMapTool(self.network_tool)
 
-    def on_point_select(self, selected_features, clicked_coordinate):
+    def select_profile(self, item):
+        pass
+
+    def data_changed_legger_tree(self, index, to_index):
+        """
+                change graphs based on changes in locations
+                :param index: index of changed field
+                """
+        col = self.legger_model.column(index.column())
+
+        if col['field'] == 'sp':
+            value = self.legger_model.data(index, Qt.CheckStateRole)
+            if value:
+                index_ep = self.legger_model.find_younger(start_index=index, key='ep', value=True)
+                if index_ep is None:
+                    leaf_endpoint = self.legger_model.get_open_endleaf(self.legger_tree_widget)
+                    self.legger_model.setDataItemKey(
+                        leaf_endpoint, 'ep', True, role=Qt.CheckStateRole)
+                else:
+                    self.ep = index_ep.internalPointer()
+                    self.sp = index.internalPointer()
+                    self.refresh_sideview(self.sp, self.ep)
+
+        elif col['field'] == 'ep':
+            value = self.legger_model.data(index, Qt.CheckStateRole)
+            if value:
+                index_sp = self.legger_model.find_older(start_index=index, key='sp', value=True)
+                if index_sp is None:
+                    self.legger_model.setDataItemKey(
+                        self.legger_model.rootItem.child(0), 'sp', True, role=Qt.CheckStateRole)
+                else:
+                    self.ep = index.internalPointer()
+                    self.sp = index_sp.internalPointer()
+                    self.refresh_sideview(self.sp, self.ep)
+
+                # activate draw
+
+    def refresh_sideview(self, sp, ep):
+
+        up = ep.up(end=sp)
+
+        out = []
+        ids = []
+        dist = 0
+        for line in reversed(up):
+            ids.append(line.hydrovak.get('hydro_id'))
+            out.append({
+                'b_distance': dist,
+                'e_distance': line.hydrovak.get('distance'),
+                'depth': line.hydrovak.get('depth'),
+                'target_level': line.hydrovak.get('target_level'),
+                'min_depth': line.hydrovak.get('variant_min'),
+                'max_depth': line.hydrovak.get('variant_max'),
+            })
+            dist = line.hydrovak.get('distance')
+
+        self.sideview_widget.set_data(out)
+
+        profs = []
+        if len(ids):
+            hydro_objects = self.session.query(HydroObject).filter(HydroObject.id.in_(ids)).all()
+
+            self.measured_model.removeRows(0, len(self.measured_model.rows))
+
+            for obj in hydro_objects:
+                for profile in obj.figuren.filter_by(type_prof='m').all():
+                    profs.append({
+                        'name': profile.profid,
+                        'color': (128, 128, 128),
+                        'points': [p for p in loads(profile.coord).exterior.coords]
+                    })
+
+            self.measured_model.insertRows(profs)
+
+        print('refresh')
+
+    def data_changed_variant(self, index):
+        """
+        change graphs based on changes in locations
+        :param index: index of changed field
+        """
+        item = self.variant_model.rows[index.row()]
+        if self.variant_model.columns[index.column()].name == 'active':
+            if item.active.value:
+                # only one selected at the time
+                for row in self.variant_model.rows:
+                    if row.active.value and row != item:
+                        row.active.value = False
+                depth = item.depth.value
+
+                def loop(node):
+                    """
+                    recursive loop over younger items where depth can be applied according to
+                    available profiles
+                    :param node:
+                    :return:
+                    """
+                    for young in node.younger():
+                        if (young.hydrovak.get('variant_min') is None or
+                                young.hydrovak.get('variant_max') is None or
+                                (depth >= young.hydrovak.get('variant_min') and
+                                 depth <= young.hydrovak.get('variant_max'))):
+                            self.legger_model.setDataItemKey(young, 'selected_depth', depth)
+                            loop(young)
+
+                self.legger_model.setDataItemKey(self.selected_hydrovak, 'selected_depth', depth)
+                loop(self.selected_hydrovak)
+
+        elif self.variant_model.columns[index.column()].name == 'hover':
+            if item.hover.value:
+                depth = item.depth.value
+
+                def loop(node):
+                    """
+                    recursive loop over younger items where depth can be applied according to
+                    available profiles
+                    :param node:
+                    :return:
+                    """
+                    for young in node.younger():
+                        if (young.hydrovak.get('variant_min') is None or
+                                young.hydrovak.get('variant_max') is None or
+                                (depth >= young.hydrovak.get('variant_min') and
+                                 depth <= young.hydrovak.get('variant_max'))):
+                            #index = self.legger_model.createIndex(young.row(), 0, young)
+                            self.legger_model.setDataItemKey(young, 'selected_depth_tmp', depth)
+                            loop(young)
+                self.legger_model.set_column_value('selected_depth_tmp', None)
+                self.legger_model.setDataItemKey(self.selected_hydrovak, 'selected_depth_tmp', depth)
+                loop(self.selected_hydrovak)
+
+                # self.network._virtual_tree_layer.setSubsetString(
+                #     '"var_min_depth"<={depth} AND "var_max_depth">={depth}'.format(depth=depth))
+            else:
+                self.network._virtual_tree_layer.setSubsetString('')
+
+    # def start_end_point_changed(self):
+    #     pass
+
+    def on_start_point_select(self, selected_features, clicked_coordinate):
         """Select and add the closest point from the list of selected features.
 
         Args:
@@ -390,52 +505,54 @@ class LeggerWidget(QDockWidget):
             self.network.reset()
             self.network.add_point(next_point)
 
-            # todo: add graph functions here
+        self.legger_model.clear()
 
-            field_idx = self.network._virtual_tree_layer.fieldNameIndex('line_id')
-            ids = self.network._virtual_tree_layer.uniqueValues(field_idx)
+        root = TreeItem(None, None)
+        self.network.get_tree_data(root)
+        self.legger_model.setNewTree(root.childs)
+        self.legger_model.set_column_sizes_on_view(self.legger_tree_widget)
 
-            try:
-                ids.remove(feature['id'])
-            except AttributeError:
-                pass
-            except ValueError:
-                pass
+        # model = LeggerTreeModel(root_item=root)
+        # self.legger_tree_widget.setModel(model)
 
-            hydro_objects = self.session.query(HydroObject).filter(HydroObject.id.in_(ids)).all()
+    def on_select_edit_hydrovak(self, item, arc_id):
 
-            self.measured_model.removeRows(0, len(self.measured_model.rows))
-            profs = []
-            for obj in hydro_objects:
-                for profile in obj.figuren.filter_by(type_prof='m').all():
-                    profs.append({
-                        'name': profile.profid,
-                        'color': (128, 128, 128, 180),
-                        'points': [p for p in loads(profile.coord).exterior.coords]
-                    })
+        self.selected_hydrovak = item
+        ids = item.hydrovak.get('hydro_id')
+        hydro_object = self.session.query(HydroObject).filter_by(id=item.hydrovak.get('hydro_id')).first()
+        # todo: improve this quick fix
+        if hydro_object is None:
+            return None
 
-            hydro_object = self.session.query(HydroObject).filter_by(id=feature['id']).first()
+        # for profile in hydro_object.figuren.filter_by(type_prof='m').all():
+        #     profs.append({
+        #         'name': profile.profid,
+        #         'color': (128, 128, 128, 256),
+        #         'points': [p for p in loads(profile.coord).exterior.coords]
+        #     })
 
-            for profile in hydro_object.figuren.filter_by(type_prof='m').all():
-                profs.append({
-                    'name': profile.profid,
-                    'color': (128, 128, 128, 256),
-                    'points': [p for p in loads(profile.coord).exterior.coords]
-                })
+        self.variant_model.removeRows(0, len(self.variant_model.rows))
+        profs = []
+        for profile in hydro_object.varianten.all():
+            profs.append({
+                'name': profile.id,
+                'depth': profile.diepte,
+                'color': (243, 132, 0, 20),
+                'points': [
+                    (-0.5 * profile.waterbreedte, hydro_object.streefpeil),
+                    (-0.5 * profile.bodembreedte, hydro_object.streefpeil - profile.diepte),
+                    (0.5 * profile.bodembreedte, hydro_object.streefpeil - profile.diepte),
+                    (0.5 * profile.waterbreedte, hydro_object.streefpeil),
+                ]
+            })
+        self.variant_model.insertRows(profs)
+        pass
 
-            self.measured_model.insertRows(profs)
+    def on_hover_profile(self):
+        pass
 
-            self.variant_model.removeRows(0, len(self.variant_model.rows))
-            profs = []
-            for profile in hydro_object.figuren.filter_by(type_prof='t').all():
-                profs.append({
-                    'name': profile.profid,
-                    'color': (243, 132, 0, 180),
-                    'points': [p for p in loads(profile.coord).exterior.coords]
-                })
-            self.variant_model.insertRows(profs)
-
-            # hydro_object.figuren.filter_by(HydroObject.type_prof='m')
+    def on_select_profile(self):
+        pass
 
     def accept(self):
         pass
@@ -449,6 +566,8 @@ class LeggerWidget(QDockWidget):
             QgsMapLayerRegistry.instance().removeMapLayer(self.vl_tree_layer)
         if self.line_layer in QgsMapLayerRegistry.instance().mapLayers().values():
             QgsMapLayerRegistry.instance().removeMapLayer(self.line_layer)
+        if self.vl_endpoint_layer in QgsMapLayerRegistry.instance().mapLayers().values():
+            QgsMapLayerRegistry.instance().removeMapLayer(self.vl_endpoint_layer)
 
         if self.network_tool_active:
             self.toggle_startpoint_button()
@@ -456,6 +575,9 @@ class LeggerWidget(QDockWidget):
             self.toggle_startpoint_button)
         self.reset_network_tree_button.clicked.disconnect(
             self.reset_network_tree)
+
+        self.variant_model.dataChanged.disconnect(self.data_changed_variant)
+        self.legger_model.dataChanged.disconnect(self.data_changed_legger_tree)
 
         self.closingWidget.emit()
         event.accept()
@@ -498,8 +620,19 @@ class LeggerWidget(QDockWidget):
         self.contentLayout = QHBoxLayout(self)
 
         # Tree
-        self.legger_tree_widget = LeggerTreeWidget(self, self.legger_tree_model)
+        self.legger_tree_widget = LeggerTreeWidget(self, self.legger_model, self.on_select_edit_hydrovak)
+        sizePolicy = QSizePolicy(QSizePolicy.Fixed, QSizePolicy.Expanding)
+        sizePolicy.setHorizontalStretch(0)
+        sizePolicy.setVerticalStretch(0)
+        sizePolicy.setHeightForWidth(
+            self.legger_tree_widget.sizePolicy().hasHeightForWidth())
+        self.legger_tree_widget.setSizePolicy(sizePolicy)
+        self.legger_tree_widget.setMinimumSize(QSize(750, 0))
+
         self.contentLayout.addWidget(self.legger_tree_widget)
+
+        # graphs
+        self.graph_vlayout = QVBoxLayout(self)
 
         # Graph
         self.plot_widget = LeggerPlotWidget(self)
@@ -509,9 +642,23 @@ class LeggerWidget(QDockWidget):
         sizePolicy.setHeightForWidth(
             self.plot_widget.sizePolicy().hasHeightForWidth())
         self.plot_widget.setSizePolicy(sizePolicy)
-        self.plot_widget.setMinimumSize(QSize(250, 250))
+        self.plot_widget.setMinimumSize(QSize(250, 150))
 
-        self.contentLayout.addWidget(self.plot_widget)
+        self.graph_vlayout.addWidget(self.plot_widget)
+
+        # Sideview Graph
+        self.sideview_widget = LeggerSideViewPlotWidget(self)
+        sizePolicy = QSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
+        sizePolicy.setHorizontalStretch(1)
+        sizePolicy.setVerticalStretch(1)
+        sizePolicy.setHeightForWidth(
+            self.sideview_widget.sizePolicy().hasHeightForWidth())
+        self.sideview_widget.setSizePolicy(sizePolicy)
+        self.sideview_widget.setMinimumSize(QSize(250, 150))
+
+        self.graph_vlayout.addWidget(self.sideview_widget)
+
+        self.contentLayout.addLayout(self.graph_vlayout)
 
         # table
         self.plot_item_table = PlotItemTable(self)

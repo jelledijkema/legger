@@ -42,6 +42,8 @@ class HydroObject(Base):
     # shape_length = Column(Float)
 
     varianten = relationship("Varianten",
+                             uselist=True,
+                             lazy='dynamic',
                              back_populates="hydro")
 
     profielen = relationship("Profielen",
@@ -151,6 +153,7 @@ class Varianten(Base):
 
     hydro = relationship(HydroObject,
                          # foreign_keys='ws_in_peilgebied',
+                         uselist=False,
                          back_populates="varianten")
 
     def __str__(self):
