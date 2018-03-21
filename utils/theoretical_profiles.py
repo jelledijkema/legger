@@ -280,8 +280,7 @@ def calc_profile_variants(hydro_objects_satisfy):
         object_waterdepth_id = (str(hydro_objects_satisfy.object_id[i]) + "_" +
                                 str(round(hydro_objects_satisfy.water_depth[i] * 100 + (count * 5), 0)))
         if count == 0:
-            # When normative flow is small,
-            # the necessary profile dimensions are smaller than the minimum requirements.
+            # When normative flow is small, the necessary profile dimensions are smaller than the minimum requirements.
             # print ("minimum profile dimensions suffices for object " + str(object_id))
             ditch_bottom_width = 0.5
             ditch_width = ditch_bottom_width + slope * water_depth
@@ -304,6 +303,8 @@ def calc_profile_variants(hydro_objects_satisfy):
             count = 1
 
         options_table.possibilities_count[options_table.object_id == options_table.object_id[i]] = count
+        # produces a table with the options per hydro object. This is not part of the return, because it is not used.
+
     variants_table = variants_table.reset_index(drop=True)
 
     return variants_table
@@ -421,15 +422,47 @@ def create_theoretical_profiles(legger_db_filepath):
 
     # print (str(len(hydro_objects_satisfy)) + " of the " + str(len(profile_max_ditch_width))
     # + " hydro objects satisfy the norm")
+    hydro_objects_unsatisfy = profile_max_ditch_width[profile_max_ditch_width['gradient_bos_bijkerk'] > gradient_norm]
 
     profile_variants = calc_profile_variants(hydro_objects_satisfy)
     # print profile_variants
 
     print ("\nFinished 7: variants created\n")
+
+    for i,rows in hydro_objects_unsatisfy.iterrows():
+
+        object_id = hydro_objects_unsatisfy.object_id[i]
+        object_waterdepth_id = (str(hydro_objects_unsatisfy.object_id[i]) + "_"
+                                + str(round(hydro_objects_unsatisfy.water_depth[i],2)))
+        slope = hydro_objects_unsatisfy.slope[i]
+        water_depth = hydro_objects_unsatisfy.water_depth[i]
+        ditch_width = hydro_objects_unsatisfy.max_ditch_width[i]
+        ditch_bottom_width = hydro_objects_unsatisfy.ditch_bottom_width[i]
+        normative_flow = hydro_objects_unsatisfy.normative_flow[i]
+        gradient_bos_bijkerke = hydro_objects_unsatisfy.gradient_bos_bijkerke[i]
+
+        df_temp = pd.DataFrame([[object_id,
+                                 object_waterdepth_id,
+                                 slope,
+                                 water_depth,
+                                 ditch_width,
+                                 ditch_bottom_width,
+                                 normative_flow,
+                                 gradient_bos_bijkerke]],
+                               columns=['object_id', 'object_waterdepth_id', 'slope',
+                                        'water_depth', 'ditch_width', 'ditch_bottom_width',
+                                        'normative_flow', 'gradient_bos_bijkerke'])
+
+        profile_variants = profile_variants.append(df_temp)
+    profile_variants = profile_variants.reset_index(drop=True)
+
+    print ("\nFinished 8: appended all hydro-objects without suitable profile\n")
+    print ("\nAll potential profiles are created\n")
     return profile_variants
 
 
 def write_theoretical_profile_results_to_db(profile_results, path_legger_db):
+    print ("\nWriting output to db...\n")
     db = LeggerDatabase(
         {
             'db_path': path_legger_db
@@ -442,6 +475,11 @@ def write_theoretical_profile_results_to_db(profile_results, path_legger_db):
     profiles = []
 
     for i, rows in profile_results.iterrows():
+        if profile_results.gradient_bos_bijkerk[i] > gradient_norm:
+            opmerkingen = "voldoet niet aan de norm."
+        else:
+            opmerkingen = ""
+
         profiles.append(Varianten(
             hydro_id=profile_results.object_id[i],
             id=profile_results.object_waterdepth_id[i],
@@ -450,7 +488,7 @@ def write_theoretical_profile_results_to_db(profile_results, path_legger_db):
             waterbreedte=profile_results.ditch_width[i],
             bodembreedte=profile_results.ditch_bottom_width[i],
             verhang_bos_bijkerk=profile_results.gradient_bos_bijkerk[i],
-            opmerkingen=""
+            opmerkingen=opmerkingen
         ))
 
     session.execute("Delete from {0}".format(Varianten.__tablename__))
