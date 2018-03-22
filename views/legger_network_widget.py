@@ -25,7 +25,6 @@ from legger.sql_models.legger import HydroObject
 from legger.sql_models.legger_database import LeggerDatabase
 from shapely.geometry import LineString
 from legger.qt_models.profile import ProfileModel
-from shapely.wkt import loads
 from graph_widgets import LeggerSideViewPlotWidget, LeggerPlotWidget
 
 from legger.qt_models.legger_tree import TreeItem, LeggerTreeModel
@@ -50,43 +49,38 @@ except AttributeError:
 class PlotItemTable(QTableView):
     hoverExitRow = pyqtSignal(int)
     hoverExitAllRows = pyqtSignal()  # exit the whole widget
-    hoverEnterRow = pyqtSignal(str)
+    hoverEnterRow = pyqtSignal(int)
 
-    def __init__(self, parent=None):
+    def __init__(self, parent=None, variant_model=None):
         super(PlotItemTable, self).__init__(parent)
-        self.setStyleSheet("QTreeView::item:hover{background-color:#FFFF00;}")
-        self.setMouseTracking(True)
-        self.model = None
 
         self._last_hovered_row = None
+
+        if variant_model is not None:
+            self.setModel(variant_model)
+
+        self.setMouseTracking(True)
         self.viewport().installEventFilter(self)
 
-    def on_close(self):
-        """
-        unloading widget and remove all required stuff
-        :return:
-        """
-        self.setMouseTracking(False)
-        self.viewport().removeEventFilter(self)
+        self.setStyleSheet("QTableView::item:hover{background-color:#FFFF00;}")
 
     def closeEvent(self, event):
         """
         overwrite of QDockWidget class to emit signal
         :param event: QEvent
         """
-        self.on_close()
+        self.setMouseTracking(False)
+        self.viewport().removeEventFilter(self)
         event.accept()
 
     def eventFilter(self, widget, event):
         if widget is self.viewport():
-
             if QEvent is None:
                 return QTableView.eventFilter(self, widget, event)
             elif event.type() == QEvent.MouseMove:
                 row = self.indexAt(event.pos()).row()
-                if row == 0 and self.model and row > self.model.rowCount():
+                if row == 0 and self.model() and row > self.model().rowCount():
                     row = None
-
             elif event.type() == QEvent.Leave:
                 row = None
                 self.hoverExitAllRows.emit()
@@ -97,87 +91,72 @@ class PlotItemTable(QTableView):
                 if self._last_hovered_row is not None:
                     try:
                         self.hover_exit(self._last_hovered_row)
+                        self.hoverExitRow.emit(self._last_hovered_row)
                     except IndexError:
                         log.warning("Hover row index %s out of range",
                                     self._last_hovered_row)
-                        # self.hoverExitRow.emit(self._last_hovered_row)
-                # self.hoverEnterRow.emit(row)
                 if row is not None:
                     try:
                         self.hover_enter(row)
+                        self.hoverEnterRow.emit(row)
                     except IndexError:
                         log.warning("Hover row index %s out of range", row),
                 self._last_hovered_row = row
-                pass
+
         return QTableView.eventFilter(self, widget, event)
 
     def hover_exit(self, row_nr):
         if row_nr >= 0:
-            item = self.model.rows[row_nr]
+            item = self.model().rows[row_nr]
             item.color.value = list(item.color.value)[:3] + [20]
             item.hover.value = False
 
     def hover_enter(self, row_nr):
         if row_nr >= 0:
-            item = self.model.rows[row_nr]
-            name = item.name.value
-            self.hoverEnterRow.emit(name)
+            item = self.model().rows[row_nr]
             item.color.value = list(item.color.value)[:3] + [255]
             item.hover.value = True
 
     def setModel(self, model):
         super(PlotItemTable, self).setModel(model)
 
-        self.model = model
-
         self.resizeColumnsToContents()
-        self.model.set_column_sizes_on_view(self)
+        self.model().set_column_sizes_on_view(self)
 
 
 class LeggerTreeWidget(QTreeView):
+    hoverExitIndex = pyqtSignal(QModelIndex)
+    hoverExitAll = pyqtSignal()  # exit the whole widget
+    hoverEnterIndex = pyqtSignal(QModelIndex)
 
     def __init__(self, parent=None, legger_model=None, on_select=None):
         super(LeggerTreeWidget, self).__init__(parent)
-
         self.on_select = on_select
+
+        self._last_hovered_item = None
 
         if legger_model is None:
             legger_model = LeggerTreeModel()
-
-        # self.model = legger_model
-
         self.setModel(legger_model)
-        self.setAlternatingRowColors(True)
 
-        # header = QTreeWidgetItem(["type", "diepte", "breedte"])
-        # self.setHeaderItem(header)
-        # self.setColumnWidth(0, 120)
-        # self.setColumnWidth(1, 60)
-        # self.setColumnWidth(2, 60)
-
+        # set signals
         QtCore.QObject.connect(self.selectionModel(),
                                QtCore.SIGNAL('selectionChanged(QItemSelection, QItemSelection)'),
                                self.select_leaf)
+        self.setMouseTracking(True)
+        self.viewport().installEventFilter(self)
 
-    # def set_data(self, data_dict):
-    #
-    #     def add_tree_data(parent, children):
-    #         for child in children:
-    #             item = QTreeWidgetItem(parent, [
-    #                 child.get('name'),
-    #                 child.get('depth'),
-    #                 child.get('width')
-    #             ])
-    #             item.setData(3, Qt.EditRole, child.get('feat_id'))
-    #             item.setData(4, Qt.EditRole, child.get('vertex_id'))
-    #
-    #             if child.get('children'):
-    #                 add_tree_data(child, child.get('children'))
-    #
-    #     root = QTreeWidgetItem(self, [
-    #         'root', '', ''
-    #     ])
-    #     add_tree_data(root, data_dict)
+        # set other
+        self.setAlternatingRowColors(True)
+
+    def closeEvent(self, event):
+        """
+        overwrite of QDockWidget class to emit signal
+        :param event: QEvent
+        """
+        self.setMouseTracking(False)
+        self.viewport().removeEventFilter(self)
+        event.accept()
 
     @pyqtSlot("QItemSelection, QItemSelection")
     def select_leaf(self, selected, deselected):
@@ -189,6 +168,52 @@ class LeggerTreeWidget(QTreeView):
                 log.info('selected hydrovak %s', ids)
                 self.on_select(item, name)
 
+    def eventFilter(self, widget, event):
+        if widget is self.viewport():
+            if QEvent is None:
+                return QTreeView.eventFilter(self, widget, event)
+            elif event.type() == QEvent.MouseMove:
+                index = self.indexAt(event.pos())
+                if not index.isValid():
+                    index = None
+            elif event.type() == QEvent.Leave:
+                index = None
+                self.hoverExitAll.emit()
+            else:
+                index = self._last_hovered_item
+
+            if index != self._last_hovered_item:
+                if self._last_hovered_item is not None:
+                    try:
+                        self.hover_exit(self._last_hovered_item)
+                        self.hoverExitIndex.emit(self._last_hovered_item)
+                    except IndexError:
+                        log.warning("Hover row index %s out of range",
+                                    self._last_hovered_item)
+
+                if index is not None:
+                    try:
+                        self.hover_enter(index)
+                        self.hoverEnterIndex.emit(index)
+                    except IndexError:
+                        log.warning("Hover row index %s out of range", index.row()),
+                self._last_hovered_item = index
+
+        return QTreeView.eventFilter(self, widget, event)
+
+    def hover_exit(self, index):
+        item = index.internalPointer()
+        self.model().setDataItemKey(item, 'hover', None)
+
+    def hover_enter(self, index):
+        item = index.internalPointer()
+        self.model().setDataItemKey(item, 'hover', True)
+
+    def setModel(self, model):
+        super(LeggerTreeWidget, self).setModel(model)
+
+        self.model().set_column_sizes_on_view(self)
+
 
 class LeggerWidget(QDockWidget):
     closingWidget = pyqtSignal()
@@ -196,34 +221,41 @@ class LeggerWidget(QDockWidget):
     def __init__(self, parent=None, iface=None, path_legger_db=None):
         """Constructor."""
         super(LeggerWidget, self).__init__(parent)
+
+        # store arguments
         self.iface = iface
         self.path_legger_db = path_legger_db
 
-        # init class params
+        # init parameters
+        self.ep = None
+        self.sp = None
+        self.selected_hydrovak = None
         self.network_tool_active = False
         self.measured_model = ProfileModel()
         self.variant_model = ProfileModel()
         self.legger_model = LeggerTreeModel()
 
-        self.ep = None
-        self.sp = None
-        self.selected_hydrovak = None
+        # create session (before setup_ui)
+        db = LeggerDatabase(
+            {
+                'db_path': path_legger_db
+            },
+            'spatialite'
+        )
+        # db.create_and_check_fields()
+        self.session = db.get_session()
 
         # setup ui
         self.setup_ui(self)
 
-        # self.model = LeggerItemModel()
+        self.legger_model.setTreeWidget(self.legger_tree_widget)
 
-        self.plot_item_table.setModel(self.variant_model)
-        self.plot_widget.setVariantModel(self.variant_model)
-        self.plot_widget.setMeasuredModel(self.measured_model)
-
+        # create line layer and add to map
+        # todo: move to map manager?
         self.line_layer = self.get_line_layer()
-
         self.line_layer.loadNamedStyle(os.path.join(
             os.path.dirname(__file__), os.pardir,
             'layer_styles', 'legger', 'line.qml'))
-
         QgsMapLayerRegistry.instance().addMapLayer(self.line_layer)
 
         self.init_network_tool()
@@ -237,15 +269,6 @@ class LeggerWidget(QDockWidget):
         self.legger_model.dataChanged.connect(self.data_changed_legger_tree)
         self.test_manual_input_button.clicked.connect(
             self.test_manual_input_window)
-
-        db = LeggerDatabase(
-            {
-                'db_path': path_legger_db
-            },
-            'spatialite'
-        )
-        # db.create_and_check_fields()
-        self.session = db.get_session()
 
         # initially turn on tool
         # self.select_startpoint_button.toggle()
@@ -285,6 +308,7 @@ class LeggerWidget(QDockWidget):
         self.map_visualisation = LeggerMapVisualisation(
             self.iface, line_direct.crs())
 
+        # todo: move to map manage?
         # add tree layer to map (for fun and testing purposes)
         self.vl_tree_layer = self.network.get_virtual_tree_layer()
 
@@ -304,6 +328,7 @@ class LeggerWidget(QDockWidget):
         QgsMapLayerRegistry.instance().addMapLayer(self.vl_endpoint_layer)
 
     def get_line_layer(self, geometry_col='geometry'):
+        # todo: move to map manage?
 
         def get_layer(spatialite_path, table_name, geom_column=''):
             uri2 = QgsDataSourceURI()
@@ -334,7 +359,6 @@ class LeggerWidget(QDockWidget):
         self._new_window.show()
         pass
 
-
     def unset_tool(self):
         pass
 
@@ -351,76 +375,12 @@ class LeggerWidget(QDockWidget):
 
     def data_changed_legger_tree(self, index, to_index):
         """
-                change graphs based on changes in locations
-                :param index: index of changed field
-                """
-        col = self.legger_model.column(index.column())
+        change graphs based on changes in locations
+        :param index: index of changed field
+        """
 
-        if col['field'] == 'sp':
-            value = self.legger_model.data(index, Qt.CheckStateRole)
-            if value:
-                index_ep = self.legger_model.find_younger(start_index=index, key='ep', value=True)
-                if index_ep is None:
-                    leaf_endpoint = self.legger_model.get_open_endleaf(self.legger_tree_widget)
-                    self.legger_model.setDataItemKey(
-                        leaf_endpoint, 'ep', True, role=Qt.CheckStateRole)
-                else:
-                    self.ep = index_ep.internalPointer()
-                    self.sp = index.internalPointer()
-                    self.refresh_sideview(self.sp, self.ep)
-
-        elif col['field'] == 'ep':
-            value = self.legger_model.data(index, Qt.CheckStateRole)
-            if value:
-                index_sp = self.legger_model.find_older(start_index=index, key='sp', value=True)
-                if index_sp is None:
-                    self.legger_model.setDataItemKey(
-                        self.legger_model.rootItem.child(0), 'sp', True, role=Qt.CheckStateRole)
-                else:
-                    self.ep = index.internalPointer()
-                    self.sp = index_sp.internalPointer()
-                    self.refresh_sideview(self.sp, self.ep)
-
-                # activate draw
-
-    def refresh_sideview(self, sp, ep):
-
-        up = ep.up(end=sp)
-
-        out = []
-        ids = []
-        dist = 0
-        for line in reversed(up):
-            ids.append(line.hydrovak.get('hydro_id'))
-            out.append({
-                'b_distance': dist,
-                'e_distance': line.hydrovak.get('distance'),
-                'depth': line.hydrovak.get('depth'),
-                'target_level': line.hydrovak.get('target_level'),
-                'min_depth': line.hydrovak.get('variant_min'),
-                'max_depth': line.hydrovak.get('variant_max'),
-            })
-            dist = line.hydrovak.get('distance')
-
-        self.sideview_widget.set_data(out)
-
-        profs = []
-        if len(ids):
-            hydro_objects = self.session.query(HydroObject).filter(HydroObject.id.in_(ids)).all()
-
-            self.measured_model.removeRows(0, len(self.measured_model.rows))
-
-            for obj in hydro_objects:
-                for profile in obj.figuren.filter_by(type_prof='m').all():
-                    profs.append({
-                        'name': profile.profid,
-                        'color': (128, 128, 128),
-                        'points': [p for p in loads(profile.coord).exterior.coords]
-                    })
-
-            self.measured_model.insertRows(profs)
-
-        print('refresh')
+        # activate draw
+        pass
 
     def data_changed_variant(self, index):
         """
@@ -470,9 +430,10 @@ class LeggerWidget(QDockWidget):
                                 young.hydrovak.get('variant_max') is None or
                                 (depth >= young.hydrovak.get('variant_min') and
                                  depth <= young.hydrovak.get('variant_max'))):
-                            #index = self.legger_model.createIndex(young.row(), 0, young)
+                            # index = self.legger_model.createIndex(young.row(), 0, young)
                             self.legger_model.setDataItemKey(young, 'selected_depth_tmp', depth)
                             loop(young)
+
                 self.legger_model.set_column_value('selected_depth_tmp', None)
                 self.legger_model.setDataItemKey(self.selected_hydrovak, 'selected_depth_tmp', depth)
                 loop(self.selected_hydrovak)
@@ -523,9 +484,6 @@ class LeggerWidget(QDockWidget):
         self.legger_model.setNewTree(root.childs)
         self.legger_model.set_column_sizes_on_view(self.legger_tree_widget)
 
-        # model = LeggerTreeModel(root_item=root)
-        # self.legger_tree_widget.setModel(model)
-
     def on_select_edit_hydrovak(self, item, arc_id):
 
         self.selected_hydrovak = item
@@ -565,12 +523,6 @@ class LeggerWidget(QDockWidget):
     def on_select_profile(self):
         pass
 
-    def accept(self):
-        pass
-
-    def reject(self):
-        self.close()
-
     def closeEvent(self, event):
         # todo: disconnect
         if self.vl_tree_layer in QgsMapLayerRegistry.instance().mapLayers().values():
@@ -591,6 +543,8 @@ class LeggerWidget(QDockWidget):
 
         self.variant_model.dataChanged.disconnect(self.data_changed_variant)
         self.legger_model.dataChanged.disconnect(self.data_changed_legger_tree)
+
+        self.legger_model.setTreeWidget(None)
 
         self.closingWidget.emit()
         event.accept()
@@ -651,7 +605,10 @@ class LeggerWidget(QDockWidget):
         self.graph_vlayout = QVBoxLayout(self)
 
         # Graph
-        self.plot_widget = LeggerPlotWidget(self)
+        self.plot_widget = LeggerPlotWidget(
+            self, session=self.session,
+            legger_model=self.legger_model,
+            variant_model=self.variant_model)
         sizePolicy = QSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
         sizePolicy.setHorizontalStretch(1)
         sizePolicy.setVerticalStretch(1)
@@ -663,7 +620,9 @@ class LeggerWidget(QDockWidget):
         self.graph_vlayout.addWidget(self.plot_widget)
 
         # Sideview Graph
-        self.sideview_widget = LeggerSideViewPlotWidget(self)
+        self.sideview_widget = LeggerSideViewPlotWidget(
+            self, session=self.session,
+            legger_model=self.legger_model)
         sizePolicy = QSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
         sizePolicy.setHorizontalStretch(1)
         sizePolicy.setVerticalStretch(1)
@@ -677,7 +636,7 @@ class LeggerWidget(QDockWidget):
         self.contentLayout.addLayout(self.graph_vlayout)
 
         # table
-        self.plot_item_table = PlotItemTable(self)
+        self.plot_item_table = PlotItemTable(self, variant_model=self.variant_model)
         sizePolicy = QSizePolicy(QSizePolicy.Fixed, QSizePolicy.Expanding)
         sizePolicy.setHorizontalStretch(0)
         sizePolicy.setVerticalStretch(0)

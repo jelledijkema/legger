@@ -199,6 +199,11 @@ class TreeItem(object):
             nodes.extend(self.childs)
         return nodes
 
+    def older(self):
+        if self.row() == 0:
+            return self.parent()
+        else:
+            return self.parent().child(self.row() - 1)
 
 
 class LeggerTreeModel(QtCore.QAbstractItemModel):
@@ -214,6 +219,20 @@ class LeggerTreeModel(QtCore.QAbstractItemModel):
         else:
             self.rootItem = TreeItem(None, None)
         self.parents = {0: self.rootItem}
+        self.tree_widget = None
+
+        # shortcuts to items (only one active at a time
+        self.ep = None
+        self.sp = None
+        self.hover = None
+
+    def setTreeWidget(self, widget):
+        """
+        set reference to tree widget, to make it possible to check visual state
+        widget (QTreeWidget): Treewidget
+        :return:
+        """
+        self.tree_widget = widget
 
     def columnCount(self, parent=None):
         if parent and parent.isValid():
@@ -262,15 +281,22 @@ class LeggerTreeModel(QtCore.QAbstractItemModel):
         # the value
         changed = item.setData(index.column(), value, role)
         if changed:
-            if signal:
-                self.dataChanged.emit(index, index)
+            # todo: check if this can be done more efficient with a single emit
             if HORIZONTAL_HEADERS[index.column()].get('single_selection') and value in [True, Qt.Checked]:
                 self.set_column_value(index.column(), False, skip=index)
+            self.data_change_post_process(index, index)
+
+            if signal:
+                self.dataChanged.emit(index, index)
         return changed
 
-    def setDataItemKey(self, item, key, value, role=Qt.DisplayRole, signal=True):
+    def get_column_nr(self, key):
         header = HEADER_DICT.get(key)
         column_nr = HORIZONTAL_HEADERS.index(header)
+        return column_nr
+
+    def setDataItemKey(self, item, key, value, role=Qt.DisplayRole, signal=True):
+        column_nr = self.get_column_nr(key)
         index = self.createIndex(item.row(), column_nr, item)
         self.setData(index, value, role, signal)
 
@@ -457,13 +483,20 @@ class LeggerTreeModel(QtCore.QAbstractItemModel):
         result = search(start_item)
         return result
 
-    def get_open_endleaf(self, tree_widget):
+    def get_open_endleaf(self, tree_widget=None):
+        """
+
+        tree_widget (QTreeWidget):up[-1].hydrovak.get('distance') optional. Overwrites the widget set with the function .setTreeWidget
+        :return:
+        """
+        if tree_widget is None:
+            tree_widget = self.tree_widget
 
         def loop(node):
             index = self.createIndex(node.row(), 0, node)
-            if tree_widget.isExpanded(index): # node.childCount() > 0 and :
+            if tree_widget and tree_widget.isExpanded(index):  # node.childCount() > 0 and :
                 result = loop(node.child(0))
-            elif node.parent().childCount() -1 == node.row():
+            elif node.parent().childCount() - 1 == node.row():
                 return node
             else:
                 result = loop(node.parent().child(node.row() + 1))
@@ -476,6 +509,10 @@ class LeggerTreeModel(QtCore.QAbstractItemModel):
 
     def column(self, column_nr):
         return HORIZONTAL_HEADERS[column_nr]
+
+    @property
+    def columns(self):
+        return HORIZONTAL_HEADERS
 
     def set_column_sizes_on_view(self, tree_view):
         """Helper function for applying the column sizes on a view.
@@ -490,3 +527,34 @@ class LeggerTreeModel(QtCore.QAbstractItemModel):
             if not col.get('show', True):
                 tree_view.setColumnHidden(i, True)
 
+    def data_change_post_process(self, index, to_index):
+
+        col = self.column(index.column())
+
+        if col['field'] == 'hover':
+            value = self.data(index, Qt.DisplayRole)
+            if value:
+                self.hover = index.internalPointer()
+
+        if col['field'] == 'sp':
+            value = self.data(index, Qt.CheckStateRole)
+            if value:
+                index_ep = self.find_younger(start_index=index, key='ep', value=True)
+                if index_ep is None:
+                    leaf_endpoint = self.get_open_endleaf()
+                    self.setDataItemKey(
+                        leaf_endpoint, 'ep', True, role=Qt.CheckStateRole)
+                else:
+                    self.ep = index_ep.internalPointer()
+                    self.sp = index.internalPointer()
+
+        elif col['field'] == 'ep':
+            value = self.data(index, Qt.CheckStateRole)
+            if value:
+                index_sp = self.find_older(start_index=index, key='sp', value=True)
+                if index_sp is None:
+                    self.setDataItemKey(
+                        self.rootItem.child(0), 'sp', True, role=Qt.CheckStateRole)
+                else:
+                    self.ep = index.internalPointer()
+                    self.sp = index_sp.internalPointer()
