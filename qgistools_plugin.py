@@ -6,7 +6,10 @@ from PyQt4.QtCore import (QSettings, QTranslator, qVersion, QCoreApplication,
 from PyQt4.QtGui import QAction, QIcon
 # Import the code of the tools
 from legger.tools.legger_network_tool import LeggerNetworkTool
-from legger.tools.read_SQLdatabase import ConnectToDatabase
+
+from legger.sqlite_polder_selection import ThreeDiResultSelection
+from ThreeDiToolbox.models.datasources import TimeseriesDatasourceModel
+
 # from qgis.utils import plugins
 
 
@@ -49,6 +52,8 @@ class Legger(QObject):
 
             if qVersion() > '4.3.3':
                 QCoreApplication.installTranslator(self.translator)
+
+        self.ts_datasource = TimeseriesDatasourceModel()
 
 
     # noinspection PyMethodMayBeStatic
@@ -141,16 +146,13 @@ class Legger(QObject):
         self.toolbar = self.iface.addToolBar(u'Legger')
         self.toolbar.setObjectName(u'Legger')
 
-        #self.toolbar = self.iface.addToolBar(u'Database kiezer')
-        #self.toolbar.setObjectName(u'Database kiezer')
-
         # Init tools
         self.network_tool = LeggerNetworkTool(
             self.iface)
-        self.read_database = ConnectToDatabase(
-            self.iface)
-        self.load_profiles = ConnectToDatabase(
-            self.iface)
+        self.read_database = ThreeDiResultSelection(
+            self.iface,self.ts_datasource)
+        self.load_profiles = ThreeDiResultSelection(
+            self.iface,self.ts_datasource)
 
         #self.toolbar = self.iface.addToolBar(u'Bereken profielen')
         #self.toolbar.setObjectName(u'Bereken profielen')
