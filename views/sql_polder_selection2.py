@@ -42,13 +42,44 @@ class SQLPolderSelectionWidget(QWidget, FORM_CLASS):
 
         # set models on table views and update view columns
         self.ts_datasource = ts_datasource
-        #self.resultTableView.setModel(self.ts_datasource)
+        self.resultTableView.setModel(self.ts_datasource)
         #self.ts_datasource.set_column_sizes_on_view(self.resultTableView)
 
         # connect signals
+        self.selectTsDatasourceButton.clicked.connect(
+            self.select_ts_datasource)
+        self.closeButton.clicked.connect(self.close)
+        self.removeTsDatasourceButton.clicked.connect(
+            self.remove_selected_ts_ds)
         self.selectModelSpatialiteButton.clicked.connect(
             self.select_model_spatialite_file)
-        self.closeButton.clicked.connect(self.close)
+
+        # set combobox list
+        combo_list = [ds for ds in self.get_3di_spatialites_legendlist()]
+
+        if self.ts_datasource.model_spatialite_filepath and \
+                self.ts_datasource.model_spatialite_filepath not in combo_list:
+            combo_list.append(self.ts_datasource.model_spatialite_filepath)
+
+        if not self.ts_datasource.model_spatialite_filepath:
+            combo_list.append('')
+
+        self.modelSpatialiteComboBox.addItems(combo_list)
+
+        if self.ts_datasource.model_spatialite_filepath:
+            current_index = self.modelSpatialiteComboBox.findText(
+                self.ts_datasource.model_spatialite_filepath)
+
+            self.modelSpatialiteComboBox.setCurrentIndex(
+                current_index)
+        else:
+            current_index = self.modelSpatialiteComboBox.findText('')
+            self.modelSpatialiteComboBox.setCurrentIndex(current_index)
+
+        self.modelSpatialiteComboBox.currentIndexChanged.connect(
+            self.model_spatialite_change)
+
+        self.thread = None
 
     def on_close(self):
         """
@@ -57,6 +88,10 @@ class SQLPolderSelectionWidget(QWidget, FORM_CLASS):
         self.selectTsDatasourceButton.clicked.disconnect(
             self.select_ts_datasource)
         self.closeButton.clicked.disconnect(self.close)
+        self.removeTsDatasourceButton.clicked.disconnect(
+            self.remove_selected_ts_ds)
+        self.selectModelSpatialiteButton.clicked.disconnect(
+            self.select_model_spatialite_file)
 
     def closeEvent(self, event):
         """
@@ -66,6 +101,79 @@ class SQLPolderSelectionWidget(QWidget, FORM_CLASS):
         self.closingDialog.emit()
         self.on_close()
         event.accept()
+
+    def select_ts_datasource(self):
+        """
+        Open File dialog for selecting netCDF result files, triggered by button
+        :return: boolean, if file is selected
+        """
+
+        settings = QSettings('3di', 'qgisplugin')
+
+        try:
+            init_path = settings.value('last_used_datasource_path', type=str)
+        except TypeError:
+            init_path = os.path.expanduser("~")
+
+        filename = QFileDialog.getOpenFileName(self,
+                                               'Open resultaten file',
+                                               init_path,
+                                               'NetCDF (*.nc)')
+
+        if filename:
+            # Little test for checking if there is an id mapping file available
+            # If not we're not going to proceed.
+            try:
+                find_id_mapping_file(filename)
+            except IndexError:
+                pop_up_info("No id mapping file found, we tried the following "
+                            "locations: [., ../input_generated]. Please add "
+                            "this file to the correct location and try again.",
+                            title='Error')
+                return False
+
+            # Add to the datasource
+            items = [{
+                'type': 'netcdf',
+                'name': os.path.basename(filename).lower().rstrip('.nc'),
+                'file_path': filename
+            }]
+            self.ts_datasource.insertRows(items)
+            settings.setValue('last_used_datasource_path',
+                              os.path.dirname(filename))
+
+            return True
+
+        return False
+
+    def remove_selected_ts_ds(self):
+        """
+        Remove selected result files from model, called by 'remove' button
+        """
+
+        selection_model = self.resultTableView.selectionModel()
+        # get unique rows in selected fields
+        rows = set([index.row()
+                    for index in selection_model.selectedIndexes()])
+        for row in reversed(sorted(rows)):
+            self.ts_datasource.removeRows(row, 1)
+
+    def get_3di_spatialites_legendlist(self):
+        """
+        Get list of spatialite data sources currently active in canvas
+        :return: list of strings, unique spatialite paths
+        """
+
+        tdi_spatialites = []
+
+        for layer in self.iface.legendInterface().layers():
+            if layer.name() in layer_qh_type_mapping.keys() and \
+                    layer.dataProvider().name() == 'spatialite':
+                source = layer.dataProvider().dataSourceUri().split("'")[1]
+                if source not in tdi_spatialites:
+                    tdi_spatialites.append(source)
+
+        return tdi_spatialites
 
     def model_spatialite_change(self, nr):
         """
