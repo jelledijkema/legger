@@ -7,15 +7,15 @@ import os
 
 from PyQt4.QtCore import Qt, QObject
 
-from legger.views.polder_selection import PolderSelectionWidget
+from legger.views.calculating_profiles import ProfileCalculationWidget
 
 log = logging.getLogger(__name__)
 
 
-class DatabaseSelection(QObject):
+class ProfileCalculations(QObject):
     """QGIS Plugin Implementation."""
 
-    tool_name = 'sqlite_polder_selection'
+    tool_name = 'profile_variant_calculations'
 
     def __init__(self, iface, ts_datasource):
         """Constructor.
@@ -36,7 +36,7 @@ class DatabaseSelection(QObject):
         self.plugin_dir = os.path.dirname(__file__)
 
         self.icon_path = ':/plugins/ThreeDiToolbox/icon_add_datasource.png'
-        self.menu_text = u'Selecteer de sql database met de hydro-objecten ????'
+        self.menu_text = u'Bereken de mogelijke leggerprofiel varianten'
 
         self.is_active = False
         self.dialog = None
@@ -65,7 +65,7 @@ class DatabaseSelection(QObject):
 
             if self.dialog is None:
                 # Create the dialog (after translation) and keep reference
-                self.dialog = PolderSelectionWidget(
+                self.dialog = ProfileCalculationWidget(
                     parent=None,
                     iface=self.iface,
                     ts_datasource=self.ts_datasource,

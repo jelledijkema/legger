@@ -8,7 +8,7 @@ from PyQt4.QtGui import QAction, QIcon
 from legger.tools.legger_network_tool import LeggerNetworkTool
 
 from legger.sqlite_polder_selection import DatabaseSelection
-from ThreeDiToolbox.models.datasources import TimeseriesDatasourceModel
+from legger.profile_variant_calculations import ProfileCalculations
 
 # from qgis.utils import plugins
 
@@ -151,7 +151,7 @@ class Legger(QObject):
             self.iface)
         self.read_database = DatabaseSelection(
             self.iface,self.ts_datasource)
-        self.load_profiles = DatabaseSelection(
+        self.load_profiles = ProfileCalculations(
             self.iface,self.ts_datasource)
 
         #self.toolbar = self.iface.addToolBar(u'Bereken profielen')
