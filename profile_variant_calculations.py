@@ -17,7 +17,7 @@ class ProfileCalculations(QObject):
 
     tool_name = 'profile_variant_calculations'
 
-    def __init__(self, iface, ts_datasource):
+    def __init__(self, iface, polder_datasource):
         """Constructor.
 
         :param iface: An interface instance that will be passed to this class
@@ -29,7 +29,7 @@ class ProfileCalculations(QObject):
         QObject.__init__(self)
         self.iface = iface
 
-        self.ts_datasource = ts_datasource
+        self.polder_datasource = polder_datasource
 
 
         # initialize plugin directory
@@ -68,7 +68,7 @@ class ProfileCalculations(QObject):
                 self.dialog = ProfileCalculationWidget(
                     parent=None,
                     iface=self.iface,
-                    ts_datasource=self.ts_datasource,
+                    polder_datasource=self.polder_datasource,
                     parent_class=self)
 
             # connect to provide cleanup on closing of dockwidget

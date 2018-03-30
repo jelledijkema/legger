@@ -31,13 +31,12 @@ class PolderSelectionWidget(QWidget):#, FORM_CLASS):
     closingDialog = pyqtSignal()
 
     def __init__(
-            self, parent=None, iface=None, ts_datasource=None,
-            parent_class=None):
+            self, parent, iface, polder_datasource,parent_class):
         """Constructor
 
         :parent: Qt parent Widget
         :iface: QGiS interface
-        :ts_datasource: TimeseriesDatasourceModel instance
+        :polder_datasource: Polder spatialite instance
         :parent_class: the tool class which instantiated this widget. Is used
              here for storing volatile information
         """
@@ -48,9 +47,10 @@ class PolderSelectionWidget(QWidget):#, FORM_CLASS):
         self.setup_ui()
 
         # set models on table views and update view columns
-        self.ts_datasource = ts_datasource
-        #self.resultTableView.setModel(self.ts_datasource)
-        #self.ts_datasource.set_column_sizes_on_view(self.resultTableView)
+        self.polder_datasource = polder_datasource
+        self.filename = None
+        #self.resultTableView.setModel(self.polder_datasource)
+        #self.polder_datasource.set_column_sizes_on_view(self.resultTableView)
 
     def on_close(self):
         """
@@ -65,8 +65,11 @@ class PolderSelectionWidget(QWidget):#, FORM_CLASS):
         :param nr: integer, nr of item selected in combobox
         """
 
-        self.ts_datasource = self.polderSpatialiteComboBox.currentText()
-        self.close()
+        #self.var_text.setText(self.filename)
+        self.polder_datasource = self.polderSpatialiteComboBox.currentText()
+
+        self.var_text.setText(self.polder_datasource)
+        #self.close()
 
     def select_spatialite(self):
         """
@@ -85,7 +88,7 @@ class PolderSelectionWidget(QWidget):#, FORM_CLASS):
             init_path = os.path.expanduser("~")
 
 
-        filename = QFileDialog.getOpenFileName(
+        self.filename = QFileDialog.getOpenFileName(
             self,
             'Open File',
             init_path,
@@ -94,13 +97,13 @@ class PolderSelectionWidget(QWidget):#, FORM_CLASS):
         #dlg.setFileMode(QFileDialog.AnyFile)
         #dlg.setFilter('Spatialite (*.sqlite)')
         #filename = "hello"
-        if filename == "":
+        if self.filename == "":
             return False
 
-        #self.ts_datasource.spatialite_filepath = filename
+        #self.polder_datasource.spatialite_filepath = filename
         #index = self.polderSpatialiteComboBox.findText(filename, QtCore.Qt.MatchFixedString)
 
-        self.polderSpatialiteComboBox.addItem(filename)
+        self.polderSpatialiteComboBox.addItem(self.filename)
 
 
         #if index < 0:
@@ -110,7 +113,7 @@ class PolderSelectionWidget(QWidget):#, FORM_CLASS):
         #self.polderSpatialiteComboBox.setCurrentIndex(index_nr)
 
         settings.setValue('last_used_spatialite_path',
-                          os.path.dirname(filename))
+                          os.path.dirname(self.filename))
         return
 
     def setup_ui(self):
@@ -141,10 +144,17 @@ class PolderSelectionWidget(QWidget):#, FORM_CLASS):
         self.bottom_row.addWidget(self.save_button)
 
 
+        #test
+        self.var_text = QtGui.QTextEdit(self)
+        self.var_text.setText("bl")
+
+
         # Assembling
         self.box_input = QtGui.QHBoxLayout()
         self.box_input.addWidget(self.polderSpatialiteComboBox)
         self.box_input.addWidget(self.load_button)
+        self.box_input.addWidget(self.var_text)
+
 
         self.groupBox_input = QtGui.QGroupBox(self)
         self.groupBox_input.setTitle("Database:")

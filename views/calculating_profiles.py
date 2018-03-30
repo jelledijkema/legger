@@ -31,13 +31,13 @@ class ProfileCalculationWidget(QWidget):#, FORM_CLASS):
     closingDialog = pyqtSignal()
 
     def __init__(
-            self, parent=None, iface=None, ts_datasource=None,
-            parent_class=None):
+            self, parent, iface, polder_datasource,
+            parent_class):
         """Constructor
 
         :parent: Qt parent Widget
         :iface: QGiS interface
-        :ts_datasource: TimeseriesDatasourceModel instance
+        :polder_datasource: Spatialite polder
         :parent_class: the tool class which instantiated this widget. Is used
              here for storing volatile information
         """
@@ -48,9 +48,9 @@ class ProfileCalculationWidget(QWidget):#, FORM_CLASS):
         self.setup_ui()
 
         # set models on table views and update view columns
-        self.ts_datasource = ts_datasource
-        #self.resultTableView.setModel(self.ts_datasource)
-        #self.ts_datasource.set_column_sizes_on_view(self.resultTableView)
+        self.polder_datasource = polder_datasource
+        #self.resultTableView.setModel(self.polder_datasource)
+        #self.polder_datasource.set_column_sizes_on_view(self.resultTableView)
 
     def on_close(self):
         """
@@ -65,7 +65,7 @@ class ProfileCalculationWidget(QWidget):#, FORM_CLASS):
         :param nr: integer, nr of item selected in combobox
         """
 
-        self.ts_datasource = self.polderSpatialiteComboBox.currentText()
+        self.polder_datasource = self.polderSpatialiteComboBox.currentText()
         self.close()
 
     def select_spatialite(self):
@@ -97,7 +97,7 @@ class ProfileCalculationWidget(QWidget):#, FORM_CLASS):
         if filename == "":
             return False
 
-        #self.ts_datasource.spatialite_filepath = filename
+        #self.polder_datasource.spatialite_filepath = filename
         #index = self.polderSpatialiteComboBox.findText(filename, QtCore.Qt.MatchFixedString)
 
         self.polderSpatialiteComboBox.addItem(filename)
@@ -116,48 +116,66 @@ class ProfileCalculationWidget(QWidget):#, FORM_CLASS):
     def setup_ui(self):
         self.verticalLayout = QtGui.QVBoxLayout(self)
         self.verticalLayout.setObjectName(_fromUtf8("verticalLayout"))
+
+        self.information_row = QtGui.QHBoxLayout()
+        self.information_row.setObjectName(_fromUtf8("Information row"))
         self.upper_row = QtGui.QHBoxLayout()
         self.upper_row.setObjectName(_fromUtf8("Upper row"))
+        self.middle_row = QtGui.QHBoxLayout()
+        self.middle_row.setObjectName(_fromUtf8("Middle row"))
         self.bottom_row = QtGui.QHBoxLayout()
         self.bottom_row.setObjectName(_fromUtf8("Bottom row"))
+        self.exit_row = QtGui.QHBoxLayout()
+        self.exit_row.setObjectName(_fromUtf8("Exit row"))
 
-        # Geselecteerde polder
+        # Selected polder information text
         self.intro_text = QtGui.QTextEdit(self)
-        self.intro_text.setText("Hier kun je zelf een profiel definieren.\n"
-                                "Vul van boven naar beneden een waarde in voor:\n"
-                                "- Waterbreedte;\n"
-                                "- Waterdiepte;\n"
-                                "- Talud.\n\n"
-                                "Met de knop 'Bereken' kun je het nieuwe profiel doorrekenen.\n"
-                                "Als het profiel naar behoeven is, druk dan op 'Opslaan' om het profiel op te nemen in de database.\n"
-                                "Om het scherm te verlaten kan op 'Annuleren' gedrukt worden.")
+        try:
+            self.intro_text.setText = self.polder_datasource
+
+        except:
+            self.intro_text.setText("Nog geen database gekozen")
+
         self.intro_text.setObjectName(_fromUtf8("introductie_text"))
 
+        # Assembling information row
+        self.box_info = QtGui.QHBoxLayout()
+        self.box_info.addWidget(self.intro_text) # intro text toevoegen aan box.
+        self.groupBox_info = QtGui.QGroupBox(self)
+        self.groupBox_info.setTitle("Database:")
+        self.groupBox_info.setLayout(self.box_info) # box toevoegen aan groupbox
+        self.information_row.addWidget(self.groupBox_info)
+
+        # Assembling step 1 row
+        self.step1_button = QtGui.QPushButton(self)
+        self.step1_button.setObjectName(_fromUtf8("Perform"))
+        self.step1_button.clicked.connect(self.on_close)
+        self.groupBox_step1 = QtGui.QGroupBox(self)
+        self.groupBox_step1.setTitle("Step1:")
+        self.box_info = QtGui.QHBoxLayout()
+        self.box_info.addWidget(self.step1_button)  # intro text toevoegen aan box.
+        self.groupBox_step1.setLayout(self.box_info) # box toevoegen aan groupbox
+        self.upper_row.addWidget(self.groupBox_step1)
 
         # connect signals
         self.cancel_button = QtGui.QPushButton(self)
         self.cancel_button.setObjectName(_fromUtf8("Cancel"))
         self.cancel_button.clicked.connect(self.on_close)
-        self.bottom_row.addWidget(self.cancel_button)
+        self.exit_row.addWidget(self.cancel_button)
 
         self.save_button = QtGui.QPushButton(self)
         self.save_button.setObjectName(_fromUtf8("Save Database and Close"))
         self.save_button.clicked.connect(self.save_spatialite)
-        self.bottom_row.addWidget(self.save_button)
+        self.exit_row.addWidget(self.save_button)
 
 
-        # Assembling
-        self.box_input = QtGui.QHBoxLayout()
-        self.box_input.addWidget(self.ts_datasource)
 
-        self.groupBox_input = QtGui.QGroupBox(self)
-        self.groupBox_input.setTitle("Database:")
-        self.groupBox_input.setLayout(self.box_input)
-
-
-        self.upper_row.addWidget(self.groupBox_input)  # talud spinner toevoegen aan midden kolom
+        # Lay-out in elkaar zetten.
+        self.verticalLayout.addLayout(self.information_row)
         self.verticalLayout.addLayout(self.upper_row)
+        self.verticalLayout.addLayout(self.middle_row)
         self.verticalLayout.addLayout(self.bottom_row)
+        self.verticalLayout.addLayout(self.exit_row)
 
         self.retranslateUi(self)
         QtCore.QMetaObject.connectSlotsByName(self)
@@ -165,5 +183,6 @@ class ProfileCalculationWidget(QWidget):#, FORM_CLASS):
     def retranslateUi(self, Dialog):
         Dialog.setWindowTitle(_translate("Dialog", "Bereken de varianten van polder ...", None))
         self.save_button.setText(_translate("Dialog", "Save Database and Close", None))
+        self.step1_button.setText(_translate("Dialog", "Connect polder database to 3Di output", None))
         self.cancel_button.setText(_translate("Dialog", "Cancel", None))
 

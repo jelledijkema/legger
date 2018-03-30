@@ -53,7 +53,7 @@ class Legger(QObject):
             if qVersion() > '4.3.3':
                 QCoreApplication.installTranslator(self.translator)
 
-        self.ts_datasource = None
+        self.polder_datasource = None
 
 
     # noinspection PyMethodMayBeStatic
@@ -150,9 +150,9 @@ class Legger(QObject):
         self.network_tool = LeggerNetworkTool(
             self.iface)
         self.read_database = DatabaseSelection(
-            self.iface,self.ts_datasource)
+            self.iface,self.polder_datasource)
         self.load_profiles = ProfileCalculations(
-            self.iface,self.ts_datasource)
+            self.iface,self.polder_datasource)
 
         #self.toolbar = self.iface.addToolBar(u'Bereken profielen')
         #self.toolbar.setObjectName(u'Bereken profielen')
