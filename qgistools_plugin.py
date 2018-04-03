@@ -10,6 +10,8 @@ from legger.tools.legger_network_tool import LeggerNetworkTool
 from legger.sqlite_polder_selection import DatabaseSelection
 from legger.profile_variant_calculations import ProfileCalculations
 
+from legger.views.polder_selection import PolderSelectionWidget
+
 # from qgis.utils import plugins
 
 
@@ -53,7 +55,7 @@ class Legger(QObject):
             if qVersion() > '4.3.3':
                 QCoreApplication.installTranslator(self.translator)
 
-        self.polder_datasource = None
+        self.polder_datasource = "Kies eerst een database"
 
 
     # noinspection PyMethodMayBeStatic
@@ -149,10 +151,9 @@ class Legger(QObject):
         # Init tools
         self.network_tool = LeggerNetworkTool(
             self.iface)
-        self.read_database = DatabaseSelection(
-            self.iface,self.polder_datasource)
-        self.load_profiles = ProfileCalculations(
-            self.iface,self.polder_datasource)
+        self.read_database = DatabaseSelection(self)
+        #   self.iface
+        self.load_profiles = ProfileCalculations(self.iface, self.polder_datasource)#.iface, self.polder_datasource)
 
         #self.toolbar = self.iface.addToolBar(u'Bereken profielen')
         #self.toolbar.setObjectName(u'Bereken profielen')

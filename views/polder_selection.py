@@ -31,7 +31,7 @@ class PolderSelectionWidget(QWidget):#, FORM_CLASS):
     closingDialog = pyqtSignal()
 
     def __init__(
-            self, parent, iface, polder_datasource,parent_class):
+            self, parent, iface, parent_class):
         """Constructor
 
         :parent: Qt parent Widget
@@ -47,7 +47,7 @@ class PolderSelectionWidget(QWidget):#, FORM_CLASS):
         self.setup_ui()
 
         # set models on table views and update view columns
-        self.polder_datasource = polder_datasource
+        #self.polder_datasource = polder_datasource
         self.filename = None
         #self.resultTableView.setModel(self.polder_datasource)
         #self.polder_datasource.set_column_sizes_on_view(self.resultTableView)
@@ -170,6 +170,6 @@ class PolderSelectionWidget(QWidget):#, FORM_CLASS):
     def retranslateUi(self, Dialog):
         Dialog.setWindowTitle(_translate("Dialog", "Selecteer de database van de Polder", None))
         self.load_button.setText(_translate("Dialog", "Load", None))
-        self.save_button.setText(_translate("Dialog", "Save Database and Close", None))
-        self.cancel_button.setText(_translate("Dialog", "Cancel", None))
+        self.save_button.setText(_translate("Dialog", "Save Database", None))
+        self.cancel_button.setText(_translate("Dialog", "Close", None))
 

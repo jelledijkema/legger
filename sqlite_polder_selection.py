@@ -17,7 +17,7 @@ class DatabaseSelection(QObject):
 
     tool_name = 'sqlite_polder_selection'
 
-    def __init__(self, iface, polder_datasource):
+    def __init__(self, iface):
         """Constructor.
 
         :param iface: An interface instance that will be passed to this class
@@ -29,7 +29,7 @@ class DatabaseSelection(QObject):
         QObject.__init__(self)
         self.iface = iface
 
-        self.polder_datasource = polder_datasource
+        #self.polder_datasource = polder_datasource
 
 
         # initialize plugin directory
@@ -64,12 +64,14 @@ class DatabaseSelection(QObject):
             self.is_active = True
 
             if self.dialog is None:
-                # Create the dialog (after translation) and keep reference
+                #Create the dialog (after translation) and keep reference
                 self.dialog = PolderSelectionWidget(
                     parent=None,
                     iface=self.iface,
-                    polder_datasource=self.polder_datasource,
+                    #polder_datasource=self.polder_datasource,
                     parent_class=self)
+
+            #self.dialog = PolderSelectionWidget(self)
 
             # connect to provide cleanup on closing of dockwidget
             self.dialog.closingDialog.connect(self.on_close_dialog)

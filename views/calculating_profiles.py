@@ -134,7 +134,7 @@ class ProfileCalculationWidget(QWidget):#, FORM_CLASS):
             self.intro_text.setText = self.polder_datasource
 
         except:
-            self.intro_text.setText("Nog geen database gekozen")
+            self.intro_text.setText("Er komt geen informatie door")
 
         self.intro_text.setObjectName(_fromUtf8("introductie_text"))
 
