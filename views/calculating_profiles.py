@@ -45,18 +45,22 @@ class ProfileCalculationWidget(QWidget):#, FORM_CLASS):
 
         self.parent_class = parent_class
         self.iface = iface
+        self.polder_datasource = polder_datasource
+
         self.setup_ui()
 
         # set models on table views and update view columns
-        self.polder_datasource = polder_datasource
         #self.resultTableView.setModel(self.polder_datasource)
         #self.polder_datasource.set_column_sizes_on_view(self.resultTableView)
 
-    def on_close(self):
+    def closeEvent(self, event):
         """
-        Close
+
+        :return:
         """
+        self.closingDialog.emit()
         self.close()
+        event.accept()
 
     def save_spatialite(self):
         """
@@ -130,11 +134,9 @@ class ProfileCalculationWidget(QWidget):#, FORM_CLASS):
 
         # Selected polder information text
         self.intro_text = QtGui.QTextEdit(self)
-        try:
-            self.intro_text.setText = self.polder_datasource
 
-        except:
-            self.intro_text.setText("Er komt geen informatie door")
+        self.intro_text.setText(self.polder_datasource)
+
 
         self.intro_text.setObjectName(_fromUtf8("introductie_text"))
 
@@ -149,7 +151,7 @@ class ProfileCalculationWidget(QWidget):#, FORM_CLASS):
         # Assembling step 1 row
         self.step1_button = QtGui.QPushButton(self)
         self.step1_button.setObjectName(_fromUtf8("Perform"))
-        self.step1_button.clicked.connect(self.on_close)
+        self.step1_button.clicked.connect(self.close)
         self.groupBox_step1 = QtGui.QGroupBox(self)
         self.groupBox_step1.setTitle("Step1:")
         self.box_info = QtGui.QHBoxLayout()
@@ -160,7 +162,7 @@ class ProfileCalculationWidget(QWidget):#, FORM_CLASS):
         # connect signals
         self.cancel_button = QtGui.QPushButton(self)
         self.cancel_button.setObjectName(_fromUtf8("Cancel"))
-        self.cancel_button.clicked.connect(self.on_close)
+        self.cancel_button.clicked.connect(self.close)
         self.exit_row.addWidget(self.cancel_button)
 
         self.save_button = QtGui.QPushButton(self)

@@ -106,7 +106,7 @@ class NewWindow(QtGui.QWidget):
                                       self.ditch_bottomwidth)
 
             if  self.ditch_bottomwidth <= 0:
-                verhang_bericht = "Verhang kan nu niet berekend worden, want"
+                verhang_bericht = "Verhang kan nu niet berekend worden."
                 bodembreedte_bericht = "Bodembreedte is negatief of 0"
             else:
                 placeholder_norm_flow = 0.5

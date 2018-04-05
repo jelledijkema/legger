@@ -31,7 +31,7 @@ class PolderSelectionWidget(QWidget):#, FORM_CLASS):
     closingDialog = pyqtSignal()
 
     def __init__(
-            self, parent, iface, parent_class):
+            self, parent, iface, parent_class, root_tool):
         """Constructor
 
         :parent: Qt parent Widget
@@ -46,17 +46,18 @@ class PolderSelectionWidget(QWidget):#, FORM_CLASS):
         self.iface = iface
         self.setup_ui()
 
-        # set models on table views and update view columns
-        #self.polder_datasource = polder_datasource
-        self.filename = None
-        #self.resultTableView.setModel(self.polder_datasource)
-        #self.polder_datasource.set_column_sizes_on_view(self.resultTableView)
+        self.root_tool = root_tool
 
-    def on_close(self):
+        self.var_text.setText(self.root_tool.polder_datasource)
+
+    def closeEvent(self, event):
         """
-        Close
+
+        :return:
         """
+        self.closingDialog.emit()
         self.close()
+        event.accept()
 
     def save_spatialite(self):
         """
@@ -65,10 +66,7 @@ class PolderSelectionWidget(QWidget):#, FORM_CLASS):
         :param nr: integer, nr of item selected in combobox
         """
 
-        #self.var_text.setText(self.filename)
-        self.polder_datasource = self.polderSpatialiteComboBox.currentText()
-
-        self.var_text.setText(self.polder_datasource)
+        self.var_text.setText(self.root_tool.polder_datasource)
         #self.close()
 
     def select_spatialite(self):
@@ -83,50 +81,34 @@ class PolderSelectionWidget(QWidget):#, FORM_CLASS):
         # set initial path to right folder
         try:
             init_path = os.path.expanduser("~") # get path to respectively "user" folder
-            init_path = os.path.abspath(os.path.join(init_path, ".qgis2/python/plugins/legger"))
+            init_path = os.path.abspath(os.path.join(init_path, ".qgis2/python/plugins/legger/tests/data"))
         except TypeError:
             init_path = os.path.expanduser("~")
 
-
-        self.filename = QFileDialog.getOpenFileName(
+        self.root_tool.polder_datasource = QFileDialog.getOpenFileName(
             self,
             'Open File',
             init_path,
             'Spatialite (*.sqlite)'
         )
+
+        self.var_text.setText(self.root_tool.polder_datasource)
         #dlg.setFileMode(QFileDialog.AnyFile)
         #dlg.setFilter('Spatialite (*.sqlite)')
-        #filename = "hello"
-        if self.filename == "":
+        if self.root_tool.polder_datasource == "":
             return False
 
-        #self.polder_datasource.spatialite_filepath = filename
-        #index = self.polderSpatialiteComboBox.findText(filename, QtCore.Qt.MatchFixedString)
-
-        self.polderSpatialiteComboBox.addItem(self.filename)
-
-
-        #if index < 0:
-        #    self.polderSpatialiteComboBox.addItem(filename)
-        #    index_nr = self.polderSpatialiteComboBox.findText(filename)
-
-        #self.polderSpatialiteComboBox.setCurrentIndex(index_nr)
-
         settings.setValue('last_used_spatialite_path',
-                          os.path.dirname(self.filename))
+                          os.path.dirname(self.root_tool.polder_datasource))
         return
 
     def setup_ui(self):
         self.verticalLayout = QtGui.QVBoxLayout(self)
         self.verticalLayout.setObjectName(_fromUtf8("verticalLayout"))
-        self.upper_row = QtGui.QHBoxLayout()
+        self.upper_row = QtGui.QVBoxLayout()
         self.upper_row.setObjectName(_fromUtf8("Upper row"))
         self.bottom_row = QtGui.QHBoxLayout()
         self.bottom_row.setObjectName(_fromUtf8("Bottom row"))
-
-        # Combobox
-        self.polderSpatialiteComboBox = QtGui.QComboBox()
-
 
         # connect signals
         self.load_button = QtGui.QPushButton(self)
@@ -135,7 +117,7 @@ class PolderSelectionWidget(QWidget):#, FORM_CLASS):
 
         self.cancel_button = QtGui.QPushButton(self)
         self.cancel_button.setObjectName(_fromUtf8("Cancel"))
-        self.cancel_button.clicked.connect(self.on_close)
+        self.cancel_button.clicked.connect(self.close)
         self.bottom_row.addWidget(self.cancel_button)
 
         self.save_button = QtGui.QPushButton(self)
@@ -144,23 +126,25 @@ class PolderSelectionWidget(QWidget):#, FORM_CLASS):
         self.bottom_row.addWidget(self.save_button)
 
 
-        #test
-        self.var_text = QtGui.QTextEdit(self)
-        self.var_text.setText("bl")
+        # Feedback what document is chosen
+        self.var_text = QtGui.QLineEdit(self)
+        self.var_text.setText("leeg")
 
 
         # Assembling
         self.box_input = QtGui.QHBoxLayout()
-        self.box_input.addWidget(self.polderSpatialiteComboBox)
         self.box_input.addWidget(self.load_button)
-        self.box_input.addWidget(self.var_text)
+
+        self.feedback_box = QtGui.QVBoxLayout()
+        self.feedback_box.addWidget(self.var_text)
 
 
         self.groupBox_input = QtGui.QGroupBox(self)
         self.groupBox_input.setTitle("Database:")
         self.groupBox_input.setLayout(self.box_input)
 
-        self.upper_row.addWidget(self.groupBox_input)  # talud spinner toevoegen aan midden kolom
+        self.upper_row.addWidget(self.groupBox_input)
+        self.upper_row.addLayout(self.feedback_box)
         self.verticalLayout.addLayout(self.upper_row)
         self.verticalLayout.addLayout(self.bottom_row)
 

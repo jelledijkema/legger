@@ -151,9 +151,9 @@ class Legger(QObject):
         # Init tools
         self.network_tool = LeggerNetworkTool(
             self.iface)
-        self.read_database = DatabaseSelection(self)
+        self.read_database = DatabaseSelection(self.iface, self)
         #   self.iface
-        self.load_profiles = ProfileCalculations(self.iface, self.polder_datasource)#.iface, self.polder_datasource)
+        self.load_profiles = ProfileCalculations(self.iface, self)#.iface, self.polder_datasource)
 
         #self.toolbar = self.iface.addToolBar(u'Bereken profielen')
         #self.toolbar.setObjectName(u'Bereken profielen')

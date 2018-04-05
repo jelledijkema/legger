@@ -17,7 +17,7 @@ class DatabaseSelection(QObject):
 
     tool_name = 'sqlite_polder_selection'
 
-    def __init__(self, iface):
+    def __init__(self, iface, ref_root_tool):
         """Constructor.
 
         :param iface: An interface instance that will be passed to this class
@@ -28,7 +28,9 @@ class DatabaseSelection(QObject):
         # Save reference to the QGIS interface
         QObject.__init__(self)
         self.iface = iface
+        self.root_tool = ref_root_tool
 
+        #self.polder_datasource = PolderSelectionWidget.polder_datasource
         #self.polder_datasource = polder_datasource
 
 
@@ -68,8 +70,8 @@ class DatabaseSelection(QObject):
                 self.dialog = PolderSelectionWidget(
                     parent=None,
                     iface=self.iface,
-                    #polder_datasource=self.polder_datasource,
-                    parent_class=self)
+                    parent_class=self,
+                    root_tool=self.root_tool)
 
             #self.dialog = PolderSelectionWidget(self)
 
