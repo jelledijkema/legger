@@ -13,7 +13,10 @@
    version="1.1"
    id="svg4"
    sodipodi:docname="plus.svg"
-   inkscape:version="0.92.2 (5c3e80d, 2017-08-06)">
+   inkscape:version="0.92.2 (5c3e80d, 2017-08-06)"
+   inkscape:export-filename="C:\Users\basti\.qgis2\python\plugins\legger\media\circle_white.png"
+   inkscape:export-xdpi="96"
+   inkscape:export-ydpi="96">
   <metadata
      id="metadata10">
     <rdf:RDF>
@@ -37,26 +40,45 @@
      guidetolerance="10"
      inkscape:pageopacity="0"
      inkscape:pageshadow="2"
-     inkscape:window-width="988"
-     inkscape:window-height="632"
+     inkscape:window-width="1311"
+     inkscape:window-height="676"
      id="namedview6"
      showgrid="true"
      scale-x="1"
      fit-margin-left="2.7755576e-017"
      inkscape:zoom="14.75"
-     inkscape:cx="6"
-     inkscape:cy="16.135593"
-     inkscape:window-x="3216"
-     inkscape:window-y="414"
+     inkscape:cx="6.8649492"
+     inkscape:cy="21.862856"
+     inkscape:window-x="299"
+     inkscape:window-y="209"
      inkscape:window-maximized="0"
      inkscape:current-layer="svg4">
     <inkscape:grid
        type="xygrid"
        id="grid3701" />
   </sodipodi:namedview>
-  <path
-     d="M 31,18.549436 H 18.535311 v 12.53531 H 13.549435 V 18.549436 H 1.0847456 V 13.535311 H 13.549435 V 1 h 4.985876 V 13.535311 H 31 Z"
-     id="path2"
-     inkscape:connector-curvature="0"
-     style="fill-rule:evenodd;stroke-width:2.49998999" />
+  <circle
+     style="fill:#000000;stroke-width:1.07417226"
+     id="path3703"
+     cx="15.949152"
+     cy="16.118645"
+     r="15" />
+  <ellipse
+     style="fill:#ffffff;stroke-width:1.29472101"
+     id="path3718"
+     cx="16.127119"
+     cy="16.067797"
+     rx="13.27966"
+     ry="13.254237" />
+  <ellipse
+     style="fill:#000000;stroke-width:2.50841713"
+     id="path3710"
+     cx="16.033897"
+     cy="15.983052"
+     rx="2.4915257"
+     ry="2.5254238"
+     inkscape:transform-center-y="-0.067796607"
+     inkscape:transform-center-x="0.050847461"
+     inkscape:export-xdpi="96"
+     inkscape:export-ydpi="96" />
 </svg>

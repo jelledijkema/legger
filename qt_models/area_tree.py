@@ -8,49 +8,30 @@ from PyQt4 import QtGui, QtCore
 
 CHECKBOX_FIELD = 1
 
-HORIZONTAL_HEADERS = ({'field': 'hydro_id', 'column_width': 150},
-                      #{'field': 'feat_id', 'column_width': 25},
-                      {'field': 'sp', 'field_type': CHECKBOX_FIELD, 'column_width': 25, 'single_selection': True},
-                      {'field': 'ep', 'field_type': CHECKBOX_FIELD, 'column_width': 25, 'single_selection': True},
+HORIZONTAL_HEADERS = ({'field': 'target_level', 'column_width': 300},
+                      {'field': 'selected', 'field_type': CHECKBOX_FIELD, 'column_width': 50, 'single_selection': True},
                       {'field': 'hover', 'column_width': 1},
                       {'field': 'distance', 'header': 'afstand', 'column_width': 50},
-                      {'field': 'flow', 'column_width': 50},
-                      #{'field': 'target_level', 'column_width': 50},
-                      {'field': 'depth', 'column_width': 50},
-                      {'field': 'width', 'column_width': 50},
-                      {'field': 'variant_min', 'column_width': 1},
-                      {'field': 'variant_max', 'column_width': 1},
-                      {'field': 'selected_depth', 'header': 'prof d', 'column_width': 60},
-                      {'field': 'selected_depth_tmp', 'header': 'tmp', 'column_width': 50},
-                      {'field': 'selected_width', 'header': 'prof w', 'column_width': 60},
-                      {'field': 'over_depth', 'header': 'over d', 'column_width': 60},
-                      {'field': 'over_width', 'header': 'over w', 'column_width': 60},
-                      {'field': 'score', 'column_width': 50},
-                      # {'field': 'add', 'column_width': 25},
                       )
 
 HEADER_DICT = dict([(h['field'], h) for h in HORIZONTAL_HEADERS])
 
 
-class hydrovak_class(object):
+class area_class(object):
     """
     a trivial custom data object
     """
 
-    def __init__(self, data_dict, feature, startpoint_feature, endpoint_feature):
+    def __init__(self, data_dict):
         """
 
         data_dict (dict):
         """
-        self.feature = feature
-        self.startpoint_feature = startpoint_feature
-        self.endpoint_feature = endpoint_feature
 
-        self.feature_keys = {}
         self.data_dict = data_dict
 
     def __repr__(self):
-        return "hydrovak - %s" % (self.get('hydro_id'))
+        return "area - %.2f" % (self.get('target_level'))
 
     def data(self, column_nr, qvalue=False):
         # required
@@ -79,50 +60,31 @@ class hydrovak_class(object):
         else:
             return self.set(HORIZONTAL_HEADERS[column]['field'], value)
 
-
     def get(self, key, default_value=None):
-        if key == 'feature':
-            return self.feature
-        elif key == 'startpoint':
-            return self.startpoint_feature
-        elif key == 'endpoint':
-            return self.endpoint_feature
-        elif key == 'icon':
-            if not self.endpoint_feature:
-                return QIcon()
-            elif self.endpoint_feature.attributes()[2] == 'target':
-                return QIcon(':/plugins/legger/media/circle_blue.png')
-            elif self.endpoint_feature.attributes()[2] == 'end':
-                return QIcon(':/plugins/legger/media/circle_white.png')
-            else:
-                return QIcon()
-        elif key in self.feature_keys:
-            return self.feature[key]
+        if key == 'icon':
+            return QIcon()
         else:
             return self.data_dict.get(key, default_value)
 
     def set(self, key, value):
 
-        if key in self.feature_keys:
-            return False  # not implemented yet
-        else:
-            self.data_dict[key] = value
-            return True
+        self.data_dict[key] = value
+        return True
 
 
-class TreeItem(object):
+class AreaTreeItem(object):
     """
     a python object used to return row/column data, and keep note of
     it's parents and/or children
     """
 
-    def __init__(self, hydrovak, parent):
-        self.hydrovak = hydrovak
+    def __init__(self, area, parent):
+        self.area = area
         self.parent_item = parent
         self.childs = []
 
     def __repr__(self):
-        return "%s - %i childs" % (self.hydrovak, len(self.childs))
+        return "%s - %i childs" % (self.area, len(self.childs))
 
     def appendChild(self, item):
         self.childs.append(item)
@@ -147,17 +109,17 @@ class TreeItem(object):
         return len(HORIZONTAL_HEADERS)
 
     def data(self, column, qvalue=False):
-        if self.hydrovak is None:
+        if self.area is None:
             if column == 0:
                 return 'root'
             if column == 1:
                 return ""
         else:
-            return self.hydrovak.data(column, qvalue)
+            return self.area.data(column, qvalue)
         return None
 
     def setData(self, column, value, role, signal=True):
-        ret = self.hydrovak.setData(column, value, role)
+        ret = self.area.setData(column, value, role)
         # if signal and ret:
         #     if self.item.model:
         #         index = self.item.model.index(
@@ -166,7 +128,7 @@ class TreeItem(object):
         return ret
 
     def icon(self):
-        return self.hydrovak.get('icon')
+        return self.area.get('icon')
 
     def parent(self):
         return self.parent_item
@@ -176,48 +138,19 @@ class TreeItem(object):
             return self.parent_item.childs.index(self)
         return 0
 
-    def up(self, end=None):
 
-        up_list = []
-        node = self
-        while node != end and node is not None and node.hydrovak is not None:
-            up_list.append(node)
-            if node.row() != 0:
-                node = node.parent().child(node.row()-1)
-            else:
-                node = node.parent()
-
-        if node is not None:
-            up_list.append(node)
-        return up_list
-
-    def younger(self):
-        nodes = []
-        if self.row() < self.parent().childCount() - 1:
-            nodes.append(self.parent().child(self.row() + 1))
-        if self.childCount() > 0:
-            nodes.extend(self.childs)
-        return nodes
-
-    def older(self):
-        if self.row() == 0:
-            return self.parent()
-        else:
-            return self.parent().child(self.row() - 1)
-
-
-class LeggerTreeModel(QtCore.QAbstractItemModel):
+class AreaTreeModel(QtCore.QAbstractItemModel):
     """
     a model to display a few names, ordered by sex
     """
 
     def __init__(self, parent=None, root_item=None):
-        super(LeggerTreeModel, self).__init__(parent)
+        super(AreaTreeModel, self).__init__(parent)
 
         if root_item:
             self.rootItem = root_item
         else:
-            self.rootItem = TreeItem(None, None)
+            self.rootItem = AreaTreeItem(None, None)
         self.parents = {0: self.rootItem}
         self.tree_widget = None
 
@@ -257,8 +190,6 @@ class LeggerTreeModel(QtCore.QAbstractItemModel):
                 return None
         elif role == QtCore.Qt.DecorationRole and index.column() == 0:
             return item.icon()
-        elif role == QtCore.Qt.DecorationRole and HORIZONTAL_HEADERS[index.column()]['field'] == 'add':
-            return QIcon(':/plugins/legger/media/plus.png')
         elif role == QtCore.Qt.UserRole:
             if item:
                 return item
@@ -400,7 +331,7 @@ class LeggerTreeModel(QtCore.QAbstractItemModel):
 
     def setupModelData(self):
         for hydrovak in self.hydrovakken:
-            new_item = TreeItem(hydrovak, self.rootItem)
+            new_item = AreaTreeItem(hydrovak, self.rootItem)
             self.rootItem.appendChild(new_item)
 
     def searchModel(self, hydrovak):
@@ -425,87 +356,6 @@ class LeggerTreeModel(QtCore.QAbstractItemModel):
         retarg = searchNode(self.parents[0])
         print retarg
         return retarg
-
-    def find_younger(self, start_index, key, value):
-
-        def search(node):
-            """
-            recursive function checking siblings
-            :param index:
-            :return:
-            """
-            if node.row() < node.parent().childCount() - 1:
-                young = node.parent().child(node.row()+1)
-                if young.hydrovak.get(key) == value:
-                    index = self.createIndex(young.row(), 0, young)
-                    return index
-                result = search(young)
-                if result:
-                    return result
-
-            if node.childCount() > 0:
-                child = node.child(0)
-                if child.hydrovak.get(key) == value:
-                    index = self.createIndex(child.row(), 0, child)
-                    return index
-                result = search(child)
-                if result:
-                    return result
-
-        start_item = start_index.internalPointer()
-
-        result = search(start_item)
-        return result
-
-    def find_older(self, start_index, key, value):
-
-        def search(node):
-            """
-            recursive function checking parents
-            :param index:
-            :return:
-            """
-            if node is None or node.hydrovak is None:
-                return None
-
-            if node.hydrovak.get(key) == value:
-                index = self.createIndex(node.row(), 0, node)
-                return index
-
-            if node.row() > 0:
-                result = search(node.parent().child(node.row()-1))
-            else:
-                result = search(node.parent())
-            if result:
-                return result
-
-        start_item = start_index.internalPointer()
-        result = search(start_item)
-        return result
-
-    def get_open_endleaf(self, tree_widget=None):
-        """
-
-        tree_widget (QTreeWidget):up[-1].hydrovak.get('distance') optional. Overwrites the widget set with the function .setTreeWidget
-        :return:
-        """
-        if tree_widget is None:
-            tree_widget = self.tree_widget
-
-        def loop(node):
-            index = self.createIndex(node.row(), 0, node)
-            if tree_widget and tree_widget.isExpanded(index):  # node.childCount() > 0 and :
-                result = loop(node.child(0))
-            elif node.parent().childCount() - 1 == node.row():
-                return node
-            else:
-                result = loop(node.parent().child(node.row() + 1))
-
-            if result:
-                return result
-
-        result = loop(self.rootItem.child(0))
-        return result
 
     def column(self, column_nr):
         return HORIZONTAL_HEADERS[column_nr]
@@ -536,25 +386,7 @@ class LeggerTreeModel(QtCore.QAbstractItemModel):
             if value:
                 self.hover = index.internalPointer()
 
-        if col['field'] == 'sp':
+        if col['field'] == 'selected':
             value = self.data(index, Qt.CheckStateRole)
             if value:
-                index_ep = self.find_younger(start_index=index, key='ep', value=True)
-                if index_ep is None:
-                    leaf_endpoint = self.get_open_endleaf()
-                    self.setDataItemKey(
-                        leaf_endpoint, 'ep', True, role=Qt.CheckStateRole)
-                else:
-                    self.ep = index_ep.internalPointer()
-                    self.sp = index.internalPointer()
-
-        elif col['field'] == 'ep':
-            value = self.data(index, Qt.CheckStateRole)
-            if value:
-                index_sp = self.find_older(start_index=index, key='sp', value=True)
-                if index_sp is None:
-                    self.setDataItemKey(
-                        self.rootItem.child(0), 'sp', True, role=Qt.CheckStateRole)
-                else:
-                    self.ep = index.internalPointer()
-                    self.sp = index_sp.internalPointer()
+                self.selected = index.internalPointer()

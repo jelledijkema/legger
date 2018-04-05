@@ -4,10 +4,12 @@ import pyqtgraph as pg
 from PyQt4.QtCore import Qt
 from PyQt4.QtGui import QBrush, QColor
 import numpy as np
-from legger.sql_models.legger import HydroObject
+from legger.sql_models.legger import HydroObject, ProfielFiguren, Varianten
 from shapely.wkt import loads
 
 log = logging.getLogger('legger.' + __name__)
+
+precision = 0.000001
 
 
 class LeggerPlotWidget(pg.PlotWidget):
@@ -27,10 +29,16 @@ class LeggerPlotWidget(pg.PlotWidget):
         if variant_model:
             self.setVariantModel(variant_model)
 
+        self.measured_plots = []
+        self.hover_measured_plots = []
+        self.hover_selected_plot = None
+
         # set other
         self.showGrid(True, True, 0.5)
         self.setLabel("bottom", "breedte", "m")
         self.setLabel("left", "hoogte", "m tov waterlijn")
+
+        self.def_measured_opacity = 80
 
     def setLeggerModel(self, model):
         # todo: remove listeners to old model?
@@ -44,37 +52,37 @@ class LeggerPlotWidget(pg.PlotWidget):
         # todo: remove listeners to old model?
         self.variant_model = model
         self.variant_model.dataChanged.connect(self.data_changed_variant)
-        self.variant_model.rowsInserted.connect(self.data_changed_variant)
+        self.variant_model.rowsInserted.connect(self.add_variant_lines)
         self.variant_model.rowsAboutToBeRemoved.connect(
-            self.data_changed_variant)
+            self.clear_variant_lines)
 
-    def draw_lines(self):
-        self.clear()
+    def clear_variant_lines(self, index, to_index=None):
 
-        # TODO: tot hier was ik
+        for item in self.variant_model.rows:
+            if hasattr(item, '_plot'):
+                self.removeItem(item._plot)
 
-        # (self.measured_model, 0, 180)
-        models = [(self.variant_model, 1, 20)]
+    def add_variant_lines(self, index, to_index=None):
 
-        for model, variant, def_opacity in models:
-            for item in model.rows:
-                if not variant:
-                    midpoint = sum([p[0] for p in item.points.value[-2:]]) / 2
-                else:
-                    midpoint = 0
+        for item in self.variant_model.rows:
 
-                width = [p[0] - midpoint for p in item.points.value]
-                height = [p[1] for p in item.points.value]
+            width = [p[0] for p in item.points.value]
+            height = [p[1] for p in item.points.value]
 
-                plot_item = pg.PlotDataItem(
-                    x=width,
-                    y=height,
-                    connect='finite',
-                    pen=pg.mkPen(color=list(item.color.value)[:3] + [def_opacity], width=1))
+            if item.active.value:
+                line_width = 3
+            else:
+                line_width = 1
 
-                # keep reference
-                item._plot = plot_item
-                self.addItem(item._plot)
+            plot_item = pg.PlotDataItem(
+                x=width,
+                y=height,
+                connect='finite',
+                pen=pg.mkPen(color=item.color.value, width=line_width))
+
+            # keep reference
+            item._plot = plot_item
+            self.addItem(item._plot)
 
         self.autoRange()
 
@@ -84,22 +92,46 @@ class LeggerPlotWidget(pg.PlotWidget):
          :param index: index of changed field
          """
         model = self.variant_model
-        if model.columns[index.column()].name == 'active':
-            pass
-            # self.draw_lines()
-
-        elif model.columns[index.column()].name == 'hover':
-            for item in model.rows:
-                item._plot.setPen(color=list(item.color.value)[:3] + [20],
-                                  width=1)
-
+        if model.columns[index.column()].name == 'color':
             item = model.rows[index.row()]
-            if item.hover.value:
+            if item.active.value:
                 item._plot.setPen(color=item.color.value,
-                                  width=2)
+                                  width=3)
+            elif item.hover.value:
+                item._plot.setPen(color=item.color.value,
+                                  width=3)
             else:
-                item._plot.setPen(color=list(item.color.value)[:3] + [20],
+                item._plot.setPen(color=item.color.value,
                                   width=1)
+
+    def clear_measured_plots(self):
+
+        for prof in self.measured_plots:
+            if 'plot' in prof:
+                self.removeItem(prof['plot'])
+
+        self.measured_plots = []
+
+    def get_measured_plot(self, prof, opacity=255, midpoint=None):
+        """
+
+        profiles (dict): dictionaries with 'name', 'color' and 'points' with a list of tuples with (x, y)
+        return: plotItem
+        """
+
+        # points is a polygon, so last point is same as first. Therefor take [-2]
+        if midpoint is None:
+            midpoint = (prof['points'][0][0] + prof['points'][-2][0]) / 2
+        # todo: use calculated offset
+
+        width = [p[0] - midpoint for p in prof['points']]
+        height = [p[1] for p in prof['points']]
+
+        return pg.PlotDataItem(
+            x=width,
+            y=height,
+            connect='finite',
+            pen=pg.mkPen(color=list(prof['color'])[:3] + [opacity], width=prof.get('width', 1)))
 
     def data_changed_legger(self, index, to_index=None):
 
@@ -119,19 +151,85 @@ class LeggerPlotWidget(pg.PlotWidget):
                 if len(ids):
                     hydro_objects = self.session.query(HydroObject).filter(HydroObject.id.in_(ids)).all()
 
-                    # todo: self.measured_model.removeRows(0, len(self.measured_model.rows))
+                    self.clear_measured_plots()
 
                     for obj in hydro_objects:
-                        for profile in obj.figuren.filter_by(type_prof='m').all():
-                            profs.append({
-                                'name': profile.profid,
-                                'color': (128, 128, 128),
-                                'points': [p for p in loads(profile.coord).exterior.coords]
-                            })
 
-                    # todo: self.measured_model.insertRows(profs)
+                        for profile in obj.figuren.filter_by(type_prof='m').all():
+                            prof = {
+                                'name': profile.profid,
+                                'color': (100, 100, 100),
+                                'points': [p for p in loads(profile.coord).exterior.coords]
+                            }
+
+                            prof['plot'] = self.get_measured_plot(prof, self.def_measured_opacity)
+
+                            # keep reference
+                            self.measured_plots.append(prof)
+                            self.addItem(prof['plot'])
 
                 print('refresh')
+
+        elif field == 'hover':
+            item = self.legger_model.data(index, role=Qt.UserRole)
+
+            if item.hydrovak.get('hover'):
+
+                for profile in self.session.query(ProfielFiguren).filter(
+                        HydroObject.id == ProfielFiguren.hydro_id,
+                        HydroObject.id == item.hydrovak.get('hydro_id'),
+                        ProfielFiguren.type_prof == 'm').all():
+                    prof = {
+                        'name': profile.profid,
+                        'color': (100, 100, 100),
+                        'width': 2,
+                        'points': [p for p in loads(profile.coord).exterior.coords]
+                    }
+
+                    prof['plot'] = self.get_measured_plot(prof, 255)
+
+                    # keep reference
+                    self.hover_measured_plots.append(prof)
+                    self.addItem(prof['plot'])
+
+                # selected profile
+                depth = item.hydrovak.get('selected_depth')
+                if depth is not None:
+                    profile_variant = self.session.query(Varianten).filter(
+                        Varianten.hydro_id == item.hydrovak.get('hydro_id'),
+                        Varianten.diepte < depth + precision,
+                        Varianten.diepte > depth - precision
+                    )
+
+                    if profile_variant.count() > 0:
+                        profile = profile_variant.first()
+                        ref_peil = profile.hydro.streefpeil
+
+                        prof = {
+                            'name':  profile.id,
+                            'color': (255, 10, 10),
+                            'width': 2,
+                            'points': [
+                                (-0.5 * profile.waterbreedte, ref_peil),
+                                (-0.5 * profile.bodembreedte, ref_peil - profile.diepte),
+                                (0.5 * profile.bodembreedte, ref_peil - profile.diepte),
+                                (0.5 * profile.waterbreedte, ref_peil),
+                            ]
+                        }
+
+                        prof['plot'] = self.hover_selected_plot = self.get_measured_plot(prof, 255, 0)
+                        self.hover_selected_plot = prof
+                        self.addItem(prof['plot'])
+
+            else:
+                for prof in self.hover_measured_plots:
+                    if 'plot' in prof:
+                        self.removeItem(prof['plot'])
+
+                if self.hover_selected_plot is not None:
+                    self.removeItem(self.hover_selected_plot['plot'])
+
+                self.hover_measured_plots = []
 
 
 class LeggerSideViewPlotWidget(pg.PlotWidget):
@@ -318,7 +416,6 @@ class LeggerSideViewPlotWidget(pg.PlotWidget):
                 self.draw_selected_lines(data)
         elif field in ['selected_depth', 'selected_depth_tmp']:
             self.draw_selected_lines(self._get_data())
-
 
     def _get_data(self):
         if self.legger_model.ep is None:
