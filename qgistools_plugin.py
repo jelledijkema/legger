@@ -10,11 +10,6 @@ from legger.tools.legger_network_tool import LeggerNetworkTool
 from legger.sqlite_polder_selection import DatabaseSelection
 from legger.profile_variant_calculations import ProfileCalculations
 
-from legger.views.polder_selection import PolderSelectionWidget
-
-# from qgis.utils import plugins
-
-
 import resources  # NoQa
 
 # Initialize Qt resources from file resources.py
