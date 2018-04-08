@@ -46,9 +46,8 @@ class PolderSelectionWidget(QWidget):#, FORM_CLASS):
         self.iface = iface
         self.setup_ui()
 
-        self.root_tool = root_tool
-
-        self.var_text.setText(self.root_tool.polder_datasource)
+        self.root_tool = root_tool  # "root tool meegeven aan nieuw scherm. Verwijzing naar een class, i.p.v. een nieuwe variabele"
+        self.var_text.setText(self.root_tool.polder_datasource) # De tekst verwijst naar de tekst in de root_tool totdat deze geupdated wordt.
 
     def closeEvent(self, event):
         """
@@ -58,16 +57,6 @@ class PolderSelectionWidget(QWidget):#, FORM_CLASS):
         self.closingDialog.emit()
         self.close()
         event.accept()
-
-    def save_spatialite(self):
-        """
-        Change active modelsource. Called by combobox when selected
-        spatialite changed
-        :param nr: integer, nr of item selected in combobox
-        """
-
-        self.var_text.setText(self.root_tool.polder_datasource)
-        #self.close()
 
     def select_spatialite(self):
         """
@@ -93,13 +82,11 @@ class PolderSelectionWidget(QWidget):#, FORM_CLASS):
         )
 
         self.var_text.setText(self.root_tool.polder_datasource)
-        #dlg.setFileMode(QFileDialog.AnyFile)
-        #dlg.setFilter('Spatialite (*.sqlite)')
         if self.root_tool.polder_datasource == "":
             return False
 
         settings.setValue('last_used_spatialite_path',
-                          os.path.dirname(self.root_tool.polder_datasource))
+                          os.path.dirname(self.root_tool.polder_datasource)) # verwijzing naar de class.variable in het hoofdscherm
         return
 
     def setup_ui(self):
@@ -119,11 +106,6 @@ class PolderSelectionWidget(QWidget):#, FORM_CLASS):
         self.cancel_button.setObjectName(_fromUtf8("Cancel"))
         self.cancel_button.clicked.connect(self.close)
         self.bottom_row.addWidget(self.cancel_button)
-
-        self.save_button = QtGui.QPushButton(self)
-        self.save_button.setObjectName(_fromUtf8("Save Database and Close"))
-        self.save_button.clicked.connect(self.save_spatialite)
-        self.bottom_row.addWidget(self.save_button)
 
 
         # Feedback what document is chosen
@@ -154,6 +136,5 @@ class PolderSelectionWidget(QWidget):#, FORM_CLASS):
     def retranslateUi(self, Dialog):
         Dialog.setWindowTitle(_translate("Dialog", "Selecteer de database van de Polder", None))
         self.load_button.setText(_translate("Dialog", "Load", None))
-        self.save_button.setText(_translate("Dialog", "Save Database", None))
         self.cancel_button.setText(_translate("Dialog", "Close", None))
 

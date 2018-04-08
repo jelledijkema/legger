@@ -6,7 +6,6 @@ from PyQt4.QtCore import (QSettings, QTranslator, qVersion, QCoreApplication,
 from PyQt4.QtGui import QAction, QIcon
 # Import the code of the tools
 from legger.tools.legger_network_tool import LeggerNetworkTool
-
 from legger.sqlite_polder_selection import DatabaseSelection
 from legger.profile_variant_calculations import ProfileCalculations
 
@@ -144,21 +143,15 @@ class Legger(QObject):
         self.toolbar.setObjectName(u'Legger')
 
         # Init tools
-        self.network_tool = LeggerNetworkTool(
-            self.iface)
         self.read_database = DatabaseSelection(self.iface, self)
-        #   self.iface
-        self.load_profiles = ProfileCalculations(self.iface, self)#.iface, self.polder_datasource)
-
-        #self.toolbar = self.iface.addToolBar(u'Bereken profielen')
-        #self.toolbar.setObjectName(u'Bereken profielen')
-
+        self.load_profiles = ProfileCalculations(self.iface, self)
+        self.network_tool = LeggerNetworkTool(self.iface)
 
 
         self.tools = []
-        self.tools.append(self.network_tool)
         self.tools.append(self.read_database)
         self.tools.append(self.load_profiles)
+        self.tools.append(self.network_tool)
 
         try:
             import remote_debugger_settings

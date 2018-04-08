@@ -23,6 +23,7 @@ class ProfileCalculations(QObject):
         :param iface: An interface instance that will be passed to this class
             which provides the hook by which you can manipulate the QGIS
             application at run time.
+        :param root_tool: A reference to the parent window where the reference to databases and files are declared.
         :type iface: QgsInterface
         """
         # Save reference to the QGIS interface

@@ -23,6 +23,7 @@ class DatabaseSelection(QObject):
         :param iface: An interface instance that will be passed to this class
             which provides the hook by which you can manipulate the QGIS
             application at run time.
+        :param ref_root_tool: A reference to the parent window where the reference to databases and files are declared.
         :type iface: QgsInterface
         """
         # Save reference to the QGIS interface
@@ -30,15 +31,11 @@ class DatabaseSelection(QObject):
         self.iface = iface
         self.root_tool = ref_root_tool
 
-        #self.polder_datasource = PolderSelectionWidget.polder_datasource
-        #self.polder_datasource = polder_datasource
-
-
         # initialize plugin directory
         self.plugin_dir = os.path.dirname(__file__)
 
         self.icon_path = ':/plugins/ThreeDiToolbox/icon_add_datasource.png'
-        self.menu_text = u'Selecteer de sql database met de hydro-objecten ????'
+        self.menu_text = u'Selecteer de spatialite database met de database van de hydro-objecten van de polder'
 
         self.is_active = False
         self.dialog = None
