@@ -9,6 +9,9 @@ from legger.tools.legger_network_tool import LeggerNetworkTool
 from legger.sqlite_polder_selection import DatabaseSelection
 from legger.profile_variant_calculations import ProfileCalculations
 
+from ThreeDiToolbox.threedi_tools import ThreeDiResultSelection
+from ThreeDiToolbox.views.result_selection import ThreeDiResultSelectionWidget
+
 import resources  # NoQa
 
 # Initialize Qt resources from file resources.py
@@ -49,7 +52,12 @@ class Legger(QObject):
             if qVersion() > '4.3.3':
                 QCoreApplication.installTranslator(self.translator)
 
-        self.polder_datasource = "Kies eerst een database"
+        self.polder_datasource = "Kies eerst een legger database"
+
+        errormessage = "Kies eerst 3Di output (model, simulatie (nc), sqlite1)"
+        self.model_datasource = errormessage
+        self.timeseries_datasource = errormessage
+        self.instantiated_datasource = errormessage
 
 
     # noinspection PyMethodMayBeStatic

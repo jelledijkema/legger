@@ -47,7 +47,8 @@ class PolderSelectionWidget(QWidget):#, FORM_CLASS):
         self.setup_ui()
 
         self.root_tool = root_tool  # "root tool meegeven aan nieuw scherm. Verwijzing naar een class, i.p.v. een nieuwe variabele"
-        self.var_text.setText(self.root_tool.polder_datasource) # De tekst verwijst naar de tekst in de root_tool totdat deze geupdated wordt.
+        #self.var_text.setText(self.root_tool.polder_datasource) # De tekst verwijst naar de tekst in de root_tool totdat deze geupdated wordt.
+        self.var_text.setText(self.root_tool.ts_datasource)
 
     def closeEvent(self, event):
         """
@@ -65,7 +66,7 @@ class PolderSelectionWidget(QWidget):#, FORM_CLASS):
         """
 
         # saves the last opened path
-        settings = QSettings('last_used_spatialite_path', 'filepath') #todo: doesn't work yet
+        settings = QSettings('last_used_spatialite_path', 'filepath')
 
         # set initial path to right folder
         try:
