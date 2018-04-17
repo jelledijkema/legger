@@ -9,10 +9,16 @@ from legger.tools.legger_network_tool import LeggerNetworkTool
 from legger.sqlite_polder_selection import DatabaseSelection
 from legger.profile_variant_calculations import ProfileCalculations
 
-from ThreeDiToolbox.threedi_tools import ThreeDiResultSelection
-from ThreeDiToolbox.views.result_selection import ThreeDiResultSelectionWidget
+# Import 3Di tool to connect with sqlite, sqlite1 and nc.
+from qgis.utils import plugins
+try:
+    tdi_plugin = plugins['ThreeDiToolbox']
+except:
+    raise ImportError("For ThreeDiStatistics tool the ThreeDiToolbox plugin must be installed, "
+                      "version xxx or higher")
 
-import resources  # NoQa
+import resources # can be essential for the pictograms
+
 
 # Initialize Qt resources from file resources.py
 
@@ -59,6 +65,11 @@ class Legger(QObject):
         self.timeseries_datasource = errormessage
         self.instantiated_datasource = errormessage
 
+        self.ts_datasource = tdi_plugin.ts_datasource
+
+        #self.db_path_result_sqlite = self.ts_datasource.rows[0].spatialite_cache_filepath().replace('\\', '/')
+        #db_path_model_sqlite = ts_datasource.model_spatialite_filepath
+        #result_ds = ts_datasource.rows[0].datasource()
 
     # noinspection PyMethodMayBeStatic
     def tr(self, message):

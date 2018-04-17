@@ -132,19 +132,32 @@ class ProfileCalculationWidget(QWidget):#, FORM_CLASS):
         self.exit_row = QtGui.QHBoxLayout()
         self.exit_row.setObjectName(_fromUtf8("Exit row"))
 
-        # Selected polder information text
-        self.intro_text = QtGui.QTextEdit(self)
+        # Selected file name and location in information groupbox
+        self.polder_filename = QtGui.QLineEdit(self)
+        self.polder_filename.setText(self.polder_datasource)
+        self.polder_filename.setObjectName(_fromUtf8("polder legger filename"))
 
-        self.intro_text.setText(self.polder_datasource)
+        self.model_filename = QtGui.QLineEdit(self)
+        self.model_filename.setText("model") #Todo replace
+        self.model_filename.setObjectName(_fromUtf8("model filename"))
 
+        self.result_filename = QtGui.QLineEdit(self)
+        self.result_filename.setText("result") #Todo replace
+        self.result_filename.setObjectName(_fromUtf8("result filename"))
 
-        self.intro_text.setObjectName(_fromUtf8("introductie_text"))
+        self.connection_filename = QtGui.QLineEdit(self)
+        self.connection_filename.setText("connection") #Todo replace
+        self.connection_filename.setObjectName(_fromUtf8("connection filename"))
 
-        # Assembling information row
-        self.box_info = QtGui.QHBoxLayout()
-        self.box_info.addWidget(self.intro_text) # intro text toevoegen aan box.
+        # Assembling information groubox
+        self.box_info = QtGui.QVBoxLayout()
+        self.box_info.addWidget(self.polder_filename) # intro text toevoegen aan box.
+        self.box_info.addWidget(self.model_filename)
+        self.box_info.addWidget(self.result_filename)
+        self.box_info.addWidget(self.connection_filename)
+
         self.groupBox_info = QtGui.QGroupBox(self)
-        self.groupBox_info.setTitle("Database:")
+        self.groupBox_info.setTitle("Bestanden gekozen:")
         self.groupBox_info.setLayout(self.box_info) # box toevoegen aan groupbox
         self.information_row.addWidget(self.groupBox_info)
 
@@ -183,7 +196,7 @@ class ProfileCalculationWidget(QWidget):#, FORM_CLASS):
         QtCore.QMetaObject.connectSlotsByName(self)
 
     def retranslateUi(self, Dialog):
-        Dialog.setWindowTitle(_translate("Dialog", "Bereken de varianten van polder ...", None))
+        Dialog.setWindowTitle(_translate("Dialog", "Bereken de varianten van polder ...", None)) #todo: maak een merge met de poldernaam.
         self.save_button.setText(_translate("Dialog", "Save Database and Close", None))
         self.step1_button.setText(_translate("Dialog", "Connect polder database to 3Di output", None))
         self.cancel_button.setText(_translate("Dialog", "Cancel", None))

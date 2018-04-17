@@ -47,8 +47,7 @@ class PolderSelectionWidget(QWidget):#, FORM_CLASS):
         self.setup_ui()
 
         self.root_tool = root_tool  # "root tool meegeven aan nieuw scherm. Verwijzing naar een class, i.p.v. een nieuwe variabele"
-        #self.var_text.setText(self.root_tool.polder_datasource) # De tekst verwijst naar de tekst in de root_tool totdat deze geupdated wordt.
-        self.var_text.setText(self.root_tool.ts_datasource)
+        self.var_text.setText(self.root_tool.polder_datasource) # De tekst verwijst naar de tekst in de root_tool totdat deze geupdated wordt.
 
     def closeEvent(self, event):
         """
@@ -123,7 +122,7 @@ class PolderSelectionWidget(QWidget):#, FORM_CLASS):
 
 
         self.groupBox_input = QtGui.QGroupBox(self)
-        self.groupBox_input.setTitle("Database:")
+        self.groupBox_input.setTitle("Database legger:")
         self.groupBox_input.setLayout(self.box_input)
 
         self.upper_row.addWidget(self.groupBox_input)
