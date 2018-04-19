@@ -31,7 +31,7 @@ class ProfileCalculationWidget(QWidget):#, FORM_CLASS):
     closingDialog = pyqtSignal()
 
     def __init__(
-            self, parent, iface, polder_datasource,
+            self, parent, iface, polder_datasource, ts_datasource,
             parent_class):
         """Constructor
 
@@ -46,12 +46,30 @@ class ProfileCalculationWidget(QWidget):#, FORM_CLASS):
         self.parent_class = parent_class
         self.iface = iface
         self.polder_datasource = polder_datasource
+        self.ts_datasource = ts_datasource
+
+        self.polder_name =str(self.polder_datasource[1:4])
+
+        errormessage = "Kies eerst 3di output (model en netCDF) in de 'Select 3di results' van 3di plugin."
+
+        try:
+            self.db_path_result_sqlite = self.ts_datasource.rows[0].spatialite_cache_filepath().replace('\\', '/')
+        except:
+            self.db_path_result_sqlite = errormessage
+        try:
+            self.db_path_model_sqlite = self.ts_datasource.model_spatialite_filepath
+        except:
+            self.db_path_model_sqlite = errormessage
+        try:
+            self.path_result_nc = str(self.ts_datasource.rows[0].datasource()) #todo: nog aanpassen..
+        except:
+            self.path_result_nc = errormessage
+
+        if self.db_path_model_sqlite == None:
+            self.db_path_model_sqlite = errormessage
 
         self.setup_ui()
 
-        # set models on table views and update view columns
-        #self.resultTableView.setModel(self.polder_datasource)
-        #self.polder_datasource.set_column_sizes_on_view(self.resultTableView)
 
     def closeEvent(self, event):
         """
@@ -72,50 +90,18 @@ class ProfileCalculationWidget(QWidget):#, FORM_CLASS):
         self.polder_datasource = self.polderSpatialiteComboBox.currentText()
         self.close()
 
-    def select_spatialite(self):
-        """
-        Open file dialog on click on button 'load model'
-        :return: Boolean, if file is selected
-        """
+    def execute_step1(self):
 
-        # saves the last opened path
-        settings = QSettings('last_used_spatialite_path', 'filepath') #todo: doesn't work yet
+        self.feedbacktext.setText("Databases zijn gekoppeld.")
 
-        # set initial path to right folder
-        try:
-            init_path = os.path.expanduser("~") # get path to respectively "user" folder
-            init_path = os.path.abspath(os.path.join(init_path, ".qgis2/python/plugins/legger"))
-        except TypeError:
-            init_path = os.path.expanduser("~")
+    def execute_step2(self):
 
+        self.feedbacktext.setText("Profielen zijn berekend.")
 
-        filename = QFileDialog.getOpenFileName(
-            self,
-            'Open File',
-            init_path,
-            'Spatialite (*.sqlite)'
-        )
-        #dlg.setFileMode(QFileDialog.AnyFile)
-        #dlg.setFilter('Spatialite (*.sqlite)')
-        #filename = "hello"
-        if filename == "":
-            return False
+    def execute_step3(self):
 
-        #self.polder_datasource.spatialite_filepath = filename
-        #index = self.polderSpatialiteComboBox.findText(filename, QtCore.Qt.MatchFixedString)
+        self.feedbacktext.setText("De fit % zijn berekend.")
 
-        self.polderSpatialiteComboBox.addItem(filename)
-
-
-        #if index < 0:
-        #    self.polderSpatialiteComboBox.addItem(filename)
-        #    index_nr = self.polderSpatialiteComboBox.findText(filename)
-
-        #self.polderSpatialiteComboBox.setCurrentIndex(index_nr)
-
-        settings.setValue('last_used_spatialite_path',
-                          os.path.dirname(filename))
-        return
 
     def setup_ui(self):
         self.verticalLayout = QtGui.QVBoxLayout(self)
@@ -129,6 +115,8 @@ class ProfileCalculationWidget(QWidget):#, FORM_CLASS):
         self.middle_row.setObjectName(_fromUtf8("Middle row"))
         self.bottom_row = QtGui.QHBoxLayout()
         self.bottom_row.setObjectName(_fromUtf8("Bottom row"))
+        self.feedback_row = QtGui.QHBoxLayout()
+        self.feedback_row.setObjectName(_fromUtf8("Feedback row"))
         self.exit_row = QtGui.QHBoxLayout()
         self.exit_row.setObjectName(_fromUtf8("Exit row"))
 
@@ -138,15 +126,15 @@ class ProfileCalculationWidget(QWidget):#, FORM_CLASS):
         self.polder_filename.setObjectName(_fromUtf8("polder legger filename"))
 
         self.model_filename = QtGui.QLineEdit(self)
-        self.model_filename.setText("model") #Todo replace
+        self.model_filename.setText(self.db_path_model_sqlite)
         self.model_filename.setObjectName(_fromUtf8("model filename"))
 
         self.result_filename = QtGui.QLineEdit(self)
-        self.result_filename.setText("result") #Todo replace
+        self.result_filename.setText(self.path_result_nc)
         self.result_filename.setObjectName(_fromUtf8("result filename"))
 
         self.connection_filename = QtGui.QLineEdit(self)
-        self.connection_filename.setText("connection") #Todo replace
+        self.connection_filename.setText(self.db_path_result_sqlite)
         self.connection_filename.setObjectName(_fromUtf8("connection filename"))
 
         # Assembling information groubox
@@ -163,16 +151,45 @@ class ProfileCalculationWidget(QWidget):#, FORM_CLASS):
 
         # Assembling step 1 row
         self.step1_button = QtGui.QPushButton(self)
-        self.step1_button.setObjectName(_fromUtf8("Perform"))
-        self.step1_button.clicked.connect(self.close)
+        self.step1_button.setObjectName(_fromUtf8("Step1"))
+        self.step1_button.clicked.connect(self.execute_step1)
         self.groupBox_step1 = QtGui.QGroupBox(self)
         self.groupBox_step1.setTitle("Step1:")
-        self.box_info = QtGui.QHBoxLayout()
-        self.box_info.addWidget(self.step1_button)  # intro text toevoegen aan box.
-        self.groupBox_step1.setLayout(self.box_info) # box toevoegen aan groupbox
+        self.box_step1 = QtGui.QHBoxLayout()
+        self.box_step1.addWidget(self.step1_button)
+        self.groupBox_step1.setLayout(self.box_step1) # box toevoegen aan groupbox
         self.upper_row.addWidget(self.groupBox_step1)
 
-        # connect signals
+        # Assembling step 2 row
+        self.step2_button = QtGui.QPushButton(self)
+        self.step2_button.setObjectName(_fromUtf8("Step2"))
+        self.step2_button.clicked.connect(self.execute_step2)
+        self.groupBox_step2 = QtGui.QGroupBox(self)
+        self.groupBox_step2.setTitle("Step2:")
+        self.box_step2 = QtGui.QHBoxLayout()
+        self.box_step2.addWidget(self.step2_button)
+        self.groupBox_step2.setLayout(self.box_step2) # box toevoegen aan groupbox
+        self.middle_row.addWidget(self.groupBox_step2)
+
+        # Assembling step 3 row
+        self.step3_button = QtGui.QPushButton(self)
+        self.step3_button.setObjectName(_fromUtf8("Step3"))
+        self.step3_button.clicked.connect(self.execute_step3)
+        self.groupBox_step3 = QtGui.QGroupBox(self)
+        self.groupBox_step3.setTitle("Step3:")
+        self.box_step3 = QtGui.QHBoxLayout()
+        self.box_step3.addWidget(self.step3_button)
+        self.groupBox_step3.setLayout(self.box_step3) # box toevoegen aan groupbox
+        self.bottom_row.addWidget(self.groupBox_step3)
+
+        # Assembling feedback row
+        self.feedbacktext = QtGui.QLineEdit(self)
+        self.feedbacktext.setText("Nog geen berekening uitgevoerd.")
+        self.feedbacktext.setObjectName(_fromUtf8("feedback"))
+
+        self.feedback_row.addWidget(self.feedbacktext)
+
+        # Assembling exit row
         self.cancel_button = QtGui.QPushButton(self)
         self.cancel_button.setObjectName(_fromUtf8("Cancel"))
         self.cancel_button.clicked.connect(self.close)
@@ -190,6 +207,7 @@ class ProfileCalculationWidget(QWidget):#, FORM_CLASS):
         self.verticalLayout.addLayout(self.upper_row)
         self.verticalLayout.addLayout(self.middle_row)
         self.verticalLayout.addLayout(self.bottom_row)
+        self.verticalLayout.addLayout(self.feedback_row)
         self.verticalLayout.addLayout(self.exit_row)
 
         self.retranslateUi(self)
@@ -199,5 +217,7 @@ class ProfileCalculationWidget(QWidget):#, FORM_CLASS):
         Dialog.setWindowTitle(_translate("Dialog", "Bereken de varianten van polder ...", None)) #todo: maak een merge met de poldernaam.
         self.save_button.setText(_translate("Dialog", "Save Database and Close", None))
         self.step1_button.setText(_translate("Dialog", "Connect polder database to 3Di output", None))
+        self.step2_button.setText(_translate("Dialog", "Calculate all the hydraulic suitable variants", None))
+        self.step3_button.setText(_translate("Dialog", "Calculate the fit % of the calculated profiles within measured profiles", None))
         self.cancel_button.setText(_translate("Dialog", "Cancel", None))
 

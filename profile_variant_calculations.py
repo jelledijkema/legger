@@ -69,6 +69,7 @@ class ProfileCalculations(QObject):
                     parent=None,
                     iface=self.iface,
                     polder_datasource=self.root_tool.polder_datasource,
+                    ts_datasource = self.root_tool.ts_datasource,
                     parent_class=self)
 
             # connect to provide cleanup on closing of dockwidget

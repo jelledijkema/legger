@@ -8,17 +8,14 @@ from PyQt4.QtGui import QAction, QIcon
 from legger.tools.legger_network_tool import LeggerNetworkTool
 from legger.sqlite_polder_selection import DatabaseSelection
 from legger.profile_variant_calculations import ProfileCalculations
+import resources # can be essential for the tool pictograms
 
-# Import 3Di tool to connect with sqlite, sqlite1 and nc.
 from qgis.utils import plugins
 try:
     tdi_plugin = plugins['ThreeDiToolbox']
 except:
     raise ImportError("For ThreeDiStatistics tool the ThreeDiToolbox plugin must be installed, "
                       "version xxx or higher")
-
-import resources # can be essential for the pictograms
-
 
 # Initialize Qt resources from file resources.py
 
@@ -59,13 +56,14 @@ class Legger(QObject):
                 QCoreApplication.installTranslator(self.translator)
 
         self.polder_datasource = "Kies eerst een legger database"
+        self.ts_datasource = tdi_plugin.ts_datasource
 
         errormessage = "Kies eerst 3Di output (model, simulatie (nc), sqlite1)"
-        self.model_datasource = errormessage
-        self.timeseries_datasource = errormessage
-        self.instantiated_datasource = errormessage
 
-        self.ts_datasource = tdi_plugin.ts_datasource
+        try:
+            self.ts_datasource =tdi_plugin.ts_datasource
+        except:
+            self.ts_datasource = errormessage
 
         #self.db_path_result_sqlite = self.ts_datasource.rows[0].spatialite_cache_filepath().replace('\\', '/')
         #db_path_model_sqlite = ts_datasource.model_spatialite_filepath
