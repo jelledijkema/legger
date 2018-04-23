@@ -9,6 +9,13 @@ from PyQt4.QtCore import pyqtSignal, QSettings, QModelIndex, QThread
 from PyQt4.QtGui import QWidget, QFileDialog, QComboBox
 from PyQt4 import QtCore, QtGui
 
+from legger.utils.read_tdi_results import (
+    read_tdi_results, write_tdi_results_to_db, read_tdi_culvert_results,
+    write_tdi_culvert_results_to_db)
+from legger.utils.theoretical_profiles import create_theoretical_profiles, write_theoretical_profile_results_to_db
+from legger.sql_models.legger_views import create_legger_views
+from pyspatialite import dbapi2 as dbapi
+
 log = logging.getLogger(__name__)
 
 try:
@@ -48,25 +55,23 @@ class ProfileCalculationWidget(QWidget):#, FORM_CLASS):
         self.polder_datasource = polder_datasource
         self.ts_datasource = ts_datasource
 
-        self.polder_name =str(self.polder_datasource[1:4])
-
         errormessage = "Kies eerst 3di output (model en netCDF) in de 'Select 3di results' van 3di plugin."
-
         try:
-            self.db_path_result_sqlite = self.ts_datasource.rows[0].spatialite_cache_filepath().replace('\\', '/')
+            self.path_model_db = self.ts_datasource.model_spatialite_filepath
         except:
-            self.db_path_result_sqlite = errormessage
+            self.path_model_db = errormessage
         try:
-            self.db_path_model_sqlite = self.ts_datasource.model_spatialite_filepath
+            self.path_result_db = self.ts_datasource.rows[0].spatialite_cache_filepath().replace('\\', '/')
         except:
-            self.db_path_model_sqlite = errormessage
+            self.path_result_db = errormessage
         try:
-            self.path_result_nc = str(self.ts_datasource.rows[0].datasource()) #todo: nog aanpassen..
+            self.path_result_nc = str(self.ts_datasource.rows[0].datasource()) #todo: nog aanpassen/verwijderen?
+            self.path_result_nc = self.ts_datasource.rows[0].spatialite_cache_filepath().replace('sqlite1', 'nc')
         except:
             self.path_result_nc = errormessage
 
-        if self.db_path_model_sqlite == None:
-            self.db_path_model_sqlite = errormessage
+        if self.path_model_db == None:
+            self.path_model_db = errormessage
 
         self.setup_ui()
 
@@ -92,13 +97,74 @@ class ProfileCalculationWidget(QWidget):#, FORM_CLASS):
 
     def execute_step1(self):
 
-        self.feedbacktext.setText("Databases zijn gekoppeld.")
+
+        try:
+            result = read_tdi_results(
+                self.path_model_db,
+                self.path_result_db,
+                self.path_result_nc,
+                self.polder_datasource
+            )
+            self.feedbackmessage = "Databases zijn gekoppeld."
+
+        except:
+            self.feedbackmessage = "Databases zijn niet gekoppeld."
+        finally:
+            self.feedbacktext.setText(self.feedbackmessage)
+
+        try:
+            write_tdi_results_to_db(result,
+                                    self.polder_datasource)
+            con_legger = dbapi.connect(self.polder_datasource)
+            create_legger_views(con_legger)
+
+            self.feedbackmessage = self.feedbackmessage+"\n3Di resultaten weggeschreven naar polder database."
+        except:
+            self.feedbackmessage = self.feedbackmessage+"\n3Di resultaten niet weggeschreven naar polder database."
+        finally:
+            self.feedbacktext.setText(self.feedbackmessage)
+
+        try:
+            results = read_tdi_culvert_results(
+                self.model_db,
+                self.result_nc,
+                self.legger_db
+            )
+            self.feedbackmessage = self.feedbackmessage+"\n3Di culverts ingelezen."
+        except:
+            self.feedbackmessage = self.feedbackmessage+"\n3Di culverts niet ingelezen."
+        finally:
+            self.feedbacktext.setText(self.feedbackmessage)
+
+        try:
+            write_tdi_culvert_results_to_db(results,
+                                            self.legger_db)
+            self.feedbackmessage = self.feedbackmessage+"\n3Di culvert resultaten weggeschreven."
+        except:
+            self.feedbackmessage = self.feedbackmessage+"\n3Di culvert resultaten niet weggeschreven."
+        finally:
+            self.feedbacktext.setText(self.feedbackmessage)
 
     def execute_step2(self):
 
-        self.feedbacktext.setText("Profielen zijn berekend.")
+        try:
+            profiles = create_theoretical_profiles(self.polder_datasource)
+            self.feedbackmessage = "Profielen zijn berekend."
+        except:
+            self.feedbackmessage = "Profielen konden niet worden berekend."
+        finally:
+            self.feedbacktext.setText(self.feedbackmessage)
+
+        try:
+            write_theoretical_profile_results_to_db(profiles,self.polder_datasource)
+            self.feedbackmessage = self.feedbackmessage+("\nProfielen opgeslagen in legger db.")
+        except:
+            self.feedbackmessage = self.feedbackmessage+("\nProfielen niet opgeslagen in legger database.")
+        finally:
+            self.feedbacktext.setText(self.feedbackmessage)
 
     def execute_step3(self):
+
 
         self.feedbacktext.setText("De fit % zijn berekend.")
 
@@ -126,7 +192,7 @@ class ProfileCalculationWidget(QWidget):#, FORM_CLASS):
         self.polder_filename.setObjectName(_fromUtf8("polder legger filename"))
 
         self.model_filename = QtGui.QLineEdit(self)
-        self.model_filename.setText(self.db_path_model_sqlite)
+        self.model_filename.setText(self.path_model_db)
         self.model_filename.setObjectName(_fromUtf8("model filename"))
 
         self.result_filename = QtGui.QLineEdit(self)
@@ -134,7 +200,7 @@ class ProfileCalculationWidget(QWidget):#, FORM_CLASS):
         self.result_filename.setObjectName(_fromUtf8("result filename"))
 
         self.connection_filename = QtGui.QLineEdit(self)
-        self.connection_filename.setText(self.db_path_result_sqlite)
+        self.connection_filename.setText(self.path_result_db)
         self.connection_filename.setObjectName(_fromUtf8("connection filename"))
 
         # Assembling information groubox
@@ -183,8 +249,9 @@ class ProfileCalculationWidget(QWidget):#, FORM_CLASS):
         self.bottom_row.addWidget(self.groupBox_step3)
 
         # Assembling feedback row
-        self.feedbacktext = QtGui.QLineEdit(self)
-        self.feedbacktext.setText("Nog geen berekening uitgevoerd.")
+        self.feedbacktext = QtGui.QTextEdit(self)
+        self.feedbackmessage = "Nog geen berekening uitgevoerd"
+        self.feedbacktext.setText(self.feedbackmessage)
         self.feedbacktext.setObjectName(_fromUtf8("feedback"))
 
         self.feedback_row.addWidget(self.feedbacktext)
@@ -214,7 +281,7 @@ class ProfileCalculationWidget(QWidget):#, FORM_CLASS):
         QtCore.QMetaObject.connectSlotsByName(self)
 
     def retranslateUi(self, Dialog):
-        Dialog.setWindowTitle(_translate("Dialog", "Bereken de varianten van polder ...", None)) #todo: maak een merge met de poldernaam.
+        Dialog.setWindowTitle(_translate("Dialog", "Bereken de profielvarianten van de polder", None)) #todo: maak een merge met de poldernaam.
         self.save_button.setText(_translate("Dialog", "Save Database and Close", None))
         self.step1_button.setText(_translate("Dialog", "Connect polder database to 3Di output", None))
         self.step2_button.setText(_translate("Dialog", "Calculate all the hydraulic suitable variants", None))
