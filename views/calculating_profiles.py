@@ -96,8 +96,6 @@ class ProfileCalculationWidget(QWidget):#, FORM_CLASS):
         self.close()
 
     def execute_step1(self):
-
-
         try:
             result = read_tdi_results(
                 self.path_model_db,
@@ -126,9 +124,9 @@ class ProfileCalculationWidget(QWidget):#, FORM_CLASS):
 
         try:
             results = read_tdi_culvert_results(
-                self.model_db,
-                self.result_nc,
-                self.legger_db
+                self.path_model_db,
+                self.path_result_nc,
+                self.polder_datasource
             )
             self.feedbackmessage = self.feedbackmessage+"\n3Di culverts ingelezen."
         except:
@@ -138,12 +136,14 @@ class ProfileCalculationWidget(QWidget):#, FORM_CLASS):
 
         try:
             write_tdi_culvert_results_to_db(results,
-                                            self.legger_db)
+                                            self.polder_datasource)
             self.feedbackmessage = self.feedbackmessage+"\n3Di culvert resultaten weggeschreven."
         except:
             self.feedbackmessage = self.feedbackmessage+"\n3Di culvert resultaten niet weggeschreven."
         finally:
             self.feedbacktext.setText(self.feedbackmessage)
+
+
 
     def execute_step2(self):
 
