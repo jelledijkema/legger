@@ -1,7 +1,8 @@
 import logging
+import datetime
 
 from sqlalchemy import (
-    Boolean, Column, Integer, String, Float, ForeignKey)
+    Boolean, Column, Integer, String, Float, ForeignKey, DateTime)
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import relationship
 from geoalchemy2.types import Geometry
@@ -52,10 +53,14 @@ class HydroObject(Base):
     kenmerken = relationship("Kenmerken",
                              back_populates="hydro")
 
+    geselecteerd = relationship("GeselecteerdeProfielen",
+                                uselist=False,
+                                back_populates="hydro")
+
     figuren = relationship("ProfielFiguren",
                            primaryjoin="HydroObject.id == ProfielFiguren.hydro_id",
                            lazy='dynamic',
-                           #foreign_keys=[id],
+                           # foreign_keys=[id],
                            back_populates="hydro")
 
     def __str__(self):
@@ -156,9 +161,29 @@ class Varianten(Base):
                          uselist=False,
                          back_populates="varianten")
 
+    # geselecteerd = relationship("GeselecteerdeProfielen",
+    #                        back_populates="variant")
+
     def __str__(self):
         return u'profiel_variant {0}'.format(
             self.id)
+
+
+class GeselecteerdeProfielen(Base):
+    __tablename__ = 'geselecteerd'
+
+    hydro_id = Column(Integer,
+                      ForeignKey(HydroObject.__tablename__ + ".id"),
+                      primary_key=True)
+    variant_id = Column(String(),
+                        ForeignKey(Varianten.__tablename__ + ".id"))
+    selected_on = Column(DateTime, default=datetime.datetime.utcnow)
+
+    hydro = relationship(HydroObject,
+                         back_populates="geselecteerd")
+
+    variant = relationship(Varianten)
+                           # back_populates="geselecteerd")
 
 
 class ProfielFiguren(Base):
@@ -183,7 +208,7 @@ class ProfielFiguren(Base):
 
     hydro = relationship(HydroObject,
                          primaryjoin="HydroObject.id == ProfielFiguren.hydro_id",
-                         #foreign_keys=[hydro_id],
+                         # foreign_keys=[hydro_id],
                          back_populates="figuren")
 
     def __str__(self):

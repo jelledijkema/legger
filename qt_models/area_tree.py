@@ -1,16 +1,19 @@
 import os
 import inspect
 
-from PyQt4.QtGui import QIcon, QStandardItem, QStandardItemModel
+from PyQt4.QtGui import QIcon, QStandardItem, QStandardItemModel, QBrush, QColor
 from PyQt4.QtCore import Qt, QSize
 
 from PyQt4 import QtGui, QtCore
 
+from legger import settings
+
 CHECKBOX_FIELD = 1
 
-HORIZONTAL_HEADERS = ({'field': 'target_level', 'column_width': 300},
-                      {'field': 'selected', 'field_type': CHECKBOX_FIELD, 'column_width': 50, 'single_selection': True},
-                      {'field': 'hover', 'column_width': 1},
+HORIZONTAL_HEADERS = ({'field': 'target_level', 'header': 'streefpeil', 'column_width': 300},
+                      {'field': 'selected', 'show': False, 'field_type': CHECKBOX_FIELD, 'column_width': 50,
+                       'single_selection': True},
+                      {'field': 'hover', 'show': False, 'field_type': CHECKBOX_FIELD, 'column_width': 50},
                       {'field': 'distance', 'header': 'afstand', 'column_width': 50},
                       )
 
@@ -188,6 +191,13 @@ class AreaTreeModel(QtCore.QAbstractItemModel):
                 return item.data(index.column(), qvalue=True)
             else:
                 return None
+        elif role == Qt.BackgroundRole:
+            if item.area.get('selected'):
+                return QBrush(QColor(*settings.SELECT_COLOR))
+            elif item.area.get('hover'):
+                return QBrush(QColor(*settings.HOVER_COLOR))
+            else:
+                return QBrush(Qt.transparent)
         elif role == QtCore.Qt.DecorationRole and index.column() == 0:
             return item.icon()
         elif role == QtCore.Qt.UserRole:
@@ -380,13 +390,20 @@ class AreaTreeModel(QtCore.QAbstractItemModel):
     def data_change_post_process(self, index, to_index):
 
         col = self.column(index.column())
+        print(col)
 
         if col['field'] == 'hover':
-            value = self.data(index, Qt.DisplayRole)
+            value = self.data(index, Qt.CheckStateRole)
             if value:
                 self.hover = index.internalPointer()
 
-        if col['field'] == 'selected':
+            for colnr in range(0, len(HORIZONTAL_HEADERS)):
+                self.tree_widget.update(self.index(index.row(), colnr, index.parent()))
+
+        elif col['field'] == 'selected':
             value = self.data(index, Qt.CheckStateRole)
             if value:
                 self.selected = index.internalPointer()
+
+            for colnr in range(0, len(HORIZONTAL_HEADERS)):
+                self.tree_widget.update(self.index(index.row(), colnr, index.parent()))

@@ -129,6 +129,8 @@ class Network(object):
         self._endpoint_layer = None
         self._track_layer = None
         self._hover_layer = None
+        self._hover_startpoint_layer = None
+        self._selected_layer = None
         self.id_start_tree = None
 
         self.path_points = []
@@ -136,6 +138,8 @@ class Network(object):
     def get_startpoint_nrs(self):
 
         start_p = []
+
+        # todo: improve - problem are 2 way arcs
         for arc_nr in range(0, self.graph.vertexCount()):
             if len(self.graph.vertex(arc_nr).inArc()) == 0:
                 start_p.append(arc_nr)
@@ -198,6 +202,7 @@ class Network(object):
                 # get
                 branch_target_level = line_feature['streefpeil']
                 branch_category = line_feature['categorieoppwaterlichaam']
+
                 flow = make_type(flow, float, round_digits=2)
                 hydro_id = line_feature['id']
 
@@ -238,6 +243,7 @@ class Network(object):
                         new_area = {
                             'target_level': branch_target_level,
                             'distance': distance,
+                            'point': self.graph.vertex(out_vertex_id).point(),
                             'vertex_id': out_vertex_id,
                             # 'parent': area,
                             'children': [],
@@ -294,16 +300,24 @@ class Network(object):
                 'branch_id': None
             })
 
+            arc_id = self.graph.vertex(self.id_start_tree).outArc()[0]
+            arc = self.graph.arc(arc_id)
+
+            branch_id = int(arc.properties()[2])
+            request = QgsFeatureRequest().setFilterFid(branch_id)
+            line_feature = self.full_line_layer.getFeatures(request).next()
+
             startingpoint_tree = {
                 'distance': 0,
                 'vertex_id': self.id_start_tree,
+                'target_level': line_feature['streefpeil'],
+                'point': self.graph.vertex(self.id_start_tree).point(),
                 'parent': None,
                 'children': []}
 
             loop_recursive(startingpoint_tree, hydro_objects, None, start_point_vertex.outArc())
 
         return startingpoint_tree, hydro_objects, endpoints
-
 
     def add_point(self, qgs_point):
         """
@@ -363,7 +377,6 @@ class Network(object):
                                                            self.id_start_tree,
                                                            0)
         self.tree_layer_up_to_date = False
-
 
     def get_path(self, id_start_point, id_end_point, begin_distance=0):
         """
@@ -516,6 +529,7 @@ class Network(object):
 
                 linked_arcs.append((arc_id, arc, flow))
 
+            # sort on highest flow
             for i, (arc_id, arc, flow) in enumerate(reversed(sorted(linked_arcs, key=lambda a: a[2]))):
 
                 # collect information and create
@@ -523,7 +537,7 @@ class Network(object):
                 request = QgsFeatureRequest().setFilterFid(branch_id)
                 line_feature = self.full_line_layer.getFeatures(request).next()
 
-                distance += line_feature['lengte']
+                distance_end = distance + line_feature['lengte']
                 branch_depth = make_type(arc.properties()[3], float, round_digits=2)
                 branch_variant_min_depth = make_type(arc.properties()[4], float, round_digits=2)
                 branch_variant_max_depth = make_type(arc.properties()[5], float, round_digits=2)
@@ -582,9 +596,10 @@ class Network(object):
                         'target_level': branch_target_level,
                         'category': branch_category,
                         'flow': flow,
-                        'distance': round(distance),
+                        'distance': round(distance_end),
                         'line_feature': line_feature,
-                        # todo: link naar hydroobject
+                        'selected_depth': line_feature['geselecteerd_diepte'],
+                        'selected_width': line_feature['geselecteerd_breedte'],
                         'new_depth': new_depth,
                         'new_variant_min_depth': new_variant_min_depth,
                         'new_variant_max_depth': new_variant_max_depth,
@@ -599,9 +614,23 @@ class Network(object):
                     if i == 0:
                         tree_item = TreeItem(hydrovak, grandparent_tree_item)
                         grandparent_tree_item.appendChild(tree_item)
-                    else:
+                    elif i == 1:
                         tree_item = TreeItem(hydrovak, parent_tree_item)
                         parent_tree_item.appendChild(tree_item)
+                    else:
+                        # first insert dummy split
+                        split_hydrovak = hydrovak_class(
+                            {'hydro_id': 'tak {0}'.format(i),
+                             'line_feature': line_feature,
+                             'distance': round(distance)
+                             },
+                            feature,
+                            startpoint_feature,
+                            endpoint_feature)
+                        split_item = TreeItem(split_hydrovak, parent_tree_item)
+                        parent_tree_item.insertChild(i - 2, split_item)
+                        tree_item = TreeItem(hydrovak, split_item)
+                        split_item.appendChild(tree_item)
 
                     # loop over upstream links
                     if do_loop:
@@ -609,11 +638,17 @@ class Network(object):
                             loop_recursive(
                                 grandparent_tree_item, tree_item, arc, linked_arcs, endpoint_feature,
                                 new_depth, new_variant_min_depth, new_variant_max_depth,
-                                branch_target_level, branch_category, distance
+                                branch_target_level, branch_category, distance_end
+                            )
+                        elif i == 1:
+                            loop_recursive(
+                                parent_tree_item, tree_item, arc, linked_arcs, endpoint_feature,
+                                new_depth, new_variant_min_depth, new_variant_max_depth,
+                                branch_target_level, branch_category, distance_end
                             )
                         else:
                             loop_recursive(
-                                parent_tree_item, tree_item, arc, linked_arcs, endpoint_feature,
+                                split_item, tree_item, arc, linked_arcs, endpoint_feature,
                                 new_depth, new_variant_min_depth, new_variant_max_depth,
                                 branch_target_level, branch_category, distance
                             )
@@ -664,7 +699,6 @@ class Network(object):
 
             self._virtual_tree_layer.updateFields()
 
-
         return self._virtual_tree_layer
 
     def get_endpoint_layer(self):
@@ -693,7 +727,6 @@ class Network(object):
             self._endpoint_layer.updateFields()
 
         return self._endpoint_layer
-
 
     def get_track_layer(self):
         """
@@ -743,6 +776,53 @@ class Network(object):
 
         return self._hover_layer
 
+    def get_selected_layer(self):
+        """
+        return a (link to) an in memory QgsVectorLayer of the current active
+        tree. The layer will be updated during when the tree (or tree start
+        point) changes
+        :return: QgsVectorLayer in memory.
+        """
+        # Enter editing mode
+
+        if not self._selected_layer:
+            # create_layer
+            crs = self.line_layer.crs().authid()
+            self._selected_layer = QgsVectorLayer(
+                "linestring?crs={0}".format(crs),
+                "geselecteerd",
+                "memory")
+
+            self._selected_layer.dataProvider().addAttributes([
+                QgsField("line_id", QVariant.LongLong)])
+
+            self._selected_layer.updateFields()
+
+        return self._selected_layer
+
+    def get_hover_startpoint_layer(self):
+        """
+        return a (link to) an in memory QgsVectorLayer of the current active
+        tree. The layer will be updated during when the tree (or tree start
+        point) changes
+        :return: QgsVectorLayer in memory.
+        """
+        # Enter editing mode
+
+        if not self._hover_startpoint_layer:
+            # create_layer
+            crs = self.line_layer.crs().authid()
+            self._hover_startpoint_layer = QgsVectorLayer(
+                "point?crs={0}".format(crs),
+                "start_point_hover",
+                "memory")
+
+            self._hover_startpoint_layer.dataProvider().addAttributes([
+                QgsField("line_id", QVariant.LongLong)])
+
+            self._hover_startpoint_layer.updateFields()
+
+        return self._hover_startpoint_layer
 
     def reset(self):
         """

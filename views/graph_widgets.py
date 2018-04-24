@@ -6,6 +6,9 @@ from PyQt4.QtGui import QBrush, QColor
 import numpy as np
 from legger.sql_models.legger import HydroObject, ProfielFiguren, Varianten
 from shapely.wkt import loads
+from qgis.core import NULL
+
+from legger import settings
 
 log = logging.getLogger('legger.' + __name__)
 
@@ -32,6 +35,7 @@ class LeggerPlotWidget(pg.PlotWidget):
         self.measured_plots = []
         self.hover_measured_plots = []
         self.hover_selected_plot = None
+        self.selected_measured_plots = []
 
         # set other
         self.showGrid(True, True, 0.5)
@@ -127,11 +131,18 @@ class LeggerPlotWidget(pg.PlotWidget):
         width = [p[0] - midpoint for p in prof['points']]
         height = [p[1] for p in prof['points']]
 
+        pen_params = {
+            'color': list(prof['color'])[:3] + [opacity],
+            'width': prof.get('width', 1)
+        }
+        if 'style' in prof:
+            pen_params['style'] = prof.get('style')
+
         return pg.PlotDataItem(
             x=width,
             y=height,
             connect='finite',
-            pen=pg.mkPen(color=list(prof['color'])[:3] + [opacity], width=prof.get('width', 1)))
+            pen=pg.mkPen(**pen_params))
 
     def data_changed_legger(self, index, to_index=None):
 
@@ -181,7 +192,8 @@ class LeggerPlotWidget(pg.PlotWidget):
                         ProfielFiguren.type_prof == 'm').all():
                     prof = {
                         'name': profile.profid,
-                        'color': (100, 100, 100),
+                        'color': settings.HOVER_COLOR,
+                        'style': Qt.DashLine,
                         'width': 2,
                         'points': [p for p in loads(profile.coord).exterior.coords]
                     }
@@ -194,7 +206,7 @@ class LeggerPlotWidget(pg.PlotWidget):
 
                 # selected profile
                 depth = item.hydrovak.get('selected_depth')
-                if depth is not None:
+                if depth is not None and depth != NULL:
                     profile_variant = self.session.query(Varianten).filter(
                         Varianten.hydro_id == item.hydrovak.get('hydro_id'),
                         Varianten.diepte < depth + precision,
@@ -205,9 +217,10 @@ class LeggerPlotWidget(pg.PlotWidget):
                         profile = profile_variant.first()
                         ref_peil = profile.hydro.streefpeil
 
+                        # todo: iets met een patroon
                         prof = {
                             'name':  profile.id,
-                            'color': (255, 10, 10),
+                            'color': settings.HOVER_COLOR,
                             'width': 2,
                             'points': [
                                 (-0.5 * profile.waterbreedte, ref_peil),
@@ -231,6 +244,40 @@ class LeggerPlotWidget(pg.PlotWidget):
 
                 self.hover_measured_plots = []
 
+        elif field == 'selected':
+            item = self.legger_model.data(index, role=Qt.UserRole)
+
+            if item.hydrovak.get('selected'):
+
+                for profile in self.session.query(ProfielFiguren).filter(
+                        HydroObject.id == ProfielFiguren.hydro_id,
+                        HydroObject.id == item.hydrovak.get('hydro_id'),
+                        ProfielFiguren.type_prof == 'm').all():
+                    prof = {
+                        'name': profile.profid,
+                        'color': settings.SELECT_COLOR,
+                        'style': Qt.DashLine,
+                        'width': 2,
+                        'points': [p for p in loads(profile.coord).exterior.coords]
+                    }
+
+                    prof['plot'] = self.get_measured_plot(prof, 255)
+
+                    # keep reference
+                    self.selected_measured_plots.append(prof)
+                    self.addItem(prof['plot'])
+
+            else:
+                # clear list
+                for prof in self.selected_measured_plots:
+                    if 'plot' in prof:
+                        self.removeItem(prof['plot'])
+
+                # if self.hover_selected_plot is not None:
+                #     self.removeItem(self.hover_selected_plot['plot'])
+
+                self.selected_measured_plots = []
+
 
 class LeggerSideViewPlotWidget(pg.PlotWidget):
 
@@ -241,6 +288,7 @@ class LeggerSideViewPlotWidget(pg.PlotWidget):
         self.legger_model = None
         self.variant_model = None
         self.series = {}
+        self.hydrovak_ids = []
 
         # store arguments
         self.name = name
@@ -305,13 +353,20 @@ class LeggerSideViewPlotWidget(pg.PlotWidget):
             pen=pg.mkPen(color=[60, 60, 60, 120], width=3))
 
         self.hover_start = pg.InfiniteLine(None,
-                                           pen=pg.mkPen(color=[40, 40, 40, 220], width=3))
+                                           pen=pg.mkPen(color=QColor(*settings.HOVER_COLOR), width=3))
         self.hover_end = pg.InfiniteLine(None,
-                                         pen=pg.mkPen(color=[40, 40, 40, 220], width=3))
+                                         pen=pg.mkPen(color=QColor(*settings.HOVER_COLOR), width=3))
+
+        self.selected_start = pg.InfiniteLine(None,
+                                           pen=pg.mkPen(color=QColor(*settings.SELECT_COLOR), width=3))
+        self.selected_end = pg.InfiniteLine(None,
+                                         pen=pg.mkPen(color=QColor(*settings.SELECT_COLOR), width=3))
+
         # self.hover_fill = pg.FillBetweenItem(self.hover_start, self.hover_end,
         #                                    brush=pg.mkBrush(QBrush(QColor(100, 100, 100, 10), Qt.SolidPattern)))
 
         for item in [self.hover_start, self.hover_end,
+                     self.selected_start, self.selected_end,
                      self.water_fill, self.target_level_plot, self.depth_plot,
                      self.available_fill, self.min_depth_plot, self.max_depth_plot,
                      self.selected_depth_plot, self.tmp_selected_depth_plot]:
@@ -338,6 +393,8 @@ class LeggerSideViewPlotWidget(pg.PlotWidget):
                 ref_level = 0
             else:
                 ref_level = item['target_level']
+
+            self.hydrovak_ids.append(item['id'])
 
             d = ref_level - item['depth'] if item['depth'] is not None else np.nan
             mind = ref_level - item['min_depth'] if item['min_depth'] is not None else np.nan
@@ -396,18 +453,42 @@ class LeggerSideViewPlotWidget(pg.PlotWidget):
 
         if field == 'hover':
             if self.legger_model.hover is None:
-                self.hover_start.setValue(None)
-                self.hover_end.setValue(None)
+                self.hover_start.setValue(0)
+                self.hover_end.setValue(0)
             else:
                 self.disableAutoRange()
-                if self.legger_model.hover.older().hydrovak is None:
-                    dist = 0
+                if self.legger_model.hover.hydrovak.get('feat_id') not in self.hydrovak_ids:
+                    self.hover_start.setValue(0)
+                    self.hover_end.setValue(0)
                 else:
-                    dist = self.legger_model.hover.older().hydrovak.get('distance')
+                    if self.legger_model.hover.older().hydrovak is None:
+                        dist = 0
+                    else:
+                        dist = self.legger_model.hover.older().hydrovak.get('distance')
 
-                self.hover_start.setValue(dist)
-                self.hover_end.setValue(
-                    self.legger_model.hover.hydrovak.get('distance'))
+                    self.hover_start.setValue(dist)
+                    self.hover_end.setValue(
+                        self.legger_model.hover.hydrovak.get('distance'))
+
+        elif field == 'selected':
+            if self.legger_model.selected is None:
+                self.selected_start.setValue(0)
+                self.selected_end.setValue(0)
+            else:
+                self.disableAutoRange()
+                if self.legger_model.selected.hydrovak.get('feat_id') not in self.hydrovak_ids:
+                    self.selected_start.setValue(0)
+                    self.selected_end.setValue(0)
+                else:
+                    if self.legger_model.selected.older().hydrovak is None:
+                        dist = 0
+                    else:
+                        dist = self.legger_model.selected.older().hydrovak.get('distance')
+
+                    self.selected_start.setValue(dist)
+                    self.selected_end.setValue(
+                        self.legger_model.selected.hydrovak.get('distance'))
+
 
         elif field in ['sp', 'ep']:
             if self.legger_model.data(index, role=Qt.CheckStateRole) and self.legger_model.ep is not None:
@@ -430,6 +511,7 @@ class LeggerSideViewPlotWidget(pg.PlotWidget):
 
         for line in reversed(up):
             out.append({
+                'id': line.hydrovak.get('feat_id'),
                 'b_distance': dist,
                 'e_distance': line.hydrovak.get('distance'),
                 'depth': line.hydrovak.get('depth'),

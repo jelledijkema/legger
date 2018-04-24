@@ -7,8 +7,8 @@ def create_legger_views(session):
 
     session.execute(
         """
-            CREATE VIEW hydroobjects_kenmerken13 AS 
-            SELECT 
+            CREATE VIEW hydroobjects_kenmerken15 AS 
+SELECT 
             h.objectid, 
             h.id, 
             code, 
@@ -23,6 +23,8 @@ def create_legger_views(session):
             min_breedte, 
             max_breedte,
             ST_LENGTH("GEOMETRY") as lengte,
+            geselecteerd_diepte,
+            geselecteerd_breedte,
             CASE 
               WHEN h.debiet >= 0 THEN "GEOMETRY"
               WHEN h.debiet THEN ST_REVERSE("GEOMETRY")
@@ -51,7 +53,16 @@ def create_legger_views(session):
                 min(waterbreedte) AS min_breedte,
                 max(waterbreedte) AS max_breedte
                 FROM varianten
-                GROUP BY hydro_id) AS mm ON mm.hydro_id = h.id               
+                GROUP BY hydro_id) AS mm 
+                ON mm.hydro_id = h.id
+            LEFT OUTER JOIN (
+                SELECT
+                g.hydro_id,
+				v.diepte as geselecteerd_diepte,
+				v.waterbreedte as geselecteerd_breedte
+                FROM geselecteerd g, varianten v
+                WHERE	g.variant_id = v.id) as sel
+                ON sel.hydro_id = h.id       
         """)
 
     session.execute(

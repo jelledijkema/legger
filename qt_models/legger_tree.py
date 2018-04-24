@@ -1,10 +1,11 @@
 import os
 import inspect
 
-from PyQt4.QtGui import QIcon, QStandardItem, QStandardItemModel
+from PyQt4.QtGui import QIcon, QStandardItem, QStandardItemModel, QBrush, QColor
 from PyQt4.QtCore import Qt, QSize
 
 from PyQt4 import QtGui, QtCore
+from legger import settings
 
 CHECKBOX_FIELD = 1
 
@@ -12,21 +13,21 @@ HORIZONTAL_HEADERS = ({'field': 'hydro_id', 'column_width': 150},
                       #{'field': 'feat_id', 'column_width': 25},
                       {'field': 'sp', 'field_type': CHECKBOX_FIELD, 'column_width': 25, 'single_selection': True},
                       {'field': 'ep', 'field_type': CHECKBOX_FIELD, 'column_width': 25, 'single_selection': True},
-                      {'field': 'hover', 'column_width': 1},
+                      {'field': 'selected', 'field_type': CHECKBOX_FIELD, 'show': False, 'column_width': 50, 'single_selection': True},
+                      {'field': 'hover', 'show': False, 'column_width': 50},
                       {'field': 'distance', 'header': 'afstand', 'column_width': 50},
-                      {'field': 'flow', 'column_width': 50},
-                      #{'field': 'target_level', 'column_width': 50},
-                      {'field': 'depth', 'column_width': 50},
-                      {'field': 'width', 'column_width': 50},
-                      {'field': 'variant_min', 'column_width': 1},
-                      {'field': 'variant_max', 'column_width': 1},
+                      {'field': 'flow', 'header': 'debiet', 'column_width': 50},
+                      {'field': 'target_level', 'show': False, 'column_width': 50},
+                      {'field': 'depth', 'header': 'diepte', 'column_width': 50},
+                      {'field': 'width', 'header': 'breedte', 'column_width': 50},
+                      {'field': 'variant_min', 'show': False, 'column_width': 60},
+                      {'field': 'variant_max', 'show': False, 'column_width': 60},
                       {'field': 'selected_depth', 'header': 'prof d', 'column_width': 60},
                       {'field': 'selected_depth_tmp', 'header': 'tmp', 'column_width': 50},
-                      {'field': 'selected_width', 'header': 'prof w', 'column_width': 60},
+                      {'field': 'selected_width', 'header': 'prof b', 'column_width': 60},
                       {'field': 'over_depth', 'header': 'over d', 'column_width': 60},
-                      {'field': 'over_width', 'header': 'over w', 'column_width': 60},
+                      {'field': 'over_width', 'header': 'over b', 'column_width': 60},
                       {'field': 'score', 'column_width': 50},
-                      # {'field': 'add', 'column_width': 25},
                       )
 
 HEADER_DICT = dict([(h['field'], h) for h in HORIZONTAL_HEADERS])
@@ -129,6 +130,11 @@ class TreeItem(object):
         if item.parent() != self:
             item.setParent(self)
 
+    def insertChild(self, index, item):
+        self.childs.insert(index, item)
+        if item.parent() != self:
+            item.setParent(self)
+
     def clearChilds(self):
         self.childs = []
 
@@ -225,6 +231,7 @@ class LeggerTreeModel(QtCore.QAbstractItemModel):
         self.ep = None
         self.sp = None
         self.hover = None
+        self.selected = None
 
     def setTreeWidget(self, widget):
         """
@@ -248,6 +255,13 @@ class LeggerTreeModel(QtCore.QAbstractItemModel):
         if role == QtCore.Qt.DisplayRole:
             if HORIZONTAL_HEADERS[index.column()].get('field_type') != CHECKBOX_FIELD:
                 return item.data(index.column())
+        elif role == Qt.BackgroundRole:
+            if item.hydrovak.get('selected'):
+                return QBrush(QColor(*settings.SELECT_COLOR))
+            elif item.hydrovak.get('hover'):
+                return QBrush(QColor(*settings.HOVER_COLOR))
+            else:
+                return QBrush(Qt.transparent)
         elif role == Qt.TextAlignmentRole:
             return Qt.AlignVCenter
         elif role == Qt.CheckStateRole:
@@ -532,11 +546,28 @@ class LeggerTreeModel(QtCore.QAbstractItemModel):
         col = self.column(index.column())
 
         if col['field'] == 'hover':
-            value = self.data(index, Qt.DisplayRole)
+            value = self.data(index, Qt.CheckStateRole)
             if value:
                 self.hover = index.internalPointer()
+            elif index.internalPointer() == self.hover:
+                self.hover = None
 
-        if col['field'] == 'sp':
+            for colnr in range(0, len(HORIZONTAL_HEADERS)):
+                self.tree_widget.update(self.index(index.row(), colnr, index.parent()))
+
+        elif col['field'] == 'selected':
+            value = self.data(index, Qt.CheckStateRole)
+            if value:
+                self.selected = index.internalPointer()
+                self.tree_widget.update(index)
+
+            elif index.internalPointer() == self.selected:
+                self.selected = None
+
+            for colnr in range(0, len(HORIZONTAL_HEADERS)):
+                self.tree_widget.update(self.index(index.row(), colnr, index.parent()))
+
+        elif col['field'] == 'sp':
             value = self.data(index, Qt.CheckStateRole)
             if value:
                 index_ep = self.find_younger(start_index=index, key='ep', value=True)
