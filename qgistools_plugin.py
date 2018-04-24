@@ -6,10 +6,16 @@ from PyQt4.QtCore import (QSettings, QTranslator, qVersion, QCoreApplication,
 from PyQt4.QtGui import QAction, QIcon
 # Import the code of the tools
 from legger.tools.legger_network_tool import LeggerNetworkTool
-# from qgis.utils import plugins
+from legger.sqlite_polder_selection import DatabaseSelection
+from legger.profile_variant_calculations import ProfileCalculations
+import resources # can be essential for the tool pictograms
 
-
-import resources  # NoQa
+from qgis.utils import plugins
+try:
+    tdi_plugin = plugins['ThreeDiToolbox']
+except:
+    raise ImportError("For ThreeDiStatistics tool the ThreeDiToolbox plugin must be installed, "
+                      "version xxx or higher")
 
 # Initialize Qt resources from file resources.py
 
@@ -49,6 +55,19 @@ class Legger(QObject):
             if qVersion() > '4.3.3':
                 QCoreApplication.installTranslator(self.translator)
 
+        self.polder_datasource = "Kies eerst een legger database"
+        self.ts_datasource = tdi_plugin.ts_datasource
+
+        errormessage = "Kies eerst 3Di output (model, simulatie (nc), sqlite1)"
+
+        try:
+            self.ts_datasource =tdi_plugin.ts_datasource
+        except:
+            self.ts_datasource = errormessage
+
+        #self.db_path_result_sqlite = self.ts_datasource.rows[0].spatialite_cache_filepath().replace('\\', '/')
+        #db_path_model_sqlite = ts_datasource.model_spatialite_filepath
+        #result_ds = ts_datasource.rows[0].datasource()
 
     # noinspection PyMethodMayBeStatic
     def tr(self, message):
@@ -141,10 +160,14 @@ class Legger(QObject):
         self.toolbar.setObjectName(u'Legger')
 
         # Init tools
-        self.network_tool = LeggerNetworkTool(
-            self.iface)
+        self.read_database = DatabaseSelection(self.iface, self)
+        self.load_profiles = ProfileCalculations(self.iface, self)
+        self.network_tool = LeggerNetworkTool(self.iface)
+
 
         self.tools = []
+        self.tools.append(self.read_database)
+        self.tools.append(self.load_profiles)
         self.tools.append(self.network_tool)
 
         try:

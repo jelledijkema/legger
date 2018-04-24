@@ -22,7 +22,7 @@ class LeggerNetworkTool:
         self.plugin_dir = os.path.dirname(__file__)
 
         self.icon_path = ':/plugins/legger/media/icon_legger.png'
-        self.menu_text = u'legger'
+        self.menu_text = u'legger berekenen'
 
         self.dock_widget = None
 

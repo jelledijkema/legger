@@ -3,7 +3,7 @@ import pandas as pd
 import numpy as np
 # import math
 # import matplotlib.pyplot as plt
-from pandas import DataFrame  # Series
+from pandas import DataFrame
 from legger.sql_models.legger import Varianten
 from legger.sql_models.legger_database import LeggerDatabase
 
@@ -61,27 +61,30 @@ def read_spatialite(legger_db_filepath):
         'QEND'])
 
 
-def filter_unused(df_in, column):
+def filter_unused(df_in):
     """ The data set includes data that are incorrect or sometimes data is missing.
     In order for the analysis to work well these objects should be removed from the set.
     With this function the rows in the data frame where this occurs can be deleted from the data frame.
     The result is a new data frame that includes all the dropped rows from the original data frame.
 
     The input here is an input data frame (df_in), and a column name where the check should be on (i.e. slope, or width)
-    Checks include: is the value 0? is the value NaN? D
+    Checks include: is the value 0? is the value NaN?
     """
-    df_unused = df_in[df_in[column] == 0]
-    df_unused = df_unused.append(
-        df_in[np.isnan(df_in[column])])
 
-    df_unused = df_unused.drop_duplicates()  # In the case the same row occurs twice.
 
-    if df_unused['OBJECTID'].count() == 0:
-        print ("No hydro objects removed.")
-    else:
-        print (str(df_unused['OBJECTID'].count()) + " Hydro object(s) removed b/o missing data.")
+    df_unused = df_in[df_in['BREEDTE'] == 0]
+    for column in ['BREEDTE', 'QEND']:
+        df_unused = df_unused.append(
+            df_in[pd.isnull(df_in[column])])
 
-    df_out = df_in.drop(df_unused.index)
+        df_unused = df_unused.drop_duplicates()  # In the case the same row occurs twice.
+
+        if df_unused['OBJECTID'].count() == 0:
+            print ("No hydro objects removed.")
+        else:
+            print (str(df_unused['OBJECTID'].count()) + " Hydro object(s) removed b/o missing data.")
+
+        df_out = df_in.drop(df_unused.index)
 
     return df_out
 
@@ -355,11 +358,11 @@ def create_theoretical_profiles(legger_db_filepath):
     # Part 1: read SpatiaLite
     # The original Spatialite database is read into Python for further analysis.
     hydro_objects = read_spatialite(legger_db_filepath)  # print (Hydro_objects)
-    print ("\n\nFinished 1: SpatiaLite Database read successfully\n")
+    count_objects = len(hydro_objects.BREEDTE)
+    print ("\n\nFinished 1: SpatiaLite Database read successfully "+str(count_objects)+" objects\n")
 
     # Part 2: Filter the table for hydro objects that can not be analyzed due to incomplete data.
-    column = "BREEDTE"  # in this case filter on width, but can be any column name
-    hydro_objects = filter_unused(hydro_objects, column)
+    hydro_objects = filter_unused(hydro_objects)
     print ("\nFinished 2: Hydro database filtered successfully\n")
 
     # Part 3: Calculate per hydro object the legger profile based on maximum ditch width.
@@ -439,7 +442,7 @@ def create_theoretical_profiles(legger_db_filepath):
         ditch_width = hydro_objects_unsatisfy.max_ditch_width[i]
         ditch_bottom_width = hydro_objects_unsatisfy.ditch_bottom_width[i]
         normative_flow = hydro_objects_unsatisfy.normative_flow[i]
-        gradient_bos_bijkerke = hydro_objects_unsatisfy.gradient_bos_bijkerke[i]
+        gradient_bos_bijkerk = hydro_objects_unsatisfy.gradient_bos_bijkerk[i]
 
         df_temp = pd.DataFrame([[object_id,
                                  object_waterdepth_id,
@@ -448,10 +451,10 @@ def create_theoretical_profiles(legger_db_filepath):
                                  ditch_width,
                                  ditch_bottom_width,
                                  normative_flow,
-                                 gradient_bos_bijkerke]],
+                                 gradient_bos_bijkerk]],
                                columns=['object_id', 'object_waterdepth_id', 'slope',
                                         'water_depth', 'ditch_width', 'ditch_bottom_width',
-                                        'normative_flow', 'gradient_bos_bijkerke'])
+                                        'normative_flow', 'gradient_bos_bijkerk'])
 
         profile_variants = profile_variants.append(df_temp)
     profile_variants = profile_variants.reset_index(drop=True)

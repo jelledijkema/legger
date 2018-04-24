@@ -40,7 +40,7 @@ class LeggerPlotWidget(pg.PlotWidget):
         self.setLabel("left", "hoogte", "m tov waterlijn")
 
         self.series = {}
-        self.hydro_object = None #todo: verwijzing
+        self.hydro_object = None #todo: verwijzing naar hydro object in kwestie
 
     def set_data(self,ditch_width,waterdepth,ditch_slope,ditch_bottomwidth):
         self.ditch_width = ditch_width
@@ -106,7 +106,7 @@ class NewWindow(QtGui.QWidget):
                                       self.ditch_bottomwidth)
 
             if  self.ditch_bottomwidth <= 0:
-                verhang_bericht = "Verhang kan nu niet berekend worden, want"
+                verhang_bericht = "Verhang kan nu niet berekend worden."
                 bodembreedte_bericht = "Bodembreedte is negatief of 0"
             else:
                 placeholder_norm_flow = 0.5
