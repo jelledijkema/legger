@@ -54,11 +54,17 @@ class LeggerPlotWidget(pg.PlotWidget):
         self.clear()
 
         x = [
-            - 0.5 * self.ditch_width, -0.5 * self.ditch_bottomwidth, 0.5 * self.ditch_bottomwidth, 0.5 * self.ditch_width
+            - 0.5 * self.ditch_width,
+            -0.5 * self.ditch_bottomwidth,
+            0.5 * self.ditch_bottomwidth,
+            0.5 * self.ditch_width
             ]
 
         y = [
-            0, -1 * self.waterdepth, -1 * self.waterdepth, 0
+            0,
+            -1 * self.waterdepth,
+            -1 * self.waterdepth,
+            0
         ]
 
 
@@ -74,11 +80,13 @@ class LeggerPlotWidget(pg.PlotWidget):
 
 
 class NewWindow(QtGui.QWidget):
-    def __init__(self, db_session):
+    def __init__(self, legger_item, db_session, callback_on_save=None):
         super(NewWindow, self).__init__()
         self._new_window = None
 
+        self.legger_item = legger_item
         self.session = db_session
+        self.callback_on_save = callback_on_save
 
         self.setup_ui()
 
@@ -88,6 +96,9 @@ class NewWindow(QtGui.QWidget):
 
 
     def calculate(self):
+        verhang_bericht = ""
+        bodembreedte_bericht = ""
+
         try:
             self.ditch_width = float(self.input_ditch_width.value())
             self.waterdepth = float(self.input_waterdepth.value())
@@ -109,7 +120,7 @@ class NewWindow(QtGui.QWidget):
                 verhang_bericht = "Verhang kan nu niet berekend worden."
                 bodembreedte_bericht = "Bodembreedte is negatief of 0"
             else:
-                placeholder_norm_flow = 0.5
+                placeholder_norm_flow = self.legger_item.hydrovak.get('flow', 0)
                 self.verhang = calc_bos_bijkerk(placeholder_norm_flow,
                                                        self.ditch_bottomwidth,
                                                        self.waterdepth,
@@ -146,12 +157,15 @@ class NewWindow(QtGui.QWidget):
                 bodembreedte = self.ditch_bottomwidth,
                 talud=self.ditch_slope,
                 verhang_bos_bijkerk=self.verhang,
-                opmerkingen='',
-                hydro_id=None
+                opmerkingen='handmatig aangemaakt',
+                hydro_id=self.legger_item.hydrovak.get('hydro_id')
             )
 
             self.session.add(variant)
             self.session.commit()
+
+            if self.callback_on_save is not None:
+                self.callback_on_save(self.legger_item, variant)
 
         self.close()
 

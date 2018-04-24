@@ -27,6 +27,7 @@ class LeggerPlotWidget(pg.PlotWidget):
         # store arguments
         self.name = name
         self.session = session
+        self.reference_level = 0
         if legger_model:
             self.setLeggerModel(legger_model)
         if variant_model:
@@ -71,7 +72,7 @@ class LeggerPlotWidget(pg.PlotWidget):
         for item in self.variant_model.rows:
 
             width = [p[0] for p in item.points.value]
-            height = [p[1] for p in item.points.value]
+            height = [p[1] - self.reference_level for p in item.points.value]
 
             if item.active.value:
                 line_width = 3
@@ -162,6 +163,7 @@ class LeggerPlotWidget(pg.PlotWidget):
                 if len(ids):
                     hydro_objects = self.session.query(HydroObject).filter(HydroObject.id.in_(ids)).all()
 
+                    self.reference_level = up[0].hydrovak.get('target_level', 0.0)
                     self.clear_measured_plots()
 
                     for obj in hydro_objects:
@@ -170,7 +172,8 @@ class LeggerPlotWidget(pg.PlotWidget):
                             prof = {
                                 'name': profile.profid,
                                 'color': (100, 100, 100),
-                                'points': [p for p in loads(profile.coord).exterior.coords]
+                                'points': [(p[0], p[1] - self.reference_level)
+                                           for p in loads(profile.coord).exterior.coords]
                             }
 
                             prof['plot'] = self.get_measured_plot(prof, self.def_measured_opacity)
@@ -179,13 +182,15 @@ class LeggerPlotWidget(pg.PlotWidget):
                             self.measured_plots.append(prof)
                             self.addItem(prof['plot'])
 
-                print('refresh')
+            else:
+                self.clear_measured_plots()
 
         elif field == 'hover':
             item = self.legger_model.data(index, role=Qt.UserRole)
 
             if item.hydrovak.get('hover'):
 
+                self.reference_level = item.hydrovak.get('target_level', 0.0)
                 for profile in self.session.query(ProfielFiguren).filter(
                         HydroObject.id == ProfielFiguren.hydro_id,
                         HydroObject.id == item.hydrovak.get('hydro_id'),
@@ -195,7 +200,8 @@ class LeggerPlotWidget(pg.PlotWidget):
                         'color': settings.HOVER_COLOR,
                         'style': Qt.DashLine,
                         'width': 2,
-                        'points': [p for p in loads(profile.coord).exterior.coords]
+                        'points': [(p[0], p[1] - self.reference_level)
+                                   for p in loads(profile.coord).exterior.coords]
                     }
 
                     prof['plot'] = self.get_measured_plot(prof, 255)
@@ -219,14 +225,14 @@ class LeggerPlotWidget(pg.PlotWidget):
 
                         # todo: iets met een patroon
                         prof = {
-                            'name':  profile.id,
+                            'name': profile.id,
                             'color': settings.HOVER_COLOR,
                             'width': 2,
                             'points': [
-                                (-0.5 * profile.waterbreedte, ref_peil),
-                                (-0.5 * profile.bodembreedte, ref_peil - profile.diepte),
-                                (0.5 * profile.bodembreedte, ref_peil - profile.diepte),
-                                (0.5 * profile.waterbreedte, ref_peil),
+                                (-0.5 * profile.waterbreedte, 0l),
+                                (-0.5 * profile.bodembreedte, -1 * profile.diepte),
+                                (0.5 * profile.bodembreedte, -1 * profile.diepte),
+                                (0.5 * profile.waterbreedte, 0),
                             ]
                         }
 
@@ -253,12 +259,14 @@ class LeggerPlotWidget(pg.PlotWidget):
                         HydroObject.id == ProfielFiguren.hydro_id,
                         HydroObject.id == item.hydrovak.get('hydro_id'),
                         ProfielFiguren.type_prof == 'm').all():
+                    self.reference_level = item.hydrovak.get('target_level', 0.0)
                     prof = {
                         'name': profile.profid,
                         'color': settings.SELECT_COLOR,
                         'style': Qt.DashLine,
                         'width': 2,
-                        'points': [p for p in loads(profile.coord).exterior.coords]
+                        'points': [(p[0], p[1] - self.reference_level)
+                                   for p in loads(profile.coord).exterior.coords]
                     }
 
                     prof['plot'] = self.get_measured_plot(prof, 255)
@@ -306,7 +314,7 @@ class LeggerSideViewPlotWidget(pg.PlotWidget):
         self.target_level_plot = pg.PlotDataItem(
             x=[],
             y=[],
-            connect='finite',
+            #connect='finite',
             pen=pg.mkPen(color=[30, 144, 255, 150], width=2))
 
         self.depth_plot = pg.PlotDataItem(
@@ -314,7 +322,12 @@ class LeggerSideViewPlotWidget(pg.PlotWidget):
             connect='finite',
             pen=pg.mkPen(color=[0, 100, 255, 150], width=2))
 
-        self.water_fill = pg.FillBetweenItem(self.target_level_plot, self.depth_plot,
+        self.depth_plot_interpolated = pg.PlotDataItem(
+            x=[], y=[],
+            #connect='finite',
+            pen=pg.mkPen(color=[0, 100, 255, 150], width=2))
+
+        self.water_fill = pg.FillBetweenItem(self.target_level_plot, self.depth_plot_interpolated,
                                              brush=pg.mkBrush(color=[0, 100, 255, 25]))
 
         self.min_depth_plot = pg.PlotDataItem(
@@ -358,9 +371,9 @@ class LeggerSideViewPlotWidget(pg.PlotWidget):
                                          pen=pg.mkPen(color=QColor(*settings.HOVER_COLOR), width=3))
 
         self.selected_start = pg.InfiniteLine(None,
-                                           pen=pg.mkPen(color=QColor(*settings.SELECT_COLOR), width=3))
+                                              pen=pg.mkPen(color=QColor(*settings.SELECT_COLOR), width=3))
         self.selected_end = pg.InfiniteLine(None,
-                                         pen=pg.mkPen(color=QColor(*settings.SELECT_COLOR), width=3))
+                                            pen=pg.mkPen(color=QColor(*settings.SELECT_COLOR), width=3))
 
         # self.hover_fill = pg.FillBetweenItem(self.hover_start, self.hover_end,
         #                                    brush=pg.mkBrush(QBrush(QColor(100, 100, 100, 10), Qt.SolidPattern)))
@@ -379,6 +392,16 @@ class LeggerSideViewPlotWidget(pg.PlotWidget):
         self.legger_model.rowsInserted.connect(self.data_changed_legger)
         self.legger_model.rowsAboutToBeRemoved.connect(
             self.data_changed_legger)
+
+    def clear_graph(self):
+        self.depth_plot.setData(x=[], y=[])
+        self.depth_plot_interpolated.setData(x=[], y=[])
+        self.min_depth_plot.setData(x=[], y=[])
+        self.max_depth_plot.setData(x=[], y=[])
+        self.min_depth_plot_interpolated.setData(x=[], y=[])
+        self.max_depth_plot_interpolated.setData(x=[], y=[])
+
+        self.target_level_plot.setData(x=[], y=[])
 
     def draw_base_lines(self, data):
 
@@ -412,6 +435,7 @@ class LeggerSideViewPlotWidget(pg.PlotWidget):
             target_level.append(ref_level)
 
         self.depth_plot.setData(x=dist, y=depth)
+        self.depth_plot_interpolated.setData(x=dist, y=depth)
         self.min_depth_plot.setData(x=dist, y=min_depth)
         self.max_depth_plot.setData(x=dist, y=max_depth)
         self.min_depth_plot_interpolated.setData(x=dist, y=min_depth)
@@ -495,8 +519,14 @@ class LeggerSideViewPlotWidget(pg.PlotWidget):
                 data = self._get_data()
                 self.draw_base_lines(data)
                 self.draw_selected_lines(data)
+            else:
+                self.clear_graph()
+
         elif field in ['selected_depth', 'selected_depth_tmp']:
             self.draw_selected_lines(self._get_data())
+
+        elif field in ['variant_min', 'variant_max']:
+            self.draw_base_lines(self._get_data())
 
     def _get_data(self):
         if self.legger_model.ep is None:

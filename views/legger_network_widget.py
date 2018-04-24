@@ -369,8 +369,8 @@ class LeggerWidget(QDockWidget):
         self.variant_model.dataChanged.connect(self.data_changed_variant)
         self.legger_model.dataChanged.connect(self.data_changed_legger_tree)
         self.area_model.dataChanged.connect(self.data_changed_area_model)
-        self.test_manual_input_button.clicked.connect(
-            self.test_manual_input_window)
+        self.show_manual_input_button.clicked.connect(
+            self.show_manual_input_window)
 
         # initially turn on tool
         # self.select_startpoint_button.toggle()
@@ -470,6 +470,8 @@ class LeggerWidget(QDockWidget):
             os.path.dirname(os.path.realpath(__file__)), os.pardir,
             'layer_styles', 'legger', 'selected_hydro.qml'))
 
+        QgsMapLayerRegistry.instance().addMapLayer(self.vl_selected_layer)
+
         # add selected startpoint layer
         self.vl_startpoint_hover_layer = self.network.get_hover_startpoint_layer()
 
@@ -507,10 +509,12 @@ class LeggerWidget(QDockWidget):
     def reset_network_tree(self):
         pass
 
-    def test_manual_input_window(self):
-        self._new_window = NewWindow(self.session)
+    def show_manual_input_window(self):
+        self._new_window = NewWindow(
+            self.legger_model.selected,
+            self.session,
+            callback_on_save=self.update_available_profiles)
         self._new_window.show()
-        pass
 
     def unset_tool(self):
         pass
@@ -533,14 +537,15 @@ class LeggerWidget(QDockWidget):
         """
 
         # activate draw
+        node = self.legger_model.data(index, role=Qt.UserRole)
+
         if self.legger_model.columns[index.column()].get('field') == 'hover':
             ids = [feat.id() for feat in self.vl_hover_layer.getFeatures()]
             self.vl_hover_layer.dataProvider().deleteFeatures(ids)
 
-            if self.legger_model.hover:
+            if node.hydrovak.get('hover'):
                 features = []
 
-                node = self.legger_model.hover
                 feat = QgsFeature()
                 feat.setGeometry(node.hydrovak.get('line_feature').geometry())
 
@@ -558,10 +563,9 @@ class LeggerWidget(QDockWidget):
             ids = [feat.id() for feat in self.vl_selected_layer.getFeatures()]
             self.vl_selected_layer.dataProvider().deleteFeatures(ids)
 
-            if self.legger_model.selected:
+            if node.hydrovak.get('selected'):
                 features = []
 
-                node = self.legger_model.selected
                 feat = QgsFeature()
                 feat.setGeometry(node.hydrovak.get('line_feature').geometry())
 
@@ -575,10 +579,12 @@ class LeggerWidget(QDockWidget):
             self.vl_selected_layer.updateExtents()
             self.vl_selected_layer.triggerRepaint()
 
-            if self.legger_model.data(index, role = Qt.CheckStateRole) == Qt.Checked:
+            if node.hydrovak.get('selected'):
                 self.on_select_edit_hydrovak(self.legger_model.data(index, role=Qt.UserRole))
+                self.show_manual_input_button.setDisabled(False)
             elif self.legger_model.selected is None or self.legger_model.data(index, role=Qt.UserRole) == self.legger_model.selected:
                 self.variant_model.removeRows(0, len(self.variant_model.rows))
+                self.show_manual_input_button.setDisabled(True)
 
         elif self.legger_model.columns[index.column()].get('field') in ['ep', 'sp']:
             ids = [feat.id() for feat in self.vl_track_layer.getFeatures()]
@@ -613,6 +619,13 @@ class LeggerWidget(QDockWidget):
         """
 
         if self.area_model.columns[index.column()].get('field') == 'selected':
+            # clear display elements
+            self.variant_model.removeRows(0, len(self.variant_model.rows))
+            self.legger_model.set_column_value('hover', False)
+            self.legger_model.set_column_value('selected', False)
+            self.legger_model.set_column_value('ep', False)
+            self.legger_model.set_column_value('sp', False)
+
             area_item = self.area_model.data(index, role=Qt.UserRole)
 
             self.network.reset()
@@ -649,7 +662,6 @@ class LeggerWidget(QDockWidget):
             self.vl_startpoint_hover_layer.commitChanges()
             self.vl_startpoint_hover_layer.updateExtents()
             self.vl_startpoint_hover_layer.triggerRepaint()
-
 
     def data_changed_variant(self, index):
         """
@@ -706,7 +718,7 @@ class LeggerWidget(QDockWidget):
 
                         self.session.add(selected)
 
-                    # todo: score
+                        # todo: score
 
                     for young in node.younger():
                         if (young.hydrovak.get('variant_min') is None or
@@ -717,7 +729,6 @@ class LeggerWidget(QDockWidget):
 
                             loop(young)
 
-
                 loop(self.legger_model.selected)
                 self.session.commit()
             else:
@@ -726,6 +737,7 @@ class LeggerWidget(QDockWidget):
         elif self.variant_model.columns[index.column()].name == 'hover':
             if item.hover.value:
                 depth = item.depth.value
+                ids = []
 
                 def loop(node):
                     """
@@ -741,16 +753,18 @@ class LeggerWidget(QDockWidget):
                                  depth <= young.hydrovak.get('variant_max') + precision)):
                             # index = self.legger_model.createIndex(young.row(), 0, young)
                             self.legger_model.setDataItemKey(young, 'selected_depth_tmp', depth)
+                            ids.append(str(young.hydrovak.get('hydro_id')))
                             loop(young)
 
                 self.legger_model.set_column_value('selected_depth_tmp', None)
                 self.legger_model.setDataItemKey(self.legger_model.selected, 'selected_depth_tmp', depth)
                 loop(self.legger_model.selected)
 
-                # self.network._virtual_tree_layer.setSubsetString(
-                #     '"var_min_depth"<={depth} AND "var_max_depth">={depth}'.format(depth=depth))
+                self.network._virtual_tree_layer.setSubsetString(
+                    '"hydro_id" in (\'{ids}\')'.format(ids='\',\''.join(ids)))
             else:
                 self.network._virtual_tree_layer.setSubsetString('')
+                self.legger_model.set_column_value('selected_depth_tmp', None)
 
     def on_start_point_select(self, selected_features, clicked_coordinate):
         """Select and add the closest point from the list of selected features.
@@ -812,7 +826,7 @@ class LeggerWidget(QDockWidget):
         profs = []
         selected_depth = item.hydrovak.get('selected_depth')
 
-        for profile in hydro_object.varianten.all():
+        for profile in hydro_object.varianten.order_by(Varianten.diepte):
             active = abs(profile.diepte - selected_depth) < 0.00001 if selected_depth is not None else False
 
             profs.append({
@@ -828,6 +842,18 @@ class LeggerWidget(QDockWidget):
                 ]
             })
         self.variant_model.insertRows(profs)
+
+    def update_available_profiles(self, item, variant):
+
+        # update variant table
+        self.on_select_edit_hydrovak(item)
+        diepte = float(variant.diepte)
+
+        if item.hydrovak.get('variant_max') is None or diepte > item.hydrovak.get('variant_max'):
+            self.legger_model.setDataItemKey(item, 'variant_max', diepte)
+
+        if item.hydrovak.get('variant_min') is None or diepte < item.hydrovak.get('variant_min'):
+            self.legger_model.setDataItemKey(item, 'variant_min', diepte)
 
     def on_hover_profile(self):
         pass
@@ -860,7 +886,7 @@ class LeggerWidget(QDockWidget):
             self.toggle_startpoint_button()
 
         self.select_startpoint_button.toggled.disconnect(self.toggle_startpoint_button)
-        self.test_manual_input_button.clicked.disconnect(self.test_manual_input_window)
+        self.show_manual_input_button.clicked.disconnect(self.show_manual_input_window)
         self.variant_model.dataChanged.disconnect(self.data_changed_variant)
         self.legger_model.dataChanged.disconnect(self.data_changed_legger_tree)
 
@@ -893,11 +919,9 @@ class LeggerWidget(QDockWidget):
         # self.reset_network_tree_button = QPushButton(self)
         # self.button_bar_hlayout.addWidget(self.reset_network_tree_button)
 
-        self.test_manual_input_button = QPushButton(self)
-        self.button_bar_hlayout.addWidget(self.test_manual_input_button)
-
-        self.import_treedi_button = QPushButton(self)
-        self.button_bar_hlayout.addWidget(self.import_treedi_button)
+        self.show_manual_input_button = QPushButton(self)
+        self.button_bar_hlayout.addWidget(self.show_manual_input_button)
+        self.show_manual_input_button.setDisabled(True)
 
         spacer_item = QSpacerItem(40,
                                   20,
@@ -1004,5 +1028,5 @@ class LeggerWidget(QDockWidget):
             "DockWidget", "Legger", None))
         self.select_startpoint_button.setText(_translate(
             "DockWidget", "Selecteer een startpunt", None))
-        self.test_manual_input_button.setText(_translate(
+        self.show_manual_input_button.setText(_translate(
             "DockWidget", "Voeg profiel toe", None))

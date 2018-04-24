@@ -200,11 +200,11 @@ class Network(object):
                 end_distance = distance + line_feature['lengte']
 
                 # get
-                branch_target_level = line_feature['streefpeil']
-                branch_category = line_feature['categorieoppwaterlichaam']
+                branch_target_level = arc.properties()[6]
+                branch_category = arc.properties()[7]
 
                 flow = make_type(flow, float, round_digits=2)
-                hydro_id = line_feature['id']
+                hydro_id = arc.properties()[9]
 
                 in_vertex_id = arc.inVertex()
                 out_vertex_id = arc.outVertex()
@@ -485,6 +485,7 @@ class Network(object):
             feat.setAttributes([
                 float(arc.properties()[1]),
                 int(arc.properties()[2]),
+                int(arc.properties()[9]),
                 make_type(depth, float),
                 make_type(variant_min_depth, float),
                 make_type(variant_max_depth, float),
@@ -583,7 +584,7 @@ class Network(object):
                     # hydrovak line feature
                     feature = add_line(
                         line_feature, arc, new_depth, new_variant_min_depth, new_variant_max_depth,
-                        branch_target_level, branch_category, )
+                        branch_target_level, branch_category)
 
                     hydrovak = hydrovak_class({
                         'feat_id': branch_id,
@@ -598,8 +599,10 @@ class Network(object):
                         'flow': flow,
                         'distance': round(distance_end),
                         'line_feature': line_feature,
-                        'selected_depth': line_feature['geselecteerd_diepte'],
-                        'selected_width': line_feature['geselecteerd_breedte'],
+                        'selected_depth': (
+                        line_feature['geselecteerd_diepte'] if line_feature['geselecteerd_diepte'] != NULL else None),
+                        'selected_width': (
+                        line_feature['geselecteerd_breedte'] if line_feature['geselecteerd_breedte'] != NULL else None),
                         'new_depth': new_depth,
                         'new_variant_min_depth': new_variant_min_depth,
                         'new_variant_max_depth': new_variant_max_depth,
@@ -691,6 +694,7 @@ class Network(object):
             self._virtual_tree_layer.dataProvider().addAttributes([
                 QgsField("weight", QVariant.Double),
                 QgsField("line_id", QVariant.LongLong),
+                QgsField("hydro_id", QVariant.LongLong),
                 QgsField("min_depth", QVariant.Double),
                 QgsField("var_min_depth", QVariant.Double),
                 QgsField("var_max_depth", QVariant.Double),
