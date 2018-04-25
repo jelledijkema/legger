@@ -1,7 +1,6 @@
 import os.path
-from PyQt4.QtCore import Qt
-import qgis
 
+from PyQt4.QtCore import Qt
 from legger.views.legger_network_widget import LeggerWidget
 
 

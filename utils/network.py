@@ -1,8 +1,8 @@
 # -*- coding: utf-8 -*-
 from PyQt4.QtCore import QVariant
-from qgis.core import (QgsFeature, QgsFeatureRequest, QgsField, QgsGeometry, QgsVectorLayer, QgsPoint, NULL)
+from legger.qt_models.legger_tree import TreeItem, hydrovak_class
+from qgis.core import (NULL, QgsFeature, QgsFeatureRequest, QgsField, QgsGeometry, QgsPoint, QgsVectorLayer)
 from qgis.networkanalysis import QgsArcProperter, QgsDistanceArcProperter, QgsGraphAnalyzer, QgsGraphBuilder
-from legger.qt_models.legger_tree import hydrovak_class, TreeItem, LeggerTreeModel
 
 
 def make_type(value, typ, default_value=None, round_digits=None):
@@ -159,12 +159,12 @@ class Network(object):
                     return False
                 else:
                     to_vertexes = [self.graph.arc(arc_id).inVertex()
-                                           for arc_id in vertex.outArc()]
+                                   for arc_id in vertex.outArc()]
                     for arc_nr in vertex.inArc():
                         # check if 'to' arcs are all bi-directional
 
                         if self.graph.arc(arc_nr).outVertex() not in to_vertexes:
-                          # if not, this is a non bi-directional way in, so no startpoint island
+                            # if not, this is a non bi-directional way in, so no startpoint island
                             return False
 
                     # add additional points to list and continue
@@ -193,11 +193,11 @@ class Network(object):
                 continue
             else:
                 to_vertexes = [self.graph.arc(arc_id).inVertex()
-                                           for arc_id in vertex.outArc()]
+                               for arc_id in vertex.outArc()]
                 for arc_nr in vertex.inArc():
                     # check if 'to' arcs are all bi-directional
                     if self.graph.arc(arc_nr).outVertex() not in to_vertexes:
-                      # if not, this is a non bi-directional way in
+                        # if not, this is a non bi-directional way in
                         continue
 
                 # startpoint island check
@@ -665,9 +665,11 @@ class Network(object):
                         'distance': round(distance_end),
                         'line_feature': line_feature,
                         'selected_depth': (
-                        line_feature['geselecteerd_diepte'] if line_feature['geselecteerd_diepte'] != NULL else None),
+                            line_feature['geselecteerd_diepte'] if line_feature[
+                                                                       'geselecteerd_diepte'] != NULL else None),
                         'selected_width': (
-                        line_feature['geselecteerd_breedte'] if line_feature['geselecteerd_breedte'] != NULL else None),
+                            line_feature['geselecteerd_breedte'] if line_feature[
+                                                                        'geselecteerd_breedte'] != NULL else None),
                         'new_depth': new_depth,
                         'new_variant_min_depth': new_variant_min_depth,
                         'new_variant_max_depth': new_variant_max_depth,

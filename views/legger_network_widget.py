@@ -1,38 +1,22 @@
 import logging
 import os
-import sys
 
-import numpy as np
-import pyqtgraph as pg
-from PyQt4 import QtCore, QtGui
-from PyQt4.QtCore import QEvent, QMetaObject, QSize, Qt, pyqtSignal, pyqtSlot, QModelIndex
-from PyQt4.QtGui import (QApplication, QColor, QDockWidget, QHBoxLayout, QPushButton, QSizePolicy, QSpacerItem,
-                         QTableView, QVBoxLayout, QWidget, QTreeWidget, QTreeView, QTreeWidgetItem, QTabWidget)
-from legger.qt_models.legger_item import LeggerItemModel
+from PyQt4.QtCore import QMetaObject, QSize, Qt, pyqtSignal
+from PyQt4.QtGui import (QApplication, QDockWidget, QHBoxLayout, QPushButton, QSizePolicy, QSpacerItem, QTabWidget,
+                         QVBoxLayout, QWidget)
+from legger.qt_models.area_tree import AreaTreeItem, AreaTreeModel, area_class
+from legger.qt_models.legger_tree import LeggerTreeModel, TreeItem
+from legger.qt_models.profile import ProfileModel
+from legger.sql_models.legger import GeselecteerdeProfielen, HydroObject, Varianten
+from legger.sql_models.legger_database import LeggerDatabase
 from legger.utils.network import Network
 from legger.utils.network_utils import LeggerDistancePropeter, LeggerMapVisualisation, NetworkTool
-from qgis.core import (QgsMapLayerRegistry)
+from legger.views.input_widget import NewWindow
+from network_graph_widgets import LeggerPlotWidget, LeggerSideViewPlotWidget
+from qgis.core import QgsDataSourceURI, QgsFeature, QgsGeometry, QgsMapLayerRegistry, QgsPoint, QgsVectorLayer
 from qgis.networkanalysis import (QgsLineVectorLayerDirector)
 
-from qgis.core import (QgsPoint, QgsRectangle, QgsCoordinateTransform,
-                       QgsVectorLayer, QgsField, QgsFeature, QgsGeometry, QgsMapLayerRegistry,
-                       QGis, QgsFeatureRequest, QgsDistanceArea, QgsCoordinateReferenceSystem)
-
-from qgis.core import QgsDataSourceURI
-from legger.qt_models.legger_tree import LeggerTreeModel
-
-from legger.sql_models.legger import HydroObject, Varianten, GeselecteerdeProfielen
-from legger.sql_models.legger_database import LeggerDatabase
-from shapely.geometry import LineString
-from legger.qt_models.profile import ProfileModel
-from graph_widgets import LeggerSideViewPlotWidget, LeggerPlotWidget
-
-from legger.qt_models.legger_tree import TreeItem, LeggerTreeModel
-from legger.qt_models.area_tree import AreaTreeItem, AreaTreeModel, area_class
-
-from sqlalchemy.orm import joinedload
-
-from legger.views.input_widget import NewWindow
+from .network_table_widgets import LeggerTreeWidget, PlotItemTable, StartpointTreeWidget
 
 log = logging.getLogger('legger.' + __name__)
 
@@ -47,272 +31,6 @@ try:
 except AttributeError:
     def _translate(context, text, disambig):
         return QApplication.translate(context, text, disambig)
-
-
-class PlotItemTable(QTableView):
-    hoverExitRow = pyqtSignal(int)
-    hoverExitAllRows = pyqtSignal()  # exit the whole widget
-    hoverEnterRow = pyqtSignal(int)
-
-    def __init__(self, parent=None, variant_model=None):
-        super(PlotItemTable, self).__init__(parent)
-
-        self._last_hovered_row = None
-
-        if variant_model is not None:
-            self.setModel(variant_model)
-
-        self.setMouseTracking(True)
-        self.viewport().installEventFilter(self)
-
-        self.setStyleSheet("QTableView::item:hover{background-color:#FFFF00;}")
-
-    def closeEvent(self, event):
-        """
-        overwrite of QDockWidget class to emit signal
-        :param event: QEvent
-        """
-        self.setMouseTracking(False)
-        self.viewport().removeEventFilter(self)
-        event.accept()
-
-    def eventFilter(self, widget, event):
-        if widget is self.viewport():
-            if QEvent is None:
-                return QTableView.eventFilter(self, widget, event)
-            elif event.type() == QEvent.MouseMove:
-                row = self.indexAt(event.pos()).row()
-                if row == 0 and self.model() and row > self.model().rowCount():
-                    row = None
-            elif event.type() == QEvent.Leave:
-                row = None
-                self.hoverExitAllRows.emit()
-            else:
-                row = self._last_hovered_row
-
-            if row != self._last_hovered_row:
-                if self._last_hovered_row is not None:
-                    try:
-                        self.hover_exit(self._last_hovered_row)
-                        self.hoverExitRow.emit(self._last_hovered_row)
-                    except IndexError:
-                        log.warning("Hover row index %s out of range",
-                                    self._last_hovered_row)
-                if row is not None:
-                    try:
-                        self.hover_enter(row)
-                        self.hoverEnterRow.emit(row)
-                    except IndexError:
-                        log.warning("Hover row index %s out of range", row),
-                self._last_hovered_row = row
-
-        return QTableView.eventFilter(self, widget, event)
-
-    def hover_exit(self, row_nr):
-        if row_nr >= 0:
-            item = self.model().rows[row_nr]
-            item.hover.value = False
-            if not item.active.value:
-                item.color.value = list(item.color.value)[:3] + [20]
-
-
-    def hover_enter(self, row_nr):
-        if row_nr >= 0:
-            item = self.model().rows[row_nr]
-            item.hover.value = True
-            if not item.active.value:
-                item.color.value = list(item.color.value)[:3] + [200]
-
-    def setModel(self, model):
-        super(PlotItemTable, self).setModel(model)
-
-        self.resizeColumnsToContents()
-        self.model().set_column_sizes_on_view(self)
-
-
-class StartpointTreeWidget(QTreeView):
-    hoverExitIndex = pyqtSignal(QModelIndex)
-    hoverExitAll = pyqtSignal()  # exit the whole widget
-    hoverEnterIndex = pyqtSignal(QModelIndex)
-
-    def __init__(self, parent=None, startpoint_model=None, on_select=None):
-        super(StartpointTreeWidget, self).__init__(parent)
-        self.on_select = on_select
-
-        self._last_hovered_item = None
-
-        if startpoint_model is None:
-            startpoint_model = AreaTreeModel()
-        self.setModel(startpoint_model)
-
-        # set signals
-        self.clicked.connect(self.click_leaf)
-
-        self.setMouseTracking(True)
-        self.viewport().installEventFilter(self)
-
-        # set other
-        self.setAlternatingRowColors(True)
-        self.setSelectionMode(QtGui.QAbstractItemView.NoSelection)
-
-    def closeEvent(self, event):
-        """
-        overwrite of QDockWidget class to emit signal
-        :param event: QEvent
-        """
-        self.clicked.disconnect(self.click_leaf)
-        self.setMouseTracking(False)
-        self.viewport().removeEventFilter(self)
-        event.accept()
-
-    def click_leaf(self, index):
-
-        if index.column() == 0:
-            item = self.model().data(index, Qt.UserRole)
-            if item.area.get('selected'):
-                # deselect
-                self.model().setDataItemKey(item, 'selected', False)
-            else:
-                # select
-                self.model().setDataItemKey(item, 'selected', True)
-
-    def eventFilter(self, widget, event):
-        if widget is self.viewport():
-            if QEvent is None:
-                return QTreeView.eventFilter(self, widget, event)
-            elif event.type() == QEvent.MouseMove:
-                index = self.indexAt(event.pos())
-                if not index.isValid():
-                    index = None
-            elif event.type() == QEvent.Leave:
-                index = None
-                self.hoverExitAll.emit()
-            else:
-                index = self._last_hovered_item
-
-            if index != self._last_hovered_item:
-                if self._last_hovered_item is not None:
-                    try:
-                        self.hover_exit(self._last_hovered_item)
-                        self.hoverExitIndex.emit(self._last_hovered_item)
-                    except IndexError:
-                        log.warning("Hover row index %s out of range",
-                                    self._last_hovered_item)
-
-                if index is not None:
-                    try:
-                        self.hover_enter(index)
-                        self.hoverEnterIndex.emit(index)
-                    except IndexError:
-                        log.warning("Hover row index %s out of range", index.row()),
-                self._last_hovered_item = index
-
-        return QTreeView.eventFilter(self, widget, event)
-
-    def hover_exit(self, index):
-        item = index.internalPointer()
-        self.model().setDataItemKey(item, 'hover', None)
-
-    def hover_enter(self, index):
-        item = index.internalPointer()
-        self.model().setDataItemKey(item, 'hover', True)
-
-    def setModel(self, model):
-        super(StartpointTreeWidget, self).setModel(model)
-
-        self.model().set_column_sizes_on_view(self)
-
-
-class LeggerTreeWidget(QTreeView):
-    hoverExitIndex = pyqtSignal(QModelIndex)
-    hoverExitAll = pyqtSignal()  # exit the whole widget
-    hoverEnterIndex = pyqtSignal(QModelIndex)
-
-    def __init__(self, parent=None, legger_model=None):
-        super(LeggerTreeWidget, self).__init__(parent)
-
-        self._last_hovered_item = None
-
-        if legger_model is None:
-            legger_model = LeggerTreeModel()
-        self.setModel(legger_model)
-
-        # set signals
-        self.clicked.connect(self.click_leaf)
-
-        self.setMouseTracking(True)
-        self.viewport().installEventFilter(self)
-
-        # set other
-        self.setAlternatingRowColors(True)
-        self.setSelectionMode(QtGui.QAbstractItemView.NoSelection)
-
-    def closeEvent(self, event):
-        """
-        overwrite of QDockWidget class to emit signal
-        :param event: QEvent
-        """
-        self.clicked.disconnect(self.click_leaf)
-        self.setMouseTracking(False)
-        self.viewport().removeEventFilter(self)
-        event.accept()
-
-    def click_leaf(self, index):
-
-        if index.column() == 0:
-            item = self.model().data(index, Qt.UserRole)
-            if item.hydrovak.get('selected'):
-                # deselect
-                self.model().setDataItemKey(item, 'selected', False)
-            else:
-                # select
-                self.model().setDataItemKey(item, 'selected', True)
-
-    def eventFilter(self, widget, event):
-        if widget is self.viewport():
-            if QEvent is None:
-                return QTreeView.eventFilter(self, widget, event)
-            elif event.type() == QEvent.MouseMove:
-                index = self.indexAt(event.pos())
-                if not index.isValid():
-                    index = None
-            elif event.type() == QEvent.Leave:
-                index = None
-                self.hoverExitAll.emit()
-            else:
-                index = self._last_hovered_item
-
-            if index != self._last_hovered_item:
-                if self._last_hovered_item is not None:
-                    try:
-                        self.hover_exit(self._last_hovered_item)
-                        self.hoverExitIndex.emit(self._last_hovered_item)
-                    except IndexError:
-                        log.warning("Hover row index %s out of range",
-                                    self._last_hovered_item)
-
-                if index is not None:
-                    try:
-                        self.hover_enter(index)
-                        self.hoverEnterIndex.emit(index)
-                    except IndexError:
-                        log.warning("Hover row index %s out of range", index.row()),
-                self._last_hovered_item = index
-
-        return QTreeView.eventFilter(self, widget, event)
-
-    def hover_exit(self, index):
-        item = index.internalPointer()
-        self.model().setDataItemKey(item, 'hover', None)
-
-    def hover_enter(self, index):
-        item = index.internalPointer()
-        self.model().setDataItemKey(item, 'hover', True)
-
-    def setModel(self, model):
-        super(LeggerTreeWidget, self).setModel(model)
-
-        self.model().set_column_sizes_on_view(self)
 
 
 class LeggerWidget(QDockWidget):
@@ -481,7 +199,6 @@ class LeggerWidget(QDockWidget):
 
         QgsMapLayerRegistry.instance().addMapLayer(self.vl_startpoint_hover_layer)
 
-
     def get_line_layer(self, geometry_col='geometry'):
         # todo: move to map manage?
 
@@ -496,7 +213,7 @@ class LeggerWidget(QDockWidget):
 
         layer = get_layer(
             self.path_legger_db,
-            'hydroobjects_kenmerken15',
+            'hydroobjects_kenmerken',
             geometry_col
         )
 
@@ -582,7 +299,8 @@ class LeggerWidget(QDockWidget):
             if node.hydrovak.get('selected'):
                 self.on_select_edit_hydrovak(self.legger_model.data(index, role=Qt.UserRole))
                 self.show_manual_input_button.setDisabled(False)
-            elif self.legger_model.selected is None or self.legger_model.data(index, role=Qt.UserRole) == self.legger_model.selected:
+            elif self.legger_model.selected is None or self.legger_model.data(index,
+                                                                              role=Qt.UserRole) == self.legger_model.selected:
                 self.variant_model.removeRows(0, len(self.variant_model.rows))
                 self.show_manual_input_button.setDisabled(True)
 
@@ -654,7 +372,7 @@ class LeggerWidget(QDockWidget):
 
                 feat.setGeometry(QgsGeometry.fromPoint(node.area.get('point')))
                 feat.setAttributes([
-                     node.area.get('vertex_id')])
+                    node.area.get('vertex_id')])
                 features.append(feat)
 
                 self.vl_startpoint_hover_layer.dataProvider().addFeatures(features)
@@ -955,7 +673,6 @@ class LeggerWidget(QDockWidget):
         # self.legger_tree_widget.setMinimumSize(QSize(750, 0))
 
         self.tree_table_tab.addTab(self.startpoint_tree_widget, 'startpunten')
-
 
         # LeggerTree
         self.legger_tree_widget = LeggerTreeWidget(self, self.legger_model)

@@ -1,19 +1,16 @@
-import os
-import inspect
-
-from PyQt4.QtGui import QIcon, QStandardItem, QStandardItemModel, QBrush, QColor
-from PyQt4.QtCore import Qt, QSize
-
-from PyQt4 import QtGui, QtCore
+from PyQt4 import QtCore
+from PyQt4.QtCore import Qt
+from PyQt4.QtGui import QBrush, QColor, QIcon
 from legger import settings
 
 CHECKBOX_FIELD = 1
 
 HORIZONTAL_HEADERS = ({'field': 'hydro_id', 'column_width': 150},
-                      #{'field': 'feat_id', 'column_width': 25},
+                      # {'field': 'feat_id', 'column_width': 25},
                       {'field': 'sp', 'field_type': CHECKBOX_FIELD, 'column_width': 25, 'single_selection': True},
                       {'field': 'ep', 'field_type': CHECKBOX_FIELD, 'column_width': 25, 'single_selection': True},
-                      {'field': 'selected', 'field_type': CHECKBOX_FIELD, 'show': False, 'column_width': 50, 'single_selection': True},
+                      {'field': 'selected', 'field_type': CHECKBOX_FIELD, 'show': False, 'column_width': 50,
+                       'single_selection': True},
                       {'field': 'hover', 'field_type': CHECKBOX_FIELD, 'show': False, 'column_width': 50},
                       {'field': 'distance', 'header': 'afstand', 'column_width': 50},
                       {'field': 'flow', 'header': 'debiet', 'column_width': 50},
@@ -79,7 +76,6 @@ class hydrovak_class(object):
             return False
         else:
             return self.set(HORIZONTAL_HEADERS[column]['field'], value)
-
 
     def get(self, key, default_value=None):
         if key == 'feature':
@@ -189,7 +185,7 @@ class TreeItem(object):
         while node != end and node is not None and node.hydrovak is not None:
             up_list.append(node)
             if node.row() != 0:
-                node = node.parent().child(node.row()-1)
+                node = node.parent().child(node.row() - 1)
             else:
                 node = node.parent()
 
@@ -449,7 +445,7 @@ class LeggerTreeModel(QtCore.QAbstractItemModel):
             :return:
             """
             if node.row() < node.parent().childCount() - 1:
-                young = node.parent().child(node.row()+1)
+                young = node.parent().child(node.row() + 1)
                 if young.hydrovak.get(key) == value:
                     index = self.createIndex(young.row(), 0, young)
                     return index
@@ -487,7 +483,7 @@ class LeggerTreeModel(QtCore.QAbstractItemModel):
                 return index
 
             if node.row() > 0:
-                result = search(node.parent().child(node.row()-1))
+                result = search(node.parent().child(node.row() - 1))
             else:
                 result = search(node.parent())
             if result:
