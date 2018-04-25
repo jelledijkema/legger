@@ -1,3 +1,5 @@
+""" The graphs of the legger network tool"""
+
 import logging
 
 import pyqtgraph as pg
