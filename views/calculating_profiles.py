@@ -15,6 +15,9 @@ from legger.utils.read_tdi_results import (
 from legger.utils.theoretical_profiles import create_theoretical_profiles, write_theoretical_profile_results_to_db
 from legger.sql_models.legger_views import create_legger_views
 from pyspatialite import dbapi2 as dbapi
+from legger.sql_models.legger_database import LeggerDatabase
+from legger.sql_models.legger import HydroObject
+from legger.utils.profile_match_a import doe_profinprof, maaktabellen
 
 log = logging.getLogger(__name__)
 
@@ -70,7 +73,7 @@ class ProfileCalculationWidget(QWidget):#, FORM_CLASS):
         except:
             self.path_result_nc = errormessage
 
-        if self.path_model_db == None:
+        if self.path_model_db is None:
             self.path_model_db = errormessage
 
         self.setup_ui()
@@ -96,6 +99,17 @@ class ProfileCalculationWidget(QWidget):#, FORM_CLASS):
         self.close()
 
     def execute_step1(self):
+        db = LeggerDatabase(
+            {
+                'db_path': self.polder_datasource
+            },
+            'spatialite'
+        )
+        db.create_and_check_fields()
+        session = db.get_session()
+
+        session.query(HydroObject)
+
         try:
             result = read_tdi_results(
                 self.path_model_db,
@@ -113,6 +127,7 @@ class ProfileCalculationWidget(QWidget):#, FORM_CLASS):
         try:
             write_tdi_results_to_db(result,
                                     self.polder_datasource)
+
             con_legger = dbapi.connect(self.polder_datasource)
             create_legger_views(con_legger)
 
@@ -165,9 +180,13 @@ class ProfileCalculationWidget(QWidget):#, FORM_CLASS):
 
     def execute_step3(self):
 
+        con_legger = dbapi.connect(self.polder_datasource)
+        maaktabellen(con_legger.cursor())
+        con_legger.commit()
+        doe_profinprof(con_legger.cursor(), con_legger.cursor())
+        con_legger.commit()
 
         self.feedbacktext.setText("De fit % zijn berekend.")
-
 
     def setup_ui(self):
         self.verticalLayout = QtGui.QVBoxLayout(self)

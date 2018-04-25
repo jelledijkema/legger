@@ -162,7 +162,7 @@ class Legger(QObject):
         # Init tools
         self.read_database = DatabaseSelection(self.iface, self)
         self.load_profiles = ProfileCalculations(self.iface, self)
-        self.network_tool = LeggerNetworkTool(self.iface)
+        self.network_tool = LeggerNetworkTool(self.iface, self)
 
 
         self.tools = []
