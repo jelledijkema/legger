@@ -1,11 +1,6 @@
-import os
-import inspect
-
-from PyQt4.QtGui import QIcon, QStandardItem, QStandardItemModel, QBrush, QColor
-from PyQt4.QtCore import Qt, QSize
-
-from PyQt4 import QtGui, QtCore
-
+from PyQt4 import QtCore
+from PyQt4.QtCore import Qt
+from PyQt4.QtGui import QBrush, QColor, QIcon
 from legger import settings
 
 CHECKBOX_FIELD = 1

@@ -1,11 +1,10 @@
-import logging
 import datetime
+import logging
 
-from sqlalchemy import (
-    Boolean, Column, Integer, String, Float, ForeignKey, DateTime)
+from geoalchemy2.types import Geometry
+from sqlalchemy import (Column, DateTime, Float, ForeignKey, Integer, String)
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import relationship
-from geoalchemy2.types import Geometry
 
 logger = logging.getLogger('legger.sql_models.legger')
 
@@ -183,7 +182,7 @@ class GeselecteerdeProfielen(Base):
                          back_populates="geselecteerd")
 
     variant = relationship(Varianten)
-                           # back_populates="geselecteerd")
+    # back_populates="geselecteerd")
 
 
 class ProfielFiguren(Base):

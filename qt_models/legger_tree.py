@@ -1,20 +1,17 @@
-import os
-import inspect
-
-from PyQt4.QtGui import QIcon, QStandardItem, QStandardItemModel, QBrush, QColor
-from PyQt4.QtCore import Qt, QSize
-
-from PyQt4 import QtGui, QtCore
+from PyQt4 import QtCore
+from PyQt4.QtCore import Qt
+from PyQt4.QtGui import QBrush, QColor, QIcon
 from legger import settings
 
 CHECKBOX_FIELD = 1
 
 HORIZONTAL_HEADERS = ({'field': 'hydro_id', 'column_width': 150},
-                      #{'field': 'feat_id', 'column_width': 25},
+                      # {'field': 'feat_id', 'column_width': 25},
                       {'field': 'sp', 'field_type': CHECKBOX_FIELD, 'column_width': 25, 'single_selection': True},
                       {'field': 'ep', 'field_type': CHECKBOX_FIELD, 'column_width': 25, 'single_selection': True},
-                      {'field': 'selected', 'field_type': CHECKBOX_FIELD, 'show': False, 'column_width': 50, 'single_selection': True},
-                      {'field': 'hover', 'show': False, 'column_width': 50},
+                      {'field': 'selected', 'field_type': CHECKBOX_FIELD, 'show': False, 'column_width': 50,
+                       'single_selection': True},
+                      {'field': 'hover', 'field_type': CHECKBOX_FIELD, 'show': False, 'column_width': 50},
                       {'field': 'distance', 'header': 'afstand', 'column_width': 50},
                       {'field': 'flow', 'header': 'debiet', 'column_width': 50},
                       {'field': 'target_level', 'show': False, 'column_width': 50},
@@ -80,7 +77,6 @@ class hydrovak_class(object):
         else:
             return self.set(HORIZONTAL_HEADERS[column]['field'], value)
 
-
     def get(self, key, default_value=None):
         if key == 'feature':
             return self.feature
@@ -104,11 +100,11 @@ class hydrovak_class(object):
 
     def set(self, key, value):
 
-        if key in self.feature_keys:
-            return False  # not implemented yet
-        else:
-            self.data_dict[key] = value
-            return True
+        # if key in self.feature_keys:
+        #     return False  # not implemented yet
+        # else:
+        self.data_dict[key] = value
+        return True
 
 
 class TreeItem(object):
@@ -189,7 +185,7 @@ class TreeItem(object):
         while node != end and node is not None and node.hydrovak is not None:
             up_list.append(node)
             if node.row() != 0:
-                node = node.parent().child(node.row()-1)
+                node = node.parent().child(node.row() - 1)
             else:
                 node = node.parent()
 
@@ -202,7 +198,7 @@ class TreeItem(object):
         if self.row() < self.parent().childCount() - 1:
             nodes.append(self.parent().child(self.row() + 1))
         if self.childCount() > 0:
-            nodes.extend(self.childs)
+            nodes.append(self.childs[0])
         return nodes
 
     def older(self):
@@ -449,7 +445,7 @@ class LeggerTreeModel(QtCore.QAbstractItemModel):
             :return:
             """
             if node.row() < node.parent().childCount() - 1:
-                young = node.parent().child(node.row()+1)
+                young = node.parent().child(node.row() + 1)
                 if young.hydrovak.get(key) == value:
                     index = self.createIndex(young.row(), 0, young)
                     return index
@@ -487,7 +483,7 @@ class LeggerTreeModel(QtCore.QAbstractItemModel):
                 return index
 
             if node.row() > 0:
-                result = search(node.parent().child(node.row()-1))
+                result = search(node.parent().child(node.row() - 1))
             else:
                 result = search(node.parent())
             if result:
@@ -546,7 +542,7 @@ class LeggerTreeModel(QtCore.QAbstractItemModel):
         col = self.column(index.column())
 
         if col['field'] == 'hover':
-            value = self.data(index, Qt.CheckStateRole)
+            value = self.data(index, role=Qt.CheckStateRole)
             if value:
                 self.hover = index.internalPointer()
             elif index.internalPointer() == self.hover:
@@ -556,7 +552,7 @@ class LeggerTreeModel(QtCore.QAbstractItemModel):
                 self.tree_widget.update(self.index(index.row(), colnr, index.parent()))
 
         elif col['field'] == 'selected':
-            value = self.data(index, Qt.CheckStateRole)
+            value = self.data(index, role=Qt.CheckStateRole)
             if value:
                 self.selected = index.internalPointer()
                 self.tree_widget.update(index)
@@ -568,7 +564,7 @@ class LeggerTreeModel(QtCore.QAbstractItemModel):
                 self.tree_widget.update(self.index(index.row(), colnr, index.parent()))
 
         elif col['field'] == 'sp':
-            value = self.data(index, Qt.CheckStateRole)
+            value = self.data(index, role=Qt.CheckStateRole)
             if value:
                 index_ep = self.find_younger(start_index=index, key='ep', value=True)
                 if index_ep is None:
@@ -578,9 +574,11 @@ class LeggerTreeModel(QtCore.QAbstractItemModel):
                 else:
                     self.ep = index_ep.internalPointer()
                     self.sp = index.internalPointer()
+            else:
+                self.ep = None
 
         elif col['field'] == 'ep':
-            value = self.data(index, Qt.CheckStateRole)
+            value = self.data(index, role=Qt.CheckStateRole)
             if value:
                 index_sp = self.find_older(start_index=index, key='sp', value=True)
                 if index_sp is None:
@@ -589,3 +587,5 @@ class LeggerTreeModel(QtCore.QAbstractItemModel):
                 else:
                     self.ep = index.internalPointer()
                     self.sp = index_sp.internalPointer()
+            else:
+                self.ep = None

@@ -1,14 +1,13 @@
 import os.path
-from PyQt4.QtCore import Qt
-import qgis
 
+from PyQt4.QtCore import Qt
 from legger.views.legger_network_widget import LeggerWidget
 
 
 class LeggerNetworkTool:
     """QGIS Plugin Implementation."""
 
-    def __init__(self, iface):
+    def __init__(self, iface, root_tool):
         """Constructor.
 
         iface (QgsInterface): An interface instance that will be passed to this class
@@ -17,6 +16,7 @@ class LeggerNetworkTool:
         """
         # Save reference to the QGIS interface
         self.iface = iface
+        self.root_tool = root_tool
 
         # initialize plugin directory
         self.plugin_dir = os.path.dirname(__file__)
@@ -46,16 +46,22 @@ class LeggerNetworkTool:
         Run method that loads and starts the plugin (docked graph widget)
         """
         # create the dockwidget
+
+        db_path = self.root_tool.polder_datasource
+
+        # db_path = os.path.join(
+        #     os.path.dirname(__file__),
+        #     os.path.pardir,
+        #     'tests', 'data',
+        #     'test_spatialite_with_matchprof.sqlite'
+        # )
+
+
         if self.dock_widget is None:
             self.dock_widget = LeggerWidget(
                 iface=self.iface,
                 parent=None,
-                path_legger_db=os.path.join(
-                    os.path.dirname(__file__),
-                    os.path.pardir,
-                    'tests', 'data',
-                    'test_spatialite_with_matchprof.sqlite'
-                )
+                path_legger_db=db_path
             )
             # connect cleanup on closing of dockwidget
             self.dock_widget.closingWidget.connect(self.on_close_widget)

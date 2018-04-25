@@ -1,8 +1,8 @@
 # -*- coding: utf-8 -*-
 from PyQt4.QtCore import QVariant
-from qgis.core import (QgsFeature, QgsFeatureRequest, QgsField, QgsGeometry, QgsVectorLayer, QgsPoint, NULL)
+from legger.qt_models.legger_tree import TreeItem, hydrovak_class
+from qgis.core import (NULL, QgsFeature, QgsFeatureRequest, QgsField, QgsGeometry, QgsPoint, QgsVectorLayer)
 from qgis.networkanalysis import QgsArcProperter, QgsDistanceArcProperter, QgsGraphAnalyzer, QgsGraphBuilder
-from legger.qt_models.legger_tree import hydrovak_class, TreeItem, LeggerTreeModel
 
 
 def make_type(value, typ, default_value=None, round_digits=None):
@@ -138,13 +138,72 @@ class Network(object):
     def get_startpoint_nrs(self):
 
         start_p = []
+        startpoint_islands = []
 
-        # todo: improve - problem are 2 way arcs
-        for arc_nr in range(0, self.graph.vertexCount()):
-            if len(self.graph.vertex(arc_nr).inArc()) == 0:
-                start_p.append(arc_nr)
-        # start_p +
-        return [14] + start_p
+        def startpoint_island_check(search_start_vertex):
+            # for all in (not in previous out)
+            # check in --> if in --> no startpoint
+            # if all points checked, this is an island, select point
+
+            vertexes = [search_start_vertex]
+            i = 0
+            ready = False
+            while not ready:
+                vertex_nr = vertexes[i]
+                vertex = self.graph.vertex(vertex_nr)
+
+                startpoint_islands.append(vertex_nr)
+
+                if len(vertex.inArc()) > len(vertex.outArc()):
+                    # there is a way in, so no startpoint island
+                    return False
+                else:
+                    to_vertexes = [self.graph.arc(arc_id).inVertex()
+                                   for arc_id in vertex.outArc()]
+                    for arc_nr in vertex.inArc():
+                        # check if 'to' arcs are all bi-directional
+
+                        if self.graph.arc(arc_nr).outVertex() not in to_vertexes:
+                            # if not, this is a non bi-directional way in, so no startpoint island
+                            return False
+
+                    # add additional points to list and continue
+                    for arc_nr in vertex.inArc():
+                        in_vertex_nr = self.graph.arc(arc_nr).outVertex()
+                        if in_vertex_nr not in vertexes:
+                            vertexes.append(in_vertex_nr)
+
+                if i == len(vertexes) - 1:
+                    ready = True
+                    start_p.append(vertexes[-1])
+                    return True
+
+                i += 1
+
+        for vertex_nr in range(0, self.graph.vertexCount()):
+            vertex = self.graph.vertex(vertex_nr)
+            if len(vertex.inArc()) == 0:
+                # no 'to', this must be a startpoint
+                start_p.append(vertex_nr)
+            elif len(vertex.inArc()) > len(vertex.outArc()):
+                # more 'to' then 'from', no need to check further
+                continue
+            elif vertex_nr in startpoint_islands:
+                # point already checked by the 'startpoint island' check
+                continue
+            else:
+                to_vertexes = [self.graph.arc(arc_id).inVertex()
+                               for arc_id in vertex.outArc()]
+                for arc_nr in vertex.inArc():
+                    # check if 'to' arcs are all bi-directional
+                    if self.graph.arc(arc_nr).outVertex() not in to_vertexes:
+                        # if not, this is a non bi-directional way in
+                        continue
+
+                # startpoint island check
+                startpoint_island_check(vertex_nr)
+
+        return start_p
 
     def get_startpoint_tree(self):
 
@@ -163,17 +222,23 @@ class Network(object):
 
         endpoints = []
 
-        def get_stat(branch_value, recursive_value, func=min):
-            branch_value = make_type(branch_value, float, None)
-            if recursive_value is None and branch_value is None:
-                new_value = None
-            else:
-                new_value = func([val for val in [recursive_value, branch_value] if val is not None])
-            return new_value
-
         def loop_recursive(
                 area, parent_hydro_obj, parent_arc, child_arc_ids,
                 target_level=None, category=None, distance=0):
+            """
+            recursive function for finding endpoints through walking through graph
+
+            category not used yet (filter on layer is used to filter out nont primary water)
+
+            :param area:
+            :param parent_hydro_obj:
+            :param parent_arc:
+            :param child_arc_ids:
+            :param target_level:
+            :param category:
+            :param distance:
+            :return:
+            """
 
             linked_arcs = []
             # get flow for most of the hydroobjects - used for ordering the branches
@@ -181,7 +246,7 @@ class Network(object):
                 arc = self.graph.arc(arc_id)
                 flow = 0.0
                 if arc.properties()[8] == NULL:
-                    # if None, sum flows of upstream channels
+                    # if flow is None, sum flows of upstream channels
                     for sub_arc_id in self.graph.vertex(arc.inVertex()).outArc():
                         sub_arc = self.graph.arc(sub_arc_id)
                         flow += sub_arc.properties()[8] if arc.properties()[8] != NULL else 0.0
@@ -200,11 +265,11 @@ class Network(object):
                 end_distance = distance + line_feature['lengte']
 
                 # get
-                branch_target_level = line_feature['streefpeil']
-                branch_category = line_feature['categorieoppwaterlichaam']
+                branch_target_level = arc.properties()[6]
+                branch_category = arc.properties()[7]
 
                 flow = make_type(flow, float, round_digits=2)
-                hydro_id = line_feature['id']
+                hydro_id = arc.properties()[9]
 
                 in_vertex_id = arc.inVertex()
                 out_vertex_id = arc.outVertex()
@@ -485,6 +550,7 @@ class Network(object):
             feat.setAttributes([
                 float(arc.properties()[1]),
                 int(arc.properties()[2]),
+                int(arc.properties()[9]),
                 make_type(depth, float),
                 make_type(variant_min_depth, float),
                 make_type(variant_max_depth, float),
@@ -583,7 +649,7 @@ class Network(object):
                     # hydrovak line feature
                     feature = add_line(
                         line_feature, arc, new_depth, new_variant_min_depth, new_variant_max_depth,
-                        branch_target_level, branch_category, )
+                        branch_target_level, branch_category)
 
                     hydrovak = hydrovak_class({
                         'feat_id': branch_id,
@@ -598,8 +664,12 @@ class Network(object):
                         'flow': flow,
                         'distance': round(distance_end),
                         'line_feature': line_feature,
-                        'selected_depth': line_feature['geselecteerd_diepte'],
-                        'selected_width': line_feature['geselecteerd_breedte'],
+                        'selected_depth': (
+                            line_feature['geselecteerd_diepte'] if line_feature[
+                                                                       'geselecteerd_diepte'] != NULL else None),
+                        'selected_width': (
+                            line_feature['geselecteerd_breedte'] if line_feature[
+                                                                        'geselecteerd_breedte'] != NULL else None),
                         'new_depth': new_depth,
                         'new_variant_min_depth': new_variant_min_depth,
                         'new_variant_max_depth': new_variant_max_depth,
@@ -691,6 +761,7 @@ class Network(object):
             self._virtual_tree_layer.dataProvider().addAttributes([
                 QgsField("weight", QVariant.Double),
                 QgsField("line_id", QVariant.LongLong),
+                QgsField("hydro_id", QVariant.LongLong),
                 QgsField("min_depth", QVariant.Double),
                 QgsField("var_min_depth", QVariant.Double),
                 QgsField("var_max_depth", QVariant.Double),
