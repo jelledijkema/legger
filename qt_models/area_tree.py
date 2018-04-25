@@ -359,7 +359,6 @@ class AreaTreeModel(QtCore.QAbstractItemModel):
                         return result
 
         retarg = searchNode(self.parents[0])
-        print retarg
         return retarg
 
     def column(self, column_nr):
@@ -385,7 +384,6 @@ class AreaTreeModel(QtCore.QAbstractItemModel):
     def data_change_post_process(self, index, to_index):
 
         col = self.column(index.column())
-        print(col)
 
         if col['field'] == 'hover':
             value = self.data(index, Qt.CheckStateRole)

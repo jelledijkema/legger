@@ -433,7 +433,6 @@ class LeggerTreeModel(QtCore.QAbstractItemModel):
                         return result
 
         retarg = searchNode(self.parents[0])
-        print retarg
         return retarg
 
     def find_younger(self, start_index, key, value):

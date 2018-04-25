@@ -6,6 +6,9 @@ import numpy as np
 from pandas import DataFrame
 from legger.sql_models.legger import Varianten
 from legger.sql_models.legger_database import LeggerDatabase
+import logging
+
+log = logging.getLogger('legger.' + __name__)
 
 """
 Boundary Conditions
@@ -80,9 +83,9 @@ def filter_unused(df_in):
         df_unused = df_unused.drop_duplicates()  # In the case the same row occurs twice.
 
         if df_unused['OBJECTID'].count() == 0:
-            print ("No hydro objects removed.")
+            log.info("No hydro objects removed.")
         else:
-            print (str(df_unused['OBJECTID'].count()) + " Hydro object(s) removed b/o missing data.")
+            log.info("% i Hydro object(s) removed b/o missing data.", df_unused['OBJECTID'].count())
 
         df_out = df_in.drop(df_unused.index)
 
@@ -164,7 +167,6 @@ def calc_profile_max_ditch_width(object_id, normative_flow, length, slope, max_d
 
         # If the minimum ditch bottom width is reached, then the iteration is done.
         else:
-            # print ("Ditch bottom width became too small for " + str(object_id))
 
             # Water depth was increased for the calculation that now failed, so has to be restored to previous value.
             water_depth = water_depth - 0.05
@@ -258,12 +260,10 @@ def calc_profile_variants(hydro_objects_satisfy):
                 ditch_bottom_width = round(ditch_bottom_width, 2)
 
             if ditch_bottom_width < min_ditch_bottom_width:
-                # print(str(object_id) + ": iteration ends because of a too small ditch bottom width")
                 break
 
             object_waterdepth_id = (str(hydro_objects_satisfy.object_id[i]) + "_" +
                                     str(round(hydro_objects_satisfy.water_depth[i] * 100 + (count * 5), 0)))
-            # print (str(object_id) + " at " + str(water_depth) + " has width " + str(ditch_bottom_width))
             df_temp = pd.DataFrame([[object_id,
                                      object_waterdepth_id,
                                      slope,
@@ -284,7 +284,6 @@ def calc_profile_variants(hydro_objects_satisfy):
                                 str(round(hydro_objects_satisfy.water_depth[i] * 100 + (count * 5), 0)))
         if count == 0:
             # When normative flow is small, the necessary profile dimensions are smaller than the minimum requirements.
-            # print ("minimum profile dimensions suffices for object " + str(object_id))
             ditch_bottom_width = 0.5
             ditch_width = ditch_bottom_width + slope * water_depth
 
@@ -320,14 +319,14 @@ def print_failed_hydro_objects(input_table):
                 for i, rows in input_table.iterrows():
                     if max(float(input_table.gradient_bos_bijkerk[i]),
                            float(input_table.gradient_manning[i])) > gradient_norm:
-                                print (str(input_table.object_id[i]) + " doesn't comply to the norm of "
+                                log.warn(str(input_table.object_id[i]) + " doesn't comply to the norm of "
                                        + str(gradient_norm) + " cm/km.")
             else:
-                print ("No 'gradient_manning' data")
+                log.info("No 'gradient_manning' data")
         else:
-            print ("No 'gradient_bos_bijkerk' data")
+            log.info("No 'gradient_bos_bijkerk' data")
     else:
-        print ("No 'object_id' data")
+        log.info("No 'object_id' data")
 
 
 def show_summary(tablename, surge_comparison):
@@ -341,7 +340,7 @@ def show_summary(tablename, surge_comparison):
                "total surge is at least " + str(surge_comparison) + " cm over hydro object",
                "total amount of hydro objects"]
     )})
-    print summary_table
+    log.info(summary_table)
 
 
 """
@@ -357,13 +356,13 @@ def create_theoretical_profiles(legger_db_filepath):
 
     # Part 1: read SpatiaLite
     # The original Spatialite database is read into Python for further analysis.
-    hydro_objects = read_spatialite(legger_db_filepath)  # print (Hydro_objects)
+    hydro_objects = read_spatialite(legger_db_filepath)
     count_objects = len(hydro_objects.BREEDTE)
-    print ("\n\nFinished 1: SpatiaLite Database read successfully "+str(count_objects)+" objects\n")
+    log.debug("Finished 1: SpatiaLite Database read successfully "+str(count_objects)+" objects\n")
 
     # Part 2: Filter the table for hydro objects that can not be analyzed due to incomplete data.
     hydro_objects = filter_unused(hydro_objects)
-    print ("\nFinished 2: Hydro database filtered successfully\n")
+    log.debug("Finished 2: Hydro database filtered successfully\n")
 
     # Part 3: Calculate per hydro object the legger profile based on maximum ditch width.
     # Create an empty table to store the results:
@@ -391,23 +390,23 @@ def create_theoretical_profiles(legger_db_filepath):
     # When all the results are stored in the table, re-index the table.
         profile_max_ditch_width = profile_max_ditch_width.reset_index(drop=True)
 
-    print ("\nFinished 3: Successfully calculated profiles based on max ditch width\n")
+    log.info("Finished 3: Successfully calculated profiles based on max ditch width\n")
 
     # Part 4: Print the hydro objects where no suitable legger can be calculated.
     print_failed_hydro_objects(profile_max_ditch_width)
-    print ("\nFinished 4: Finished printing hydro objects without a suitable legger\n")
+    log.info("Finished 4: Finished printing hydro objects without a suitable legger\n")
     """
     Up to here the hydro object information is translated to a legger profile using maximum ditch width.
     """
 
     # Part 5: add surge.
     profile_max_ditch_width = add_surge(profile_max_ditch_width)
-    print ("\nFinished 5: surge added\n")
+    log.info("Finished 5: surge added\n")
 
     # Part 6: show a table with some statistics on the hydro objects
     surge_comparison = 5  # (cm) What total surge is interesting to compare it to?
     show_summary(profile_max_ditch_width, surge_comparison)
-    print ("\nFinished 6: summary printed\n")
+    log.info("Finished 6: summary printed\n")
 
     # Part 7: From the suitable profiles based on max ditch width, all the other suitable profiles are calculated.
 
@@ -423,14 +422,11 @@ def create_theoretical_profiles(legger_db_filepath):
     # Separate the hydro objects in two groups: hydro objects that satisfy requirements from the ones that don't.
     hydro_objects_satisfy = profile_max_ditch_width[profile_max_ditch_width['gradient_bos_bijkerk'] <= 3.0]
 
-    # print (str(len(hydro_objects_satisfy)) + " of the " + str(len(profile_max_ditch_width))
-    # + " hydro objects satisfy the norm")
     hydro_objects_unsatisfy = profile_max_ditch_width[profile_max_ditch_width['gradient_bos_bijkerk'] > gradient_norm]
 
     profile_variants = calc_profile_variants(hydro_objects_satisfy)
-    # print profile_variants
 
-    print ("\nFinished 7: variants created\n")
+    log.info("Finished 7: variants created\n")
 
     for i,rows in hydro_objects_unsatisfy.iterrows():
 
@@ -459,13 +455,13 @@ def create_theoretical_profiles(legger_db_filepath):
         profile_variants = profile_variants.append(df_temp)
     profile_variants = profile_variants.reset_index(drop=True)
 
-    print ("\nFinished 8: appended all hydro-objects without suitable profile\n")
-    print ("\nAll potential profiles are created\n")
+    log.info("Finished 8: appended all hydro-objects without suitable profile\n")
+    log.info("All potential profiles are created\n")
     return profile_variants
 
 
 def write_theoretical_profile_results_to_db(profile_results, path_legger_db):
-    print ("\nWriting output to db...\n")
+    log.info("Writing output to db...\n")
     db = LeggerDatabase(
         {
             'db_path': path_legger_db
