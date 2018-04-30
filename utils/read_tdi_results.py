@@ -2,9 +2,9 @@ import json
 import logging
 
 from ThreeDiToolbox.datasource.netcdf import NetcdfDataSource
-from geometry_tools.geom_collections.lines import LineCollection
-from geometry_tools.geometries import LineString
-from geometry_tools.geometries import shape
+from legger.utils.geom_collections.lines import LineCollection
+from legger.utils.geometries import LineString
+from legger.utils.geometries import shape
 from legger.sql_models.legger import DuikerSifonHevel, HydroObject
 from legger.sql_models.legger_database import LeggerDatabase
 from pyspatialite import dbapi2 as dbapi

@@ -6,8 +6,8 @@ from PyQt4.QtCore import (QSettings, QTranslator, qVersion, QCoreApplication,
 from PyQt4.QtGui import QAction, QIcon
 # Import the code of the tools
 from legger.tools.legger_network_tool import LeggerNetworkTool
-from legger.sqlite_polder_selection import DatabaseSelection
-from legger.profile_variant_calculations import ProfileCalculations
+from legger.tools.sqlite_polder_selection import DatabaseSelection
+from legger.tools.profile_variant_calculations import ProfileCalculations
 import resources # can be essential for the tool pictograms
 
 from qgis.utils import plugins

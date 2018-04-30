@@ -1,3 +1,5 @@
+""" The (tree)tables of the legger network tool"""
+
 import logging
 
 from PyQt4 import QtGui
@@ -21,9 +23,9 @@ except AttributeError:
 
 class PlotItemTable(QTableView):
     """Table with varianten"""
-    hoverExitRow = pyqtSignal(int)
+    # hoverExitRow = pyqtSignal(int)
     hoverExitAllRows = pyqtSignal()  # exit the whole widget
-    hoverEnterRow = pyqtSignal(int)
+    # hoverEnterRow = pyqtSignal(int)
 
     def __init__(self, parent=None, variant_model=None):
         super(PlotItemTable, self).__init__(parent)
@@ -65,14 +67,14 @@ class PlotItemTable(QTableView):
                 if self._last_hovered_row is not None:
                     try:
                         self.hover_exit(self._last_hovered_row)
-                        self.hoverExitRow.emit(self._last_hovered_row)
+                        # self.hoverExitRow.emit(self._last_hovered_row)
                     except IndexError:
                         log.warning("Hover row index %s out of range",
                                     self._last_hovered_row)
                 if row is not None:
                     try:
                         self.hover_enter(row)
-                        self.hoverEnterRow.emit(row)
+                        # self.hoverEnterRow.emit(row)
                     except IndexError:
                         log.warning("Hover row index %s out of range", row),
                 self._last_hovered_row = row
@@ -102,9 +104,9 @@ class PlotItemTable(QTableView):
 
 class StartpointTreeWidget(QTreeView):
     """ TreeView with startpoints """
-    hoverExitIndex = pyqtSignal(QModelIndex)
+    # hoverExitIndex = pyqtSignal(QModelIndex)
     hoverExitAll = pyqtSignal()  # exit the whole widget
-    hoverEnterIndex = pyqtSignal(QModelIndex)
+    # hoverEnterIndex = pyqtSignal(QModelIndex)
 
     def __init__(self, parent=None, startpoint_model=None, on_select=None):
         super(StartpointTreeWidget, self).__init__(parent)
@@ -164,8 +166,8 @@ class StartpointTreeWidget(QTreeView):
             if index != self._last_hovered_item:
                 if self._last_hovered_item is not None:
                     try:
+                        # self.hoverExitIndex.emit(self._last_hovered_item)
                         self.hover_exit(self._last_hovered_item)
-                        self.hoverExitIndex.emit(self._last_hovered_item)
                     except IndexError:
                         log.warning("Hover row index %s out of range",
                                     self._last_hovered_item)
@@ -173,7 +175,7 @@ class StartpointTreeWidget(QTreeView):
                 if index is not None:
                     try:
                         self.hover_enter(index)
-                        self.hoverEnterIndex.emit(index)
+                        # self.hoverEnterIndex.emit(index)
                     except IndexError:
                         log.warning("Hover row index %s out of range", index.row()),
                 self._last_hovered_item = index
@@ -196,9 +198,9 @@ class StartpointTreeWidget(QTreeView):
 
 class LeggerTreeWidget(QTreeView):
     """TreeView with network of hydroobjects"""
-    hoverExitIndex = pyqtSignal(QModelIndex)
+    # hoverExitIndex = pyqtSignal(QModelIndex)
     hoverExitAll = pyqtSignal()  # exit the whole widget
-    hoverEnterIndex = pyqtSignal(QModelIndex)
+    # hoverEnterIndex = pyqtSignal(QModelIndex)
 
     def __init__(self, parent=None, legger_model=None):
         super(LeggerTreeWidget, self).__init__(parent)
@@ -257,8 +259,8 @@ class LeggerTreeWidget(QTreeView):
             if index != self._last_hovered_item:
                 if self._last_hovered_item is not None:
                     try:
+                        # self.hoverExitIndex.emit(self._last_hovered_item)
                         self.hover_exit(self._last_hovered_item)
-                        self.hoverExitIndex.emit(self._last_hovered_item)
                     except IndexError:
                         log.warning("Hover row index %s out of range",
                                     self._last_hovered_item)
@@ -266,7 +268,7 @@ class LeggerTreeWidget(QTreeView):
                 if index is not None:
                     try:
                         self.hover_enter(index)
-                        self.hoverEnterIndex.emit(index)
+                        # self.hoverEnterIndex.emit(index)
                     except IndexError:
                         log.warning("Hover row index %s out of range", index.row()),
                 self._last_hovered_item = index

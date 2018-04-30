@@ -1,3 +1,5 @@
+""" The graphs of the legger network tool"""
+
 import logging
 
 import pyqtgraph as pg
@@ -72,6 +74,9 @@ class LeggerPlotWidget(pg.PlotWidget):
 
         for item in self.variant_model.rows:
 
+            # todo: bind a better way to get the reference level. This is working, because for a
+            # hydrovak is selected, the row of the hydrovak is hovered and the reference level
+            # is set. But this is probably not a fully bullet proof solution.
             width = [p[0] for p in item.points.value]
             height = [p[1] - self.reference_level for p in item.points.value]
 
@@ -173,7 +178,7 @@ class LeggerPlotWidget(pg.PlotWidget):
                             prof = {
                                 'name': profile.profid,
                                 'color': (100, 100, 100),
-                                'points': [(p[0], p[1] - self.reference_level)
+                                'points': [(p[0], p[1] - profile.peil)
                                            for p in loads(profile.coord).exterior.coords]
                             }
 
@@ -201,7 +206,7 @@ class LeggerPlotWidget(pg.PlotWidget):
                         'color': settings.HOVER_COLOR,
                         'style': Qt.DashLine,
                         'width': 2,
-                        'points': [(p[0], p[1] - self.reference_level)
+                        'points': [(p[0], p[1] - profile.peil)
                                    for p in loads(profile.coord).exterior.coords]
                     }
 
@@ -266,7 +271,7 @@ class LeggerPlotWidget(pg.PlotWidget):
                         'color': settings.SELECT_COLOR,
                         'style': Qt.DashLine,
                         'width': 2,
-                        'points': [(p[0], p[1] - self.reference_level)
+                        'points': [(p[0], p[1] - profile.peil)
                                    for p in loads(profile.coord).exterior.coords]
                     }
 
