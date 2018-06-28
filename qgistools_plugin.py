@@ -8,14 +8,7 @@ from PyQt4.QtGui import QAction, QIcon
 from legger.tools.legger_network_tool import LeggerNetworkTool
 from legger.tools.sqlite_polder_selection import DatabaseSelection
 from legger.tools.profile_variant_calculations import ProfileCalculations
-import resources # can be essential for the tool pictograms
-
-from qgis.utils import plugins
-try:
-    tdi_plugin = plugins['ThreeDiToolbox']
-except:
-    raise ImportError("For ThreeDiStatistics tool the ThreeDiToolbox plugin must be installed, "
-                      "version xxx or higher")
+import resources  # can be essential for the tool pictograms
 
 # Initialize Qt resources from file resources.py
 
@@ -56,18 +49,10 @@ class Legger(QObject):
                 QCoreApplication.installTranslator(self.translator)
 
         self.polder_datasource = "Kies eerst een legger database"
-        self.ts_datasource = tdi_plugin.ts_datasource
 
-        errormessage = "Kies eerst 3Di output (model, simulatie (nc), sqlite1)"
-
-        try:
-            self.ts_datasource =tdi_plugin.ts_datasource
-        except:
-            self.ts_datasource = errormessage
-
-        #self.db_path_result_sqlite = self.ts_datasource.rows[0].spatialite_cache_filepath().replace('\\', '/')
-        #db_path_model_sqlite = ts_datasource.model_spatialite_filepath
-        #result_ds = ts_datasource.rows[0].datasource()
+        # self.db_path_result_sqlite = self.ts_datasource.rows[0].spatialite_cache_filepath().replace('\\', '/')
+        # db_path_model_sqlite = ts_datasource.model_spatialite_filepath
+        # result_ds = ts_datasource.rows[0].datasource()
 
     # noinspection PyMethodMayBeStatic
     def tr(self, message):
@@ -82,17 +67,17 @@ class Legger(QObject):
         return QCoreApplication.translate('legger', message)
 
     def add_action(
-        self,
-        tool_instance,
-        icon_path,
-        text,
-        callback,
-        enabled_flag=True,
-        add_to_menu=True,
-        add_to_toolbar=True,
-        status_tip=None,
-        whats_this=None,
-        parent=None):
+            self,
+            tool_instance,
+            icon_path,
+            text,
+            callback,
+            enabled_flag=True,
+            add_to_menu=True,
+            add_to_toolbar=True,
+            status_tip=None,
+            whats_this=None,
+            parent=None):
         """Add a toolbar icon to the toolbar.
         :param icon_path: Path to the icon for this action. Can be a resource
             path (e.g. ':/plugins/foo/bar.png') or a normal file system path.
@@ -150,6 +135,7 @@ class Legger(QObject):
 
         # get link to active threedi plugin
         log.info('Legger initGui')
+        # set reference to tdi plugin
 
         # Declare instance attributes
         self.actions = []
@@ -163,7 +149,6 @@ class Legger(QObject):
         self.read_database = DatabaseSelection(self.iface, self)
         self.load_profiles = ProfileCalculations(self.iface, self)
         self.network_tool = LeggerNetworkTool(self.iface, self)
-
 
         self.tools = []
         self.tools.append(self.read_database)
@@ -188,7 +173,6 @@ class Legger(QObject):
         """Removes the plugin menu item and icon from QGIS GUI."""
 
         log.info('Legger unload')
-
 
         for action in self.actions:
             self.iface.removePluginMenu(

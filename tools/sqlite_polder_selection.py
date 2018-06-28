@@ -63,22 +63,20 @@ class DatabaseSelection(QObject):
             self.is_active = True
 
             if self.dialog is None:
-                #Create the dialog (after translation) and keep reference
+                # Create the dialog (after translation) and keep reference
                 self.dialog = PolderSelectionWidget(
                     parent=None,
                     iface=self.iface,
                     parent_class=self,
                     root_tool=self.root_tool)
 
-            #self.dialog = PolderSelectionWidget(self)
-
             # connect to provide cleanup on closing of dockwidget
             self.dialog.closingDialog.connect(self.on_close_dialog)
 
             # show the widget
             self.dialog.show()
-        #else:
-        #    self.dialog.setWindowState(
-        #        self.dialog.windowState() & ~Qt.WindowMinimized |
-        #        Qt.WindowActive)
-        #    self.dialog.raise_()
+        else:
+           self.dialog.setWindowState(
+               self.dialog.windowState() & ~Qt.WindowMinimized |
+               Qt.WindowActive)
+           self.dialog.raise_()

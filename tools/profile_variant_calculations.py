@@ -6,6 +6,7 @@ import logging
 import os
 
 from PyQt4.QtCore import Qt, QObject
+from qgis.utils import plugins
 
 from legger.views.calculating_profiles import ProfileCalculationWidget
 
@@ -59,6 +60,17 @@ class ProfileCalculations(QObject):
     def run(self):
         """Run method that loads and starts the plugin"""
 
+        try:
+            tdi_plugin = plugins['ThreeDiToolbox']
+        except:
+            raise ImportError("For Leggertool the ThreeDiToolbox plugin must be installed, "
+                              "version xxx or higher")
+
+        try:
+            ts_datasource = tdi_plugin.ts_datasource
+        except:
+            ts_datasource = "Kies eerst 3Di output (model, simulatie (nc), sqlite1)"
+
         if not self.is_active:
 
             self.is_active = True
@@ -69,7 +81,7 @@ class ProfileCalculations(QObject):
                     parent=None,
                     iface=self.iface,
                     polder_datasource=self.root_tool.polder_datasource,
-                    ts_datasource = self.root_tool.ts_datasource,
+                    ts_datasource=ts_datasource,
                     parent_class=self)
 
             # connect to provide cleanup on closing of dockwidget
@@ -77,8 +89,8 @@ class ProfileCalculations(QObject):
 
             # show the widget
             self.dialog.show()
-        #else:
-        #    self.dialog.setWindowState(
-        #        self.dialog.windowState() & ~Qt.WindowMinimized |
-        #        Qt.WindowActive)
-        #    self.dialog.raise_()
+        else:
+           self.dialog.setWindowState(
+               self.dialog.windowState() & ~Qt.WindowMinimized |
+               Qt.WindowActive)
+           self.dialog.raise_()
