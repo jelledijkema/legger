@@ -1,7 +1,7 @@
 import json
 import logging
 
-from ThreeDiToolbox.datasource.netcdf import NetcdfDataSource
+from ThreeDiToolbox.datasource.netcdf_groundwater import NetcdfGroundwaterDataSource
 from legger.utils.geom_collections.lines import LineCollection
 from legger.utils.geometries import LineString
 from legger.utils.geometries import shape
@@ -19,15 +19,17 @@ log = logging.getLogger(__name__)
 
 def read_tdi_results(path_model_db, path_result_db,
                      path_result_nc, path_legger_db,
+                     timestep,
                      max_link_distance=1.0,
                      match_criteria=3):
     """ joins hydoobjects to 3di-flowlines (through channels) and add the discharge of the last timestep
 
-    path_model_db (string): filepath to sqlite database with 3di model
-    path_result_db (string): filepath to sqlite database linked to the 3di results (.sqlite1 file)
-    path_result_nc (string):  filepath to netcdf with 3di results (same directory must include the idmapping and
+    path_model_db (str): filepath to sqlite database with 3di model
+    path_result_db (str): filepath to sqlite database linked to the 3di results (.sqlite1 file)
+    path_result_nc (str):  filepath to netcdf with 3di results (same directory must include the idmapping and
                               aggregated netcdf file)
-    path_legger_db (string): filepath to sqlite database with legger data
+    path_legger_db (str): filepath to sqlite database with legger data
+    timestep (int): index of output timestep, -1 is last timestep
     max_link_distance (float): maximum distance in meters between hydroobject
     match_criteria (float):
     returns:
@@ -42,7 +44,7 @@ def read_tdi_results(path_model_db, path_result_db,
     con_res = dbapi.connect(path_result_db)
     con_legger = dbapi.connect(path_legger_db)
 
-    result_ds = NetcdfDataSource(path_result_nc)
+    result_ds = NetcdfGroundwaterDataSource(path_result_nc)
 
     # make sure we got dictionaries returned
     con_model.row_factory = dbapi.Row
@@ -59,9 +61,13 @@ def read_tdi_results(path_model_db, path_result_db,
         # 'WHERE id=7119 ' # for testing and debugging
     )
 
-    # read discharge of last timestep. Returns numpy array with index number is idx.
+    # read discharge of timestep. Returns numpy array with index number is idx.
     # to link to model channels, the id mapping is needed.
-    qend = result_ds.get_values_by_timestep_nr('q', len(result_ds.timestamps) - 1)
+    if timestep == -1:
+        timestep = len(result_ds.timestamps) - 1
+
+
+    qts = result_ds.get_values_by_timestep_nr('q', timestep)
 
     channel_col = LineCollection()
 
@@ -91,7 +97,7 @@ def read_tdi_results(path_model_db, path_result_db,
                 'spatialite_id': fl['spatialite_id'],
                 'start_distance': fl['start_distance'],
                 'end_distance': fl['end_distance'],
-                'q_end': qend[fl['id']]  # todo: check correct (with +1 etc.)
+                'q_end': qts[fl['id']]  # todo: check correct (with +1 etc.)
             }
 
             flowlines.append(flowline)
@@ -234,43 +240,67 @@ def write_tdi_results_to_db(hydroobject_results, path_legger_db):
     session.commit()
 
 
-def read_tdi_culvert_results(path_model_db,
-                             path_result_nc, path_legger_db):
+def read_tdi_culvert_results(path_model_db, path_result_db,
+                             path_result_nc, path_legger_db,
+                             timestep):
+    """
 
+    path_model_db (str): path to 3di modelspatialite
+    path_result_db (str): path to 3di gridadmin spatialite
+    path_result_nc (str): path to 3di result netcdf (format with groundwater of june 2018)
+    path_legger_db (str): path to legger spatialite
+    timestep (int): index of output timestep, -1 is last timestep
+    :return:
+    """
+
+    # open databases and netCDF
     con_model = dbapi.connect(path_model_db)
+    con_result = dbapi.connect(path_result_db)
     con_legger = dbapi.connect(path_legger_db)
 
-    result_ds = NetcdfDataSource(path_result_nc)
+    result_ds = NetcdfGroundwaterDataSource(path_result_nc)
 
     # make sure we got dictionaries returned
     con_model.row_factory = dbapi.Row
+    con_result.row_factory = dbapi.Row
     con_legger.row_factory = dbapi.Row
 
-    # read discharge of last timestep. Returns numpy array with index number is idx.
+    # read discharge of  timestep. Returns numpy array with index number is idx.
     # to link to model channels, the id mapping is needed.
-    qend = result_ds.get_values_by_timestep_nr('q', len(result_ds.timestamps) - 1)
+    if timestep == -1:
+        timestep = len(result_ds.timestamps) - 1
+
+    qts = result_ds.get_values_by_timestep_nr('q', timestep)
 
     culverts = []
 
+    # process reading for multiple object types
     for tp in ['v2_culvert', 'v2_orifice']:
 
-        cursor = con_model.execute(
+        # create id-mapping
+        rcursor = con_result.execute("""
+            SELECT id, spatialite_id
+            FROM flowlines
+            WHERE type = '{0}'""".format(tp))
+
+        id_mapping = {f['spatialite_id']: f['id'] for f in rcursor.fetchall()}
+
+        # get all objects (including code)
+        mcursor = con_model.execute(
             'SELECT '
             'id, code '
             'FROM ' + tp
         )
 
-        id_mapping = result_ds.id_mapping.get(tp, {})
-
-        for culvert in cursor.fetchall():
-            idx = id_mapping.get(str(culvert['id']))
+        for culvert in mcursor.fetchall():
+            idx = id_mapping.get(culvert['id'])
 
             culverts.append({
                 'code': culvert['code'],
                 'id': culvert['id'],
                 'source': tp,
                 'idx': idx,
-                'qend': qend[idx]
+                'qend': qts[idx]
             })
 
     return culverts
@@ -286,13 +316,25 @@ def write_tdi_culvert_results_to_db(culvert_results, path_legger_db):
     db.create_and_check_fields()
     session = db.get_session()
 
-    results = {culvert['id']: culvert for culvert in culvert_results}
+    results = {culvert['code']: culvert for culvert in culvert_results}
 
     for culvert in session.query(DuikerSifonHevel):
-        if culvert.id in results:
-            culvert.debiet = results[culvert.id]['qend']
+        if culvert.code in results:
+            culvert.debiet = results[culvert.code]['qend']
             # culvert['source']
             # culvert['code']
 
     log.info("Save 3di result (update) to database ")
     session.commit()
+
+
+def get_timestamps(path_result_nc, parameter=None):
+    """get timesteps available
+
+    path_result_nc (str): path to 3di result netcdf
+    parameter (str): parameter identification
+    :return:
+    """
+    result_ds = NetcdfGroundwaterDataSource(path_result_nc)
+
+    return result_ds.get_timestamps(parameter=parameter)

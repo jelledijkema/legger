@@ -10,7 +10,7 @@ from PyQt4.QtGui import QWidget, QFileDialog, QComboBox
 from PyQt4 import QtCore, QtGui
 
 from legger.utils.read_tdi_results import (
-    read_tdi_results, write_tdi_results_to_db, read_tdi_culvert_results,
+    read_tdi_results, write_tdi_results_to_db, read_tdi_culvert_results, get_timestamps,
     write_tdi_culvert_results_to_db)
 from legger.utils.theoretical_profiles import create_theoretical_profiles, write_theoretical_profile_results_to_db
 from legger.sql_models.legger_views import create_legger_views
@@ -29,6 +29,8 @@ except AttributeError:
 
 try:
     _encoding = QtGui.QApplication.UnicodeUTF8
+
+
     def _translate(context, text, disambig):
         return QtGui.QApplication.translate(context, text, disambig, _encoding)
 except AttributeError:
@@ -36,8 +38,8 @@ except AttributeError:
         return QtGui.QApplication.translate(context, text, disambig)
 
 
-class ProfileCalculationWidget(QWidget):#, FORM_CLASS):
-    """Dialog for selecting model (spatialite and result files netCDFs)"""
+class ProfileCalculationWidget(QWidget):  # , FORM_CLASS):
+    """Dialog for making the pre-process steps for the Legger"""
     closingDialog = pyqtSignal()
 
     def __init__(
@@ -45,11 +47,13 @@ class ProfileCalculationWidget(QWidget):#, FORM_CLASS):
             parent_class):
         """Constructor
 
-        :parent: Qt parent Widget
-        :iface: QGiS interface
-        :polder_datasource: Spatialite polder
-        :parent_class: the tool class which instantiated this widget. Is used
+        parent (QtWidget): Qt parent Widget
+        iface (QgisInterface: QGiS interface
+        polder_datasource (str): Path to the 'legger' spatialite of a polder
+        ts_datasource (TimeseriesDatasourceModel): 3di datasource of results
+        parent_class: the tool class which instantiated this widget. Is used
              here for storing volatile information
+        returns: None
         """
         super(ProfileCalculationWidget, self).__init__(parent)
 
@@ -57,48 +61,88 @@ class ProfileCalculationWidget(QWidget):#, FORM_CLASS):
         self.iface = iface
         self.polder_datasource = polder_datasource
         self.ts_datasource = ts_datasource
+        self.timestep = -1
 
         errormessage = "Kies eerst 3di output (model en netCDF) in de 'Select 3di results' van 3di plugin."
         try:
             self.path_model_db = self.ts_datasource.model_spatialite_filepath
         except:
             self.path_model_db = errormessage
+
         try:
             self.path_result_db = self.ts_datasource.rows[0].spatialite_cache_filepath().replace('\\', '/')
         except:
             self.path_result_db = errormessage
+
         try:
-            self.path_result_nc = str(self.ts_datasource.rows[0].datasource()) #todo: nog aanpassen/verwijderen?
-            self.path_result_nc = self.ts_datasource.rows[0].spatialite_cache_filepath().replace('sqlite1', 'nc')
+            self.path_result_nc = self.ts_datasource.rows[0].file_path.value
         except:
             self.path_result_nc = errormessage
 
         if self.path_model_db is None:
             self.path_model_db = errormessage
 
+        self.last_timestep_text = 'laatste tijdstap'
+        self.timestamps = []
+
+        try:
+            self.timestamps = get_timestamps(self.path_result_nc)
+        except:
+            pass
+
         self.setup_ui()
 
+        # fill timestep combobox
+        choices = [self.last_timestep_text] + ['%.0f' % t for t in self.timestamps]
+        self.timestep_combo_box.insertItems(0, choices)
+        self.timestep_combo_box.setCurrentIndex(0)
+
+        # set listeners
+        self.timestep_combo_box.currentIndexChanged.connect(
+            self.timestep_selection_change)
+
+    def timestep_selection_change(self, nr):
+        """Proces new selected timestep in combobox
+
+        :param nr:
+        :return:
+        """
+        text = self.timestep_combo_box.currentText()
+        if text == self.last_timestep_text:
+            self.timestep = -1
+        else:
+            self.timestep = nr - 1
 
     def closeEvent(self, event):
         """
-
-        :return:
+        event (QtEvent): event triggering close
+        returns: None
         """
+        # set listeners
+        self.timestep_combo_box.currentIndexChanged.disconnect(
+            self.timestep_selection_change)
+
         self.closingDialog.emit()
         self.close()
         event.accept()
 
     def save_spatialite(self):
-        """
-        Change active modelsource. Called by combobox when selected
+        """Change active modelsource. Called by combobox when selected
         spatialite changed
-        :param nr: integer, nr of item selected in combobox
+        returns: None
         """
 
         self.polder_datasource = self.polderSpatialiteComboBox.currentText()
         self.close()
 
     def execute_step1(self):
+        """
+        First step in pre-processing:
+        - update legger database according to schema
+        - get channel and culvert discharge from 3di model and write these to the legger database
+        returns: None
+        """
+        # first update legger spatialite according to schema, using sqlAlchemy
         db = LeggerDatabase(
             {
                 'db_path': self.polder_datasource
@@ -106,59 +150,68 @@ class ProfileCalculationWidget(QWidget):#, FORM_CLASS):
             'spatialite'
         )
         db.create_and_check_fields()
+        # do one query, don't know what the reason was for this...
         session = db.get_session()
-
         session.query(HydroObject)
 
+        timestamp = 'laatst' if self.timestep == 0 else '{0} op {1:.0f} s'.format(self.timestep + 1, self.timestamps[self.timestep])
+        self.feedbackmessage = 'Neem tijdstap {0}'.format(timestamp)
+
         try:
+            # read 3di channel results
             result = read_tdi_results(
                 self.path_model_db,
                 self.path_result_db,
                 self.path_result_nc,
-                self.polder_datasource
+                self.polder_datasource,
+                self.timestep
             )
-            self.feedbackmessage = "Databases zijn gekoppeld."
+            self.feedbackmessage += "\nDatabases zijn gekoppeld."
 
         except:
-            self.feedbackmessage = "Databases zijn niet gekoppeld."
+            self.feedbackmessage += "\nDatabases zijn niet gekoppeld."
         finally:
             self.feedbacktext.setText(self.feedbackmessage)
 
         try:
-            write_tdi_results_to_db(result,
-                                    self.polder_datasource)
+            # write 3di channel result to legger spatialite
+            write_tdi_results_to_db(
+                result,
+                self.polder_datasource)
 
             con_legger = dbapi.connect(self.polder_datasource)
             create_legger_views(con_legger)
 
-            self.feedbackmessage = self.feedbackmessage+"\n3Di resultaten weggeschreven naar polder database."
+            self.feedbackmessage = self.feedbackmessage + "\n3Di resultaten weggeschreven naar polder database."
         except:
-            self.feedbackmessage = self.feedbackmessage+"\n3Di resultaten niet weggeschreven naar polder database."
+            self.feedbackmessage = self.feedbackmessage + "\n3Di resultaten niet weggeschreven naar polder database."
         finally:
             self.feedbacktext.setText(self.feedbackmessage)
 
         try:
-            results = read_tdi_culvert_results(
+            # read 3di culvert results
+            culv_results = read_tdi_culvert_results(
                 self.path_model_db,
+                self.path_result_db,
                 self.path_result_nc,
-                self.polder_datasource
+                self.polder_datasource,
+                self.timestep
             )
-            self.feedbackmessage = self.feedbackmessage+"\n3Di culverts ingelezen."
+            self.feedbackmessage = self.feedbackmessage + "\n3Di culverts ingelezen."
         except:
-            self.feedbackmessage = self.feedbackmessage+"\n3Di culverts niet ingelezen."
+            self.feedbackmessage = self.feedbackmessage + "\n3Di culverts niet ingelezen."
         finally:
             self.feedbacktext.setText(self.feedbackmessage)
 
         try:
-            write_tdi_culvert_results_to_db(results,
+            # write 3di culvert results to legger spatialite
+            write_tdi_culvert_results_to_db(culv_results,
                                             self.polder_datasource)
-            self.feedbackmessage = self.feedbackmessage+"\n3Di culvert resultaten weggeschreven."
+            self.feedbackmessage = self.feedbackmessage + "\n3Di culvert resultaten weggeschreven."
         except:
-            self.feedbackmessage = self.feedbackmessage+"\n3Di culvert resultaten niet weggeschreven."
+            self.feedbackmessage = self.feedbackmessage + "\n3Di culvert resultaten niet weggeschreven."
         finally:
             self.feedbacktext.setText(self.feedbackmessage)
-
-
 
     def execute_step2(self):
 
@@ -171,10 +224,10 @@ class ProfileCalculationWidget(QWidget):#, FORM_CLASS):
             self.feedbacktext.setText(self.feedbackmessage)
 
         try:
-            write_theoretical_profile_results_to_db(profiles,self.polder_datasource)
-            self.feedbackmessage = self.feedbackmessage+("\nProfielen opgeslagen in legger db.")
+            write_theoretical_profile_results_to_db(profiles, self.polder_datasource)
+            self.feedbackmessage = self.feedbackmessage + ("\nProfielen opgeslagen in legger db.")
         except:
-            self.feedbackmessage = self.feedbackmessage+("\nProfielen niet opgeslagen in legger database.")
+            self.feedbackmessage = self.feedbackmessage + ("\nProfielen niet opgeslagen in legger database.")
         finally:
             self.feedbacktext.setText(self.feedbackmessage)
 
@@ -224,15 +277,18 @@ class ProfileCalculationWidget(QWidget):#, FORM_CLASS):
 
         # Assembling information groubox
         self.box_info = QtGui.QVBoxLayout()
-        self.box_info.addWidget(self.polder_filename) # intro text toevoegen aan box.
+        self.box_info.addWidget(self.polder_filename)  # intro text toevoegen aan box.
         self.box_info.addWidget(self.model_filename)
         self.box_info.addWidget(self.result_filename)
         self.box_info.addWidget(self.connection_filename)
 
         self.groupBox_info = QtGui.QGroupBox(self)
         self.groupBox_info.setTitle("Bestanden gekozen:")
-        self.groupBox_info.setLayout(self.box_info) # box toevoegen aan groupbox
+        self.groupBox_info.setLayout(self.box_info)  # box toevoegen aan groupbox
         self.information_row.addWidget(self.groupBox_info)
+
+        # timestep selection:
+        self.timestep_combo_box = QComboBox(self)
 
         # Assembling step 1 row
         self.step1_button = QtGui.QPushButton(self)
@@ -240,9 +296,10 @@ class ProfileCalculationWidget(QWidget):#, FORM_CLASS):
         self.step1_button.clicked.connect(self.execute_step1)
         self.groupBox_step1 = QtGui.QGroupBox(self)
         self.groupBox_step1.setTitle("Step1:")
-        self.box_step1 = QtGui.QHBoxLayout()
+        self.box_step1 = QtGui.QVBoxLayout()
+        self.box_step1.addWidget(self.timestep_combo_box)
         self.box_step1.addWidget(self.step1_button)
-        self.groupBox_step1.setLayout(self.box_step1) # box toevoegen aan groupbox
+        self.groupBox_step1.setLayout(self.box_step1)  # box toevoegen aan groupbox
         self.upper_row.addWidget(self.groupBox_step1)
 
         # Assembling step 2 row
@@ -253,7 +310,7 @@ class ProfileCalculationWidget(QWidget):#, FORM_CLASS):
         self.groupBox_step2.setTitle("Step2:")
         self.box_step2 = QtGui.QHBoxLayout()
         self.box_step2.addWidget(self.step2_button)
-        self.groupBox_step2.setLayout(self.box_step2) # box toevoegen aan groupbox
+        self.groupBox_step2.setLayout(self.box_step2)  # box toevoegen aan groupbox
         self.middle_row.addWidget(self.groupBox_step2)
 
         # Assembling step 3 row
@@ -264,7 +321,7 @@ class ProfileCalculationWidget(QWidget):#, FORM_CLASS):
         self.groupBox_step3.setTitle("Step3:")
         self.box_step3 = QtGui.QHBoxLayout()
         self.box_step3.addWidget(self.step3_button)
-        self.groupBox_step3.setLayout(self.box_step3) # box toevoegen aan groupbox
+        self.groupBox_step3.setLayout(self.box_step3)  # box toevoegen aan groupbox
         self.bottom_row.addWidget(self.groupBox_step3)
 
         # Assembling feedback row
@@ -286,8 +343,6 @@ class ProfileCalculationWidget(QWidget):#, FORM_CLASS):
         self.save_button.clicked.connect(self.save_spatialite)
         self.exit_row.addWidget(self.save_button)
 
-
-
         # Lay-out in elkaar zetten.
         self.verticalLayout.addLayout(self.information_row)
         self.verticalLayout.addLayout(self.upper_row)
@@ -300,10 +355,11 @@ class ProfileCalculationWidget(QWidget):#, FORM_CLASS):
         QtCore.QMetaObject.connectSlotsByName(self)
 
     def retranslateUi(self, Dialog):
-        Dialog.setWindowTitle(_translate("Dialog", "Bereken de profielvarianten van de polder", None)) #todo: maak een merge met de poldernaam.
+        Dialog.setWindowTitle(_translate("Dialog", "Bereken de profielvarianten van de polder",
+                                         None))  # todo: maak een merge met de poldernaam.
         self.save_button.setText(_translate("Dialog", "Save Database and Close", None))
         self.step1_button.setText(_translate("Dialog", "Connect polder database to 3Di output", None))
         self.step2_button.setText(_translate("Dialog", "Calculate all the hydraulic suitable variants", None))
-        self.step3_button.setText(_translate("Dialog", "Calculate the fit % of the calculated profiles within measured profiles", None))
+        self.step3_button.setText(
+            _translate("Dialog", "Calculate the fit % of the calculated profiles within measured profiles", None))
         self.cancel_button.setText(_translate("Dialog", "Cancel", None))
-
