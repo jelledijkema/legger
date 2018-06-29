@@ -4,7 +4,11 @@ Leggertool changelog
 1.1dev (undefined)
 ------------------
 
-- ...
+- Read 3di results from new 3di result format
+
+- Select 3di result timestep
+
+- Some minor improvements and fixes
 
 
 1.0 (30-04-2018)

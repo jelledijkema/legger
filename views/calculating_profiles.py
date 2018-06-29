@@ -132,7 +132,6 @@ class ProfileCalculationWidget(QWidget):  # , FORM_CLASS):
         returns: None
         """
 
-        self.polder_datasource = self.polderSpatialiteComboBox.currentText()
         self.close()
 
     def execute_step1(self):
