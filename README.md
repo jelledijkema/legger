@@ -15,7 +15,7 @@ Steps for installation of this QGIS plugin:
 3. Install the 3di QGIS plugin. See installation instruction on:
    https://github.com/nens/threedi-qgis-plugin/wiki
 
-4. The following Python packages are required for the tool, but don't come with every QGIS package:
+4. The following Python packages are required for the tool, that don't (necessarly) come with every QGIS package:
    - shapely
    - pandas
    - descartes
