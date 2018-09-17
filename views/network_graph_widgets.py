@@ -204,7 +204,7 @@ class LeggerPlotWidget(pg.PlotWidget):
                     prof = {
                         'name': profile.profid,
                         'color': settings.HOVER_COLOR,
-                        'style': Qt.DashLine,
+                        'style': Qt.DotLine,
                         'width': 2,
                         'points': [(p[0], p[1] - profile.peil)
                                    for p in loads(profile.coord).exterior.coords]
@@ -233,7 +233,7 @@ class LeggerPlotWidget(pg.PlotWidget):
                         prof = {
                             'name': profile.id,
                             'color': settings.HOVER_COLOR,
-                            'width': 2,
+                            'width': 3,
                             'points': [
                                 (-0.5 * profile.waterbreedte, 0l),
                                 (-0.5 * profile.bodembreedte, -1 * profile.diepte),
