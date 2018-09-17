@@ -167,8 +167,8 @@ class ProfileCalculationWidget(QWidget):  # , FORM_CLASS):
             )
             self.feedbackmessage += "\nDatabases zijn gekoppeld."
 
-        except:
-            self.feedbackmessage += "\nDatabases zijn niet gekoppeld."
+        except Exception, e:
+            self.feedbackmessage += "\nDatabases zijn niet gekoppeld. melding: {0}\n".format(e.message)
         finally:
             self.feedbacktext.setText(self.feedbackmessage)
 

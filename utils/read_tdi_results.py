@@ -97,7 +97,7 @@ def read_tdi_results(path_model_db, path_result_db,
                 'spatialite_id': fl['spatialite_id'],
                 'start_distance': fl['start_distance'],
                 'end_distance': fl['end_distance'],
-                'q_end': qts[fl['id']]  # todo: check correct (with +1 etc.)
+                'q_end': qts[fl['id'] - 1]  # todo: check correct (with +1 etc.)
             }
 
             flowlines.append(flowline)
