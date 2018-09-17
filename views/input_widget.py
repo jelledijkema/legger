@@ -1,18 +1,8 @@
-import logging
-import os
-import sys
-
-import numpy as np
-import pyqtgraph as pg
+import datetime
 from PyQt4 import QtCore, QtGui
-from PyQt4.QtCore import QEvent, QMetaObject, QSize, Qt, pyqtSignal, pyqtSlot
-from PyQt4.QtGui import (QApplication, QColor, QDockWidget, QFormLayout,QHBoxLayout, QInputDialog,
-                         QLineEdit, QPushButton, QSizePolicy, QSpacerItem,
-                         QTableView, QVBoxLayout, QWidget, QTreeView)
 
+import pyqtgraph as pg
 from legger.sql_models.legger import Varianten
-
-
 from legger.utils.theoretical_profiles import calc_bos_bijkerk
 
 try:
@@ -149,12 +139,25 @@ class NewWindow(QtGui.QWidget):
     def save_and_close(self):
 
         if self.ditch_width is not None and self.waterdepth is not None and self.ditch_slope is not None:
-            import datetime
+
+            found = False
+            id_value=''
+
+            while not found:
+                id_value = "{hydro_id}_{depth}".format(
+                    hydro_id=self.legger_item.hydrovak.get('hydro_id'),
+                    depth=self.waterdepth
+                )
+                count = self.session.query(Varianten).filter(Varianten.id == id_value).count()
+
+                if count == 0:
+                    found = True
+
             variant = Varianten(
-                id=datetime.datetime.now().isoformat(),
-                diepte = self.waterdepth,
-                waterbreedte = self.ditch_width,
-                bodembreedte = self.ditch_bottomwidth,
+                id=id_value,
+                diepte=self.waterdepth,
+                waterbreedte=self.ditch_width,
+                bodembreedte=self.ditch_bottomwidth,
                 talud=self.ditch_slope,
                 verhang_bos_bijkerk=self.verhang,
                 opmerkingen='handmatig aangemaakt',

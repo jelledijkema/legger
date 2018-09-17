@@ -1,6 +1,8 @@
 <RCC>
     <qresource prefix="/plugins/legger/" >
         <file>media/icon_legger.png</file>
+        <file>media/calculator-icon.png</file>
+        <file>media/icon_add_datasource.png</file>
         <file>media/circle_blue.png</file>
         <file>media/circle_green.png</file>
         <file>media/circle_orange.png</file>

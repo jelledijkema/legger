@@ -86,3 +86,62 @@ def create_legger_views(session):
         """)
 
     session.commit()
+
+    ### view for getting all legger results, including additional performance indicators
+
+    session.execute(
+        """
+        DROP VIEW IF EXISTS hydroobjects_selected_legger;
+        """
+    )
+
+    session.execute(
+        """
+            CREATE VIEW hydroobjects_selected_legger AS 
+            SELECT 
+                h.objectid, 
+                h.id, 
+                h.code, 
+                h.categorieoppwaterlichaam, 
+                h.streefpeil, 
+                h.debiet,
+                k.diepte, 
+                k.breedte, 
+                k.taludvoorkeur, 
+                ST_LENGTH(h.geometry) as lengte,
+                h.geometry,
+                s.selected_on as geselecteerd_op,
+                --s.opmerkingen as selectie_opmerking,
+                v.diepte as geselecteerde_diepte,
+                v.waterbreedte as geselecteerd_waterbreedte,
+                v.bodembreedte as geselecteerde_bodembreedte,
+                v.talud as geselecteerd_talud,
+                v.verhang_bos_bijkerk as verhang,
+                v.opmerkingen as profiel_opmerking,
+                p.t_fit as fit_score,
+                p.t_afst as offset,
+                p.t_overdiepte as overdiepte,
+                p.t_overbreedte_l as overbreedte_links,
+                p.t_overbreedte_r as overbreedte_rechts
+            FROM hydroobject h
+            JOIN kenmerken k ON h.id = k.hydro_id 	
+            LEFT OUTER  JOIN geselecteerd s ON h.id = s.hydro_id
+            LEFT OUTER JOIN varianten v ON s.variant_id = v.id
+            LEFT OUTER JOIN profielfiguren p ON v.id = p.profid   
+        """)
+
+    session.execute(
+        """
+        DELETE FROM views_geometry_columns WHERE view_name = 'hydroobjects_selected_legger';
+        """
+    )
+
+    session.execute(
+        """
+            INSERT INTO views_geometry_columns (view_name, view_geometry, view_rowid, f_table_name, 
+              f_geometry_column, read_only)
+            VALUES('hydroobjects_selected_legger', 'geometry', 'objectid', 'hydroobject', 'geometry', 1);         
+        """)
+
+
+    session.commit()

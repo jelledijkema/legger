@@ -34,7 +34,7 @@ class DatabaseSelection(QObject):
         # initialize plugin directory
         self.plugin_dir = os.path.dirname(__file__)
 
-        self.icon_path = ':/plugins/ThreeDiToolbox/icon_add_datasource.png'
+        self.icon_path = ':/plugins/legger/media/icon_add_datasource.png'
         self.menu_text = u'Selecteer de spatialite database met de database van de hydro-objecten van de polder'
 
         self.is_active = False

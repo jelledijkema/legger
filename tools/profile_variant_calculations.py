@@ -36,7 +36,7 @@ class ProfileCalculations(QObject):
         # initialize plugin directory
         self.plugin_dir = os.path.dirname(__file__)
 
-        self.icon_path = ':/plugins/ThreeDiToolbox/icon_add_datasource.png'
+        self.icon_path = ':/plugins/legger/media/calculator-icon.png'
         self.menu_text = u'Bereken de mogelijke leggerprofiel varianten'
 
         self.is_active = False
