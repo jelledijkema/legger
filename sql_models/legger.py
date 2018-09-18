@@ -160,6 +160,12 @@ class Varianten(Base):
                          uselist=False,
                          back_populates="varianten")
 
+    figuren = relationship('ProfielFiguren',
+                         primaryjoin="Varianten.id == ProfielFiguren.profid",
+                         # foreign_keys=[hydro_id],
+                         back_populates="prof")
+
+
     # geselecteerd = relationship("GeselecteerdeProfielen",
     #                        back_populates="variant")
 
@@ -177,6 +183,7 @@ class GeselecteerdeProfielen(Base):
     variant_id = Column(String(),
                         ForeignKey(Varianten.__tablename__ + ".id"))
     selected_on = Column(DateTime, default=datetime.datetime.utcnow)
+    opmerkingen = Column(String())
 
     hydro = relationship(HydroObject,
                          back_populates="geselecteerd")
@@ -191,7 +198,7 @@ class ProfielFiguren(Base):
     # object_id = Column(Integer, primary_key=True)
     hydro_id = Column('id_hydro', Integer,
                       ForeignKey(HydroObject.__tablename__ + ".id"))
-    profid = Column(String(16), primary_key=True)
+    profid = Column(String(16), ForeignKey(Varianten.__tablename__ + ".id"), primary_key=True,)
     type_prof = Column(String(1))
     coord = Column(String())
     peil = Column(Float)
@@ -209,6 +216,12 @@ class ProfielFiguren(Base):
                          primaryjoin="HydroObject.id == ProfielFiguren.hydro_id",
                          # foreign_keys=[hydro_id],
                          back_populates="figuren")
+
+    prof = relationship(Varianten,
+                         primaryjoin="Varianten.id == ProfielFiguren.profid",
+                         # foreign_keys=[hydro_id],
+                         back_populates="figuren")
+
 
     def __str__(self):
         return u'profiel_figuren {0} - {1}'.format(

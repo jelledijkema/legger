@@ -247,6 +247,48 @@ class LeggerWidget(QDockWidget):
     def select_profile(self, item):
         pass
 
+    def initial_loop_tree(self, node):
+        """
+        recursive loop over younger items where depth can be applied according to
+        available profiles
+        :param node:
+        :return:
+        """
+        depth = node.hydrovak.get('selected_depth')
+
+        if depth is not None:
+            profile_variant = self.session.query(Varianten).filter(
+                Varianten.hydro_id == node.hydrovak.get('hydro_id'),
+                Varianten.diepte < depth + precision,
+                Varianten.diepte > depth - precision
+            )
+
+            over_depth = node.hydrovak.get('depth') - depth if node.hydrovak.get('depth') is not None else None
+
+            if profile_variant.count() > 0:
+                profile = profile_variant.first()
+                width = profile.waterbreedte
+                self.legger_model.setDataItemKey(node, 'selected_width', width)
+
+                over_width = node.hydrovak.get('width') - width \
+                    if node.hydrovak.get('width') is not None else None
+
+                figuren = profile.figuren
+                score = None
+                if len(figuren) > 0:
+                    figuur = figuren[0]
+                    over_width = "{0:.2f}*".format(figuur.t_overbreedte_l + figuur.t_overbreedte_r) \
+                        if figuur.t_overbreedte_l is not None else over_width
+                    score = "{0:.2f}".format(figuur.t_fit)
+                    over_depth = "{0:.2f}*".format(figuur.t_overdiepte) if figuur.t_overdiepte is not None else over_depth
+
+                self.legger_model.setDataItemKey(node, 'over_depth', over_depth)
+                self.legger_model.setDataItemKey(node, 'over_width', over_width)
+                self.legger_model.setDataItemKey(node, 'score', score)
+
+        for young in node.younger():
+            self.initial_loop_tree(young)
+
     def data_changed_legger_tree(self, index, to_index):
         """
         change graphs based on changes in locations
@@ -355,6 +397,8 @@ class LeggerWidget(QDockWidget):
             self.network.get_tree_data(root)
             self.legger_model.setNewTree(root.childs)
             self.legger_model.set_column_sizes_on_view(self.legger_tree_widget)
+            if len(root.childs) > 0:
+                self.initial_loop_tree(root.childs[0])
 
             canvas = self.iface.mapCanvas()
             canvas.setExtent(self.vl_tree_layer.extent())
@@ -412,15 +456,27 @@ class LeggerWidget(QDockWidget):
 
                     self.legger_model.setDataItemKey(self.legger_model.selected, 'selected_depth', depth)
                     over_depth = node.hydrovak.get('depth') - depth if node.hydrovak.get('depth') is not None else None
-                    self.legger_model.setDataItemKey(node, 'over_depth', over_depth)
 
                     if profile_variant.count() > 0:
                         profile = profile_variant.first()
                         width = profile.waterbreedte
                         self.legger_model.setDataItemKey(node, 'selected_width', width)
-                        over_width = node.hydrovak.get('width') - width if node.hydrovak.get(
-                            'width') is not None else None
+
+                        over_width = node.hydrovak.get('width') - width \
+                            if node.hydrovak.get('width') is not None else None
+
+                        figuren = profile.figuren
+                        score = None
+                        if len(figuren) > 0:
+                            figuur = figuren[0]
+                            over_width = "{0:.2f}*".format(figuur.t_overbreedte_l + figuur.t_overbreedte_r) \
+                                if figuur.t_overbreedte_l is not None else over_width
+                            score = "{0:.2f}".format(figuur.t_fit)
+                            over_depth = "{0:.2f}*".format(figuur.t_overdiepte) if figuur.t_overdiepte is not None else over_depth
+
+                        self.legger_model.setDataItemKey(node, 'over_depth', over_depth)
                         self.legger_model.setDataItemKey(node, 'over_width', over_width)
+                        self.legger_model.setDataItemKey(node, 'score', score)
 
                         # save
                         selected = self.session.query(GeselecteerdeProfielen).filter(
@@ -607,6 +663,7 @@ class LeggerWidget(QDockWidget):
         self.show_manual_input_button.clicked.disconnect(self.show_manual_input_window)
         self.variant_model.dataChanged.disconnect(self.data_changed_variant)
         self.legger_model.dataChanged.disconnect(self.data_changed_legger_tree)
+        self.area_model.dataChanged.disconnect(self.data_changed_area_model)
 
         self.legger_model.setTreeWidget(None)
 
