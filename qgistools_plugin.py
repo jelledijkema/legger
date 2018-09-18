@@ -16,7 +16,7 @@ log = logging.getLogger(__name__)
 
 
 class Legger(QObject):
-    """Main Plugin Class which register toolbar and menu and tools """
+    """Main Plugin Class which register toolbar, menu and tools """
 
     def __init__(self, iface):
         """Constructor.
@@ -182,6 +182,12 @@ class Legger(QObject):
             self.toolbar.removeAction(action)
 
         for tool in self.tools:
-            tool.on_unload()
+            if hasattr(tool, 'on_unload'):
+                tool.on_unload()
+            elif hasattr(tool, 'closeEvent'):
+                tool.closeEvent()
+            tool = None
+
+        self.tools = []
 
         self.toolbar.setVisible(False)
