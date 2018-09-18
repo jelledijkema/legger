@@ -142,16 +142,20 @@ class NewWindow(QtGui.QWidget):
 
             found = False
             id_value=''
-
+            i = 0
             while not found:
                 id_value = "{hydro_id}_{depth}".format(
                     hydro_id=self.legger_item.hydrovak.get('hydro_id'),
                     depth=self.waterdepth
                 )
+                if i > 0:
+                    id_value += '_{0}'.format(i)
                 count = self.session.query(Varianten).filter(Varianten.id == id_value).count()
 
                 if count == 0:
                     found = True
+                else:
+                    i += 1
 
             variant = Varianten(
                 id=id_value,
