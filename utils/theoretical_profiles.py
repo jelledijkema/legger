@@ -18,7 +18,6 @@ Km = 25  # Manning coefficient in m**(1/3/s)
 Kb = 23  # Bos and Bijkerk coefficient in 1/s
 
 ini_waterdepth = 0.30  # Initial water depth (m).
-gradient_norm = 3.0  # (cm/km) The norm for maximum gradient according to Bos and Bijkerk or Manning formula.
 min_ditch_bottom_width = 0.5  # (m) Ditch bottom width can not be smaller dan 0,5m.
 
 
@@ -134,7 +133,7 @@ def calc_manning(normative_flow, ditch_bottom_width, water_depth, slope):
     return gradient_manning
 
 
-def calc_profile_max_ditch_width(object_id, normative_flow, length, slope, max_ditch_width):
+def calc_profile_max_ditch_width(object_id, normative_flow, length, slope, max_ditch_width,gradient_norm):
     """
     Calculate a ditch profile that suffices to the gradient norm, which is based on the maximum ditch width.
     Starting with some initial profile requirements (minimum water depth, minimum ditch bottom width), the calculation
@@ -215,7 +214,7 @@ def add_surge(hydro_object_table):
     return enriched_table
 
 
-def calc_profile_variants(hydro_objects_satisfy):
+def calc_profile_variants(hydro_objects_satisfy,gradient_norm):
     """
     In this formula the different variants of suitable profiles are generated.
     The output is twofold:
@@ -312,7 +311,7 @@ def calc_profile_variants(hydro_objects_satisfy):
     return variants_table
 
 
-def print_failed_hydro_objects(input_table):
+def print_failed_hydro_objects(input_table,gradient_norm):
     if "object_id" in input_table.columns:
         if "gradient_bos_bijkerk" in input_table.columns:
             if "gradient_manning" in input_table.columns:
@@ -329,7 +328,7 @@ def print_failed_hydro_objects(input_table):
         log.info("No 'object_id' data")
 
 
-def show_summary(tablename, surge_comparison):
+def show_summary(tablename, surge_comparison,gradient_norm):
     summary_table = pd.DataFrame({'how many hydro objects do not suffice': pd.Series(
         [(len(tablename[tablename['gradient_manning'] > gradient_norm])),
          (len(tablename[tablename['gradient_bos_bijkerk'] > gradient_norm])),
@@ -352,7 +351,8 @@ This is were the main code starts:
 """
 
 
-def create_theoretical_profiles(legger_db_filepath):
+def create_theoretical_profiles(legger_db_filepath,surge_selection):
+    gradient_norm = surge_selection  # (cm/km) The norm for maximum gradient according to Bos and Bijkerk or Manning formula.
 
     # Part 1: read SpatiaLite
     # The original Spatialite database is read into Python for further analysis.
@@ -382,7 +382,7 @@ def create_theoretical_profiles(legger_db_filepath):
         length = hydro_objects.LENGTH[i]  # (m) hydro_objects.length[i]
 
         # Calculate a profile
-        profile = calc_profile_max_ditch_width(object_id, normative_flow, length, slope, max_ditch_width)
+        profile = calc_profile_max_ditch_width(object_id, normative_flow, length, slope, max_ditch_width,gradient_norm)
 
         # Add the profile to the previous made table where the results are stored
         profile_max_ditch_width = profile_max_ditch_width.append(profile)
@@ -393,7 +393,7 @@ def create_theoretical_profiles(legger_db_filepath):
     log.info("Finished 3: Successfully calculated profiles based on max ditch width\n")
 
     # Part 4: Print the hydro objects where no suitable legger can be calculated.
-    print_failed_hydro_objects(profile_max_ditch_width)
+    print_failed_hydro_objects(profile_max_ditch_width,gradient_norm)
     log.info("Finished 4: Finished printing hydro objects without a suitable legger\n")
     """
     Up to here the hydro object information is translated to a legger profile using maximum ditch width.
@@ -405,7 +405,7 @@ def create_theoretical_profiles(legger_db_filepath):
 
     # Part 6: show a table with some statistics on the hydro objects
     surge_comparison = 5  # (cm) What total surge is interesting to compare it to?
-    show_summary(profile_max_ditch_width, surge_comparison)
+    show_summary(profile_max_ditch_width, surge_comparison,gradient_norm)
     log.info("Finished 6: summary printed\n")
 
     # Part 7: From the suitable profiles based on max ditch width, all the other suitable profiles are calculated.
@@ -424,7 +424,7 @@ def create_theoretical_profiles(legger_db_filepath):
 
     hydro_objects_unsatisfy = profile_max_ditch_width[profile_max_ditch_width['gradient_bos_bijkerk'] > gradient_norm]
 
-    profile_variants = calc_profile_variants(hydro_objects_satisfy)
+    profile_variants = calc_profile_variants(hydro_objects_satisfy,gradient_norm)
 
     log.info("Finished 7: variants created\n")
 
@@ -460,7 +460,8 @@ def create_theoretical_profiles(legger_db_filepath):
     return profile_variants
 
 
-def write_theoretical_profile_results_to_db(profile_results, path_legger_db):
+def write_theoretical_profile_results_to_db(profile_results, path_legger_db,surge_selection):
+    gradient_norm = surge_selection  # (cm/km) The norm for maximum gradient according to Bos and Bijkerk or Manning formula.
     log.info("Writing output to db...\n")
     db = LeggerDatabase(
         {
