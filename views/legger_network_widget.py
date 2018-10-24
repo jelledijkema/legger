@@ -5,7 +5,7 @@ from PyQt4.QtCore import QMetaObject, QSize, Qt, pyqtSignal
 from PyQt4.QtGui import (QApplication, QDockWidget, QHBoxLayout, QPushButton, QSizePolicy, QSpacerItem, QTabWidget,
                          QVBoxLayout, QWidget)
 from legger.qt_models.area_tree import AreaTreeItem, AreaTreeModel, area_class
-from legger.qt_models.legger_tree import LeggerTreeModel, TreeItem
+from legger.qt_models.legger_tree import LeggerTreeModel, LeggerTreeItem
 from legger.qt_models.profile import ProfileModel
 from legger.sql_models.legger import GeselecteerdeProfielen, HydroObject, Varianten
 from legger.sql_models.legger_database import LeggerDatabase
@@ -393,7 +393,7 @@ class LeggerWidget(QDockWidget):
 
             self.legger_model.clear()
 
-            root = TreeItem(None, None)
+            root = LeggerTreeItem(None, None)
             self.network.get_tree_data(root)
             self.legger_model.setNewTree(root.childs)
             self.legger_model.set_column_sizes_on_view(self.legger_tree_widget)
@@ -573,7 +573,7 @@ class LeggerWidget(QDockWidget):
 
         self.legger_model.clear()
 
-        root = TreeItem(None, None)
+        root = LeggerTreeItem(None, None)
         self.network.get_tree_data(root)
         self.legger_model.setNewTree(root.childs)
         self.legger_model.set_column_sizes_on_view(self.legger_tree_widget)
@@ -581,7 +581,7 @@ class LeggerWidget(QDockWidget):
     def on_select_edit_hydrovak(self, item):
         """
         set elements after selection of a hydrovak for profile selection
-        item (TreeItem): selected hydrovak TreeItem
+        item (LeggerTreeItem): selected hydrovak LeggerTreeItem
         return: None
         """
 

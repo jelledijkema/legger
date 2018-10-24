@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 from PyQt4.QtCore import QVariant
-from legger.qt_models.legger_tree import TreeItem, hydrovak_class
+from legger.qt_models.legger_tree import LeggerTreeItem, hydrovak_class
 from qgis.core import (NULL, QgsFeature, QgsFeatureRequest, QgsField, QgsGeometry, QgsPoint, QgsVectorLayer)
 from qgis.networkanalysis import QgsArcProperter, QgsDistanceArcProperter, QgsGraphAnalyzer, QgsGraphBuilder
 
@@ -508,7 +508,7 @@ class Network(object):
         """
         get LeggerTreeModel and update virtual layer with latest tree
 
-        root (TreeItem): root element of LeggerTreeModel
+        root (LeggerTreeItem): root element of LeggerTreeModel
         return:
         """
         # get layers and make them empty
@@ -682,10 +682,10 @@ class Network(object):
                     )
 
                     if i == 0:
-                        tree_item = TreeItem(hydrovak, grandparent_tree_item)
+                        tree_item = LeggerTreeItem(hydrovak, grandparent_tree_item)
                         grandparent_tree_item.appendChild(tree_item)
                     elif i == 1:
-                        tree_item = TreeItem(hydrovak, parent_tree_item)
+                        tree_item = LeggerTreeItem(hydrovak, parent_tree_item)
                         parent_tree_item.appendChild(tree_item)
                     else:
                         # first insert dummy split
@@ -697,9 +697,9 @@ class Network(object):
                             feature,
                             startpoint_feature,
                             endpoint_feature)
-                        split_item = TreeItem(split_hydrovak, parent_tree_item)
+                        split_item = LeggerTreeItem(split_hydrovak, parent_tree_item)
                         parent_tree_item.insertChild(i - 2, split_item)
-                        tree_item = TreeItem(hydrovak, split_item)
+                        tree_item = LeggerTreeItem(hydrovak, split_item)
                         split_item.appendChild(tree_item)
 
                     # loop over upstream links

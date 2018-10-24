@@ -51,9 +51,9 @@ class ValueWithChangeSignal(object):
 
 def select_default_color(item_field):
     """
-    return color for lines
-    :param item_field: ItemField object
-    :return: tuple with the 3 color bands (values between 0-256)
+    return color for lines. First Colors are used as defined in COLOR_LIST
+    item_field (ItemField): ...
+    return (tuple): tuple with the 3 RGB color bands (values between 0-256)
     """
 
     model = item_field.item.model
@@ -71,7 +71,7 @@ def select_default_color(item_field):
 
 
 class ProfileModel(BaseModel):
-    """Model implementation for waterbalance graph items"""
+    """Model implementation for possible legger profiles"""
 
 
     class Fields:
