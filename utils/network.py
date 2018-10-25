@@ -1,8 +1,17 @@
 # -*- coding: utf-8 -*-
 from PyQt4.QtCore import QVariant
 from legger.qt_models.legger_tree import LeggerTreeItem, hydrovak_class
-from qgis.core import (NULL, QgsFeature, QgsFeatureRequest, QgsField, QgsGeometry, QgsPoint, QgsVectorLayer)
+from qgis.core import NULL, QgsFeature, QgsFeatureRequest, QgsField, QgsGeometry, QgsPoint, QgsVectorLayer
 from qgis.networkanalysis import QgsArcProperter, QgsDistanceArcProperter, QgsGraphAnalyzer, QgsGraphBuilder
+
+BRANCH_ID_PROPERTER_NR = 2
+DEPTH_PROPERTER_NR = 3
+MIN_DEPTH_PROPERTER_NR = 4
+MAX_DEPTH_PROPERTER_NR = 5
+TARGET_LEVEL_PROPERTER_NR = 6
+CATEGORY_PROPERTER_NR = 7
+FLOW_PROPERTER_NR = 8
+HYDRO_ID_PROPERTER_NR = 9
 
 
 def make_type(value, typ, default_value=None, round_digits=None):
@@ -136,11 +145,27 @@ class Network(object):
         self.path_points = []
 
     def get_startpoint_nrs(self):
+        """
+        get nrs of vertexes with no upstream nodes. With support for 'islands' of bidirectional arcs (in
+        which case a random point in the island is selected)
+
+        return (list of ints): list with vertex numbers
+        """
 
         start_p = []
         startpoint_islands = []
 
         def startpoint_island_check(search_start_vertex):
+            """
+            check if there are no incoming arcs in an island of one or more bi-directional arcs.
+            in global scope:
+              - self.graph
+              - startpoint_islands (checked points will be added to this list)
+
+            search_start_vertex (int): vertex nr to start search
+            return (bool): True if there are no incoming arcs
+            """
+
             # for all in (not in previous out)
             # check in --> if in --> no startpoint
             # if all points checked, this is an island, select point
@@ -206,6 +231,10 @@ class Network(object):
         return start_p
 
     def get_startpoint_tree(self):
+        """
+        get tree
+        :return:
+        """
 
         startpoint_tree = {
             'children': []
@@ -214,124 +243,169 @@ class Network(object):
         for startpoint_nr in self.get_startpoint_nrs():
             self.set_tree_startpoint(startpoint_nr)
             tree, hydro_objects, endpoints = self.get_tree()
-            startpoint_tree['children'].append(tree)
+            startpoint_tree['children'].extend(tree)
 
         return startpoint_tree
 
-    def get_tree(self):
+    def get_tree(self, start_vertex_nr=None):
+        """
+        refactor:
+         - startpoints
+
+
+        provide a 'flattend tree'. Channels with the highest flow will stay on the same 'tree level'
+
+
+        start_vertex_nr (int): vertex nr of startpoint of tree. When no value provided, self.id_start_tree is used
+        return (tuple): tuple with:
+          1) startpoint tree (dictionary). Example of the structure:
+            {
+              'distance': 0,
+              'vertex_id': <<vertex_nr>>,
+              'target_level': <<'streefpeil'>>,
+              'point': <<coordinates>>,
+              'category': [],
+              'children': [...]
+            }
+          2) tree if hydroobjects. Example of the structure:
+            {
+              'parent': None,
+              'children': [{
+                'hydro_id': hydro_id,
+                'arc_id': arc_id,
+                'flow': flow,
+                'start_distance': round(distance),
+                'end_distance': round(end_distance),
+                'endpoint_type': 'startpoint'/ 'target' / 'between'/ 'end',
+                'start_tree_item': start_tree_item,
+                'feature': line_feature,
+                # 'in_vertex_id': in_vertex_id,
+                # 'out_vertex_id': out_vertex_id,
+                # 'parent': parent_hydro_obj,
+                'children': [..]
+              },
+              {...}]
+            }
+          3) list with startpoints, endpoints. Example of the structure:
+            [{
+              'vertex_id': ...,
+              'arc_id': ...,
+              'type': 'startpoint'/ 'target' / 'end',  // 'between' not in this list
+              'branch_id': None,
+            },
+            ...]
+
+        """
 
         endpoints = []
+        checked_vertexes = {}
 
         def loop_recursive(
-                area, parent_hydro_obj, parent_arc, child_arc_ids,
+                parent_start_tree_item, parent_hydro_tree_item , parent_arc_id,
                 target_level=None, category=None, distance=0):
             """
             recursive function for finding endpoints through walking through graph
 
             category not used yet (filter on layer is used to filter out nont primary water)
+            global objects:
+            - self.full_line_layer
 
-            :param area:
-            :param parent_hydro_obj:
-            :param parent_arc:
-            :param child_arc_ids:
+
+            :param start_tree_item (dict): tree item of tree with start_lines. Used to store childs.
+            :param hydro_tree_item (dict): tree item of tree of full tree with hydroobjects. Used to store childs.
+            :param arc_id (int): arc number
             :param target_level:
             :param category:
             :param distance:
             :return:
             """
 
-            linked_arcs = []
-            # get flow for most of the hydroobjects - used for ordering the branches
+            parent_arc = self.graph.arc(parent_arc_id)
+            parent_in_vertex_id = parent_arc.inVertex()
+            parent_out_vertex_id = parent_arc.outVertex()
+            parent_in_vertex = self.graph.vertex(parent_in_vertex_id)
+            # filter reverse (bi-directional) arcs and circular arcs out
+            child_arc_ids = [arc_id for arc_id in parent_in_vertex.outArc()
+                             if not self.graph.arc(arc_id).inVertex() in checked_vertexes]
+            # check if child link is not the reversed one of current arc (links with zero or None
+            # flow are bi-directional, so filter these out
+            # if arc_id == in_arc and len(linked_arcs) > 0 and \
+            #         (parent_arc is None or self.tree[parent_arc.inVertex()] != self.tree[arc.inVertex()]):
+
+            if len(child_arc_ids) == 0:
+                branch_id = int(parent_arc.properties()[BRANCH_ID_PROPERTER_NR])
+                endpoints.append({
+                    'vertex_id': parent_out_vertex_id,
+                    'arc_id': parent_arc_id,
+                    'type': 'end',
+                    'branch_id': branch_id,
+                    'start_tree_item':  parent_start_tree_item,  # needed? - no use found in code
+                })
+                return
+
+            # get category and flow for the hydroobjects - used for ordering the branches
+            linked_arcs_sort = []
             for arc_id in child_arc_ids:
                 arc = self.graph.arc(arc_id)
-                flow = 0.0
-                if arc.properties()[8] == NULL:
+
+                arc_category = arc.properties()[CATEGORY_PROPERTER_NR] \
+                    if arc.properties()[CATEGORY_PROPERTER_NR] is not None else 5.0
+
+                flow = arc.properties()[FLOW_PROPERTER_NR]
+                if flow == NULL:
                     # if flow is None, sum flows of upstream channels
+                    flow = 0.0
                     for sub_arc_id in self.graph.vertex(arc.inVertex()).outArc():
                         sub_arc = self.graph.arc(sub_arc_id)
-                        flow += sub_arc.properties()[8] if arc.properties()[8] != NULL else 0.0
-                else:
-                    flow = arc.properties()[8]
+                        flow += sub_arc.properties()[FLOW_PROPERTER_NR] \
+                            if sub_arc.properties()[FLOW_PROPERTER_NR] != NULL else 0.0
 
-                linked_arcs.append((arc_id, arc, (flow, float)))
+                linked_arcs_sort.append((arc_id, arc, flow, arc_category))
 
-            # sort linked arcs from highest flow to lowest flow
-            for i, (arc_id, arc, flow) in enumerate(reversed(sorted(linked_arcs, key=lambda a: a[2]))):
-                # collect information and create
-                branch_id = int(arc.properties()[2])
+            # sort linked arcs on category and from highest flow to lowest flow
+            linked_arcs_sort = reversed(sorted(linked_arcs_sort, key=lambda a: a[2] - 1000 * a[3]))
+
+            for i, (arc_id, arc, flow, category) in enumerate(linked_arcs_sort):
+                # collect information
+                branch_id = int(arc.properties()[BRANCH_ID_PROPERTER_NR])
                 request = QgsFeatureRequest().setFilterFid(branch_id)
                 line_feature = self.full_line_layer.getFeatures(request).next()
 
                 end_distance = distance + line_feature['lengte']
-
-                # get
-                branch_target_level = arc.properties()[6]
-                branch_category = arc.properties()[7]
-
+                branch_target_level = arc.properties()[TARGET_LEVEL_PROPERTER_NR]
+                branch_category = arc.properties()[CATEGORY_PROPERTER_NR]
                 flow = make_type(flow, float, round_digits=2)
-                hydro_id = arc.properties()[9]
+                hydro_id = arc.properties()[HYDRO_ID_PROPERTER_NR]
 
-                in_vertex_id = arc.inVertex()
                 out_vertex_id = arc.outVertex()
+                checked_vertexes[arc.inVertex()] = True
 
-                # endpoint feature
-                do_loop = False
-
-                # check if child link is not the reversed one of current arc (links with zero or None
-                # flow are bi-directional, so filter these out
-                linked_arcs = self.graph.vertex(in_vertex_id).outArc()
-                linked_arcs = [ids for ids in linked_arcs
-                               if self.graph.arc(ids).inVertex() != arc.outVertex()]
-
+                start_tree_item = None
                 if target_level is not None and branch_target_level != target_level:
                     endpoint_type = 'target'
-                    vertex_id = arc.inVertex()
-                    do_loop = True
-                # elif category is not None and branch_category != category:
-                #     endpoint_type = 'category'
-                #     vertex_id = out_vertex_id
-                else:
-                    vertex_id = in_vertex_id
-                    in_arc = self.tree[in_vertex_id]
-                    if arc_id == in_arc and len(linked_arcs) > 0 and \
-                            (parent_arc is None or self.tree[parent_arc.inVertex()] != self.tree[arc.inVertex()]):
-                        endpoint_type = 'between'
-                        do_loop = True
-                    else:
-                        # endpoint
-                        endpoint_type = 'end'
 
-                new_area = None
-                if endpoint_type != 'between':
-
-                    if endpoint_type == 'target':
-                        new_area = {
-                            'target_level': branch_target_level,
-                            'distance': distance,
-                            'point': self.graph.vertex(out_vertex_id).point(),
-                            'vertex_id': out_vertex_id,
-                            # 'parent': area,
-                            'children': [],
-                            'category': []
-                        }
-                        area['children'].append(new_area)
-
-                    endpoints.append({
-                        'vertex_id': vertex_id,
+                    start_tree_item = {
+                        'target_level': branch_target_level,
+                        'distance': distance,
+                        'category': category,
+                        'start_vertex_id': out_vertex_id,
+                        'point': self.graph.vertex(out_vertex_id).point(),
                         'arc_id': arc_id,
-                        'type': endpoint_type,
-                        'branch_id': branch_id,
-                        'area': area
-                    })
+                        'line_feature': line_feature,
+                        'children': [],
+                    }
+                    parent_start_tree_item['children'].append(start_tree_item)
+                else:
+                    endpoint_type = 'between'
 
-                hydro_obj = {
+                hydro_tree_item = {
                     'hydro_id': hydro_id,
                     'arc_id': arc_id,
                     'flow': flow,
                     'start_distance': round(distance),
                     'end_distance': round(end_distance),
                     'endpoint_type': endpoint_type,
-                    'area': area,
+                    'start_tree_item':  parent_start_tree_item,  # needed? - no use found in code
                     'feature': line_feature,
                     # 'in_vertex_id': in_vertex_id,
                     # 'out_vertex_id': out_vertex_id,
@@ -339,57 +413,74 @@ class Network(object):
                     'children': []
                 }
 
-                parent_hydro_obj['children'].append(hydro_obj)
+                parent_hydro_tree_item['children'].append(hydro_tree_item)
 
                 # loop over upstream links
-                if do_loop:
-                    if new_area is not None:
-                        par_area = new_area
-                    else:
-                        par_area = area
+                if start_tree_item is not None:
+                    par_start_tree_item = start_tree_item
+                else:
+                    par_start_tree_item = parent_start_tree_item
 
-                    loop_recursive(
-                        par_area, hydro_obj, arc, linked_arcs,
-                        branch_target_level, branch_category, end_distance
-                    )
+                loop_recursive(
+                    par_start_tree_item, hydro_tree_item, arc_id,
+                    branch_target_level, branch_category, end_distance
+                )
 
-        hydro_objects = {'parent': None, 'children': []}
-        startingpoint_tree = {'children': []}
+        hydro_tree_item = {'parent': None, 'children': []}
+        startingpoint_tree = []
 
-        if self.id_start_tree is not None:
-            start_point_vertex = self.graph.vertex(self.id_start_tree)
+        if start_vertex_nr is None:
+            start_vertex_nr = self.id_start_tree
+
+        if start_vertex_nr is not None:
+            start_point_vertex = self.graph.vertex(start_vertex_nr)
             endpoints.append({
-                'vertex_id': self.id_start_tree,
+                'vertex_id': start_vertex_nr,
                 'arc_id': None,
                 'type': 'startpoint',
                 'branch_id': None
             })
 
-            arc_id = self.graph.vertex(self.id_start_tree).outArc()[0]
-            arc = self.graph.arc(arc_id)
+            for arc_id in self.graph.vertex(start_vertex_nr).outArc():
+                arc = self.graph.arc(arc_id)
 
-            branch_id = int(arc.properties()[2])
-            request = QgsFeatureRequest().setFilterFid(branch_id)
-            line_feature = self.full_line_layer.getFeatures(request).next()
+                branch_id = int(arc.properties()[BRANCH_ID_PROPERTER_NR])
+                request = QgsFeatureRequest().setFilterFid(branch_id)
+                line_feature = self.full_line_layer.getFeatures(request).next()
 
-            startingpoint_tree = {
-                'distance': 0,
-                'vertex_id': self.id_start_tree,
-                'target_level': line_feature['streefpeil'],
-                'point': self.graph.vertex(self.id_start_tree).point(),
-                'parent': None,
-                'children': []}
+                category = arc.properties()[CATEGORY_PROPERTER_NR]
+                target_level = line_feature['streefpeil']
 
-            loop_recursive(startingpoint_tree, hydro_objects, None, start_point_vertex.outArc())
+                start_tree_item = {
+                    'distance': 0,
+                    'target_level': target_level,
+                    'category': category,
+                    'start_vertex_id': start_vertex_nr,
+                    'point': self.graph.vertex(start_vertex_nr).point(),
+                    'arc_id': arc_id,
+                    'line_feature': line_feature,
+                    'parent': None,
+                    'children': []
+                }
+                startingpoint_tree.append(start_tree_item)
 
-        return startingpoint_tree, hydro_objects, endpoints
+                loop_recursive(start_tree_item,
+                               hydro_tree_item,
+                               arc_id,
+                               target_level=target_level,
+                               category=category,
+                               distance=0)
+
+        return startingpoint_tree, hydro_tree_item, endpoints
 
     def add_point(self, qgs_point):
         """
+        add point to selected Path
 
-        :param qgs_point: QgsPoint instances, additional point
-        :return: tuple (boolean: successful added to path,
-                        string: message)
+        qgs_point (QgsPoint): additional point
+        return (tuple): tuple with:
+                    0. boolean: successful added to path,
+                    1. string: message
         """
         id_point = self.graph.findVertex(qgs_point)
         if not id_point:
@@ -419,20 +510,16 @@ class Network(object):
 
             return True, "point found and added to path"
 
-    def get_id_of_point(self, qgs_point):
-
-        return self.graph.findVertex(qgs_point)
-
     def set_tree_startpoint(self, id_start_point):
         """
         set point (initial or next point) for expending path
-        :param qgs_start_point: QgsPoint instance, start point of tree for
-                (extension) of path
-        :return:
+
+        qgs_start_point (int): start point of tree for (extension) of path
+        return: None
         """
 
         if id_start_point == -1:
-            return False, "No valid point found"
+            return
 
         # else create tree from this tree startpoint
         self.id_start_tree = id_start_point
@@ -443,22 +530,44 @@ class Network(object):
                                                            0)
         self.tree_layer_up_to_date = False
 
+    def set_tree_start_arc(self, id_start_arc):
+        """
+        set line (initial or next point) for expending path
+
+        qgs_start_arc (QgsPoint): start point of tree for (extension) of path
+        return: None
+        """
+
+        if id_start_arc == -1:
+            return
+
+        # else create tree from this tree startpoint
+        arc = self.graph.arc(id_start_arc)
+        self.id_start_tree = arc.inVertex()
+        self.start_point_tree = self.graph.vertex(self.id_start_tree).point()
+
+        (self.tree, self.cost) = QgsGraphAnalyzer.dijkstra(self.graph,
+                                                           self.id_start_tree,
+                                                           0)
+        self.tree_layer_up_to_date = False
+
     def get_path(self, id_start_point, id_end_point, begin_distance=0):
         """
         get path between the to graph points
-        :param id_start_point: graph identifier of start point of (sub)path
-        :param id_end_point: graph identifier of end point of (sub) path
-        :param begin_distance: start distance of cumulative path distance
-        :return: tuple with 3 values:
-                 - successful found a path
-                 - Message in case of not succesful found a path or
-                   a list of path line elements, represent as a tuple, with:
-                   - begin distance of part (from initial start_point),
-                   - end distance of part
-                   - direction of path equal to direction of feature definition
-                     1 in case ot is, -1 in case it is the opposite direction
-                   - feature
-                 - list of vertexes (graph nodes)
+
+        id_start_point (int): graph identifier of start point of (sub)path
+        id_end_point (int): graph identifier of end point of (sub) path
+        begin_distance (float): start distance of cumulative path distance
+        return (tuple): tuple with 3 values:
+          0. successful found a path
+          1. Message in case of not succesful found a path or
+             a list of path line elements, represent as a tuple, with:
+             0. begin distance of part (from initial start_point),
+             1. end distance of part
+             2. direction of path equal to direction of feature definition
+                1 in case ot is, -1 in case it is the opposite direction
+             3. feature
+          2. list of vertexes (graph nodes)
         """
 
         # check if end_point is connected to start point
@@ -477,7 +586,7 @@ class Network(object):
 
             dist = self.graph.arc(self.tree[cur_pos]).properties()[1]
 
-            id_line = self.graph.arc(self.tree[cur_pos]).properties()[2]
+            id_line = self.graph.arc(self.tree[cur_pos]).properties()[BRANCH_ID_PROPERTER_NR]
 
             # filt = u'"%s" = %s' % (self.id_field, str(id_line))
             request = QgsFeatureRequest().setFilterFid(id_line)
@@ -509,7 +618,7 @@ class Network(object):
         get LeggerTreeModel and update virtual layer with latest tree
 
         root (LeggerTreeItem): root element of LeggerTreeModel
-        return:
+        return (bool): True if successful
         """
         # get layers and make them empty
         point_layer = self.get_endpoint_layer()
@@ -549,8 +658,8 @@ class Network(object):
 
             feat.setAttributes([
                 float(arc.properties()[1]),
-                int(arc.properties()[2]),
-                int(arc.properties()[9]),
+                int(arc.properties()[BRANCH_ID_PROPERTER_NR]),
+                int(arc.properties()[HYDRO_ID_PROPERTER_NR]),
                 make_type(depth, float),
                 make_type(variant_min_depth, float),
                 make_type(variant_max_depth, float),
@@ -585,13 +694,14 @@ class Network(object):
             for arc_id in linked_arc_ids:
                 arc = self.graph.arc(arc_id)
                 flow = 0.0
-                if arc.properties()[8] == NULL:
+                if arc.properties()[FLOW_PROPERTER_NR] == NULL:
                     # if None, sum flows of upstream channels
                     for sub_arc_id in self.graph.vertex(arc.inVertex()).outArc():
                         sub_arc = self.graph.arc(sub_arc_id)
-                        flow += sub_arc.properties()[8] if arc.properties()[8] != NULL else 0.0
+                        flow += sub_arc.properties()[FLOW_PROPERTER_NR] \
+                            if sub_arc.properties()[FLOW_PROPERTER_NR] != NULL else 0.0
                 else:
-                    flow = arc.properties()[8]
+                    flow = arc.properties()[FLOW_PROPERTER_NR]
 
                 linked_arcs.append((arc_id, arc, flow))
 
@@ -599,19 +709,19 @@ class Network(object):
             for i, (arc_id, arc, flow) in enumerate(reversed(sorted(linked_arcs, key=lambda a: a[2]))):
 
                 # collect information and create
-                branch_id = int(arc.properties()[2])
+                branch_id = int(arc.properties()[BRANCH_ID_PROPERTER_NR])
                 request = QgsFeatureRequest().setFilterFid(branch_id)
                 line_feature = self.full_line_layer.getFeatures(request).next()
 
                 distance_end = distance + line_feature['lengte']
-                branch_depth = make_type(arc.properties()[3], float, round_digits=2)
-                branch_variant_min_depth = make_type(arc.properties()[4], float, round_digits=2)
-                branch_variant_max_depth = make_type(arc.properties()[5], float, round_digits=2)
+                branch_depth = make_type(arc.properties()[DEPTH_PROPERTER_NR], float, round_digits=2)
+                branch_variant_min_depth = make_type(arc.properties()[MIN_DEPTH_PROPERTER_NR], float, round_digits=2)
+                branch_variant_max_depth = make_type(arc.properties()[MAX_DEPTH_PROPERTER_NR], float, round_digits=2)
                 branch_width = line_feature['breedte']
-                branch_target_level = arc.properties()[6]
-                branch_category = arc.properties()[7]
-                flow = make_type(arc.properties()[8], float, round_digits=2)
-                hydro_id = arc.properties()[9]
+                branch_target_level = arc.properties()[TARGET_LEVEL_PROPERTER_NR]
+                branch_category = arc.properties()[CATEGORY_PROPERTER_NR]
+                flow = make_type(arc.properties()[FLOW_PROPERTER_NR], float, round_digits=2)
+                hydro_id = arc.properties()[HYDRO_ID_PROPERTER_NR]
                 new_depth = get_stat(branch_depth, depth, min)
                 new_variant_min_depth = get_stat(branch_variant_min_depth, variant_min_depth, max)
                 new_variant_max_depth = get_stat(branch_variant_max_depth, variant_max_depth, min)
@@ -746,9 +856,9 @@ class Network(object):
         return a (link to) an in memory QgsVectorLayer of the current active
         tree. The layer will be updated during when the tree (or tree start
         point) changes
-        :return: QgsVectorLayer in memory.
+
+        return (QgsVectorLayer): QgsVectorLayer in memory.
         """
-        # Enter editing mode
 
         if not self._virtual_tree_layer:
             # create_layer
@@ -777,9 +887,9 @@ class Network(object):
         return a (link to) an in memory QgsVectorLayer of the current active
         tree. The layer will be updated during when the tree (or tree start
         point) changes
-        :return: QgsVectorLayer in memory.
+
+        return (QgsVectorLayer): QgsVectorLayer in memory.
         """
-        # Enter editing mode
 
         if not self._endpoint_layer:
             # create_layer
@@ -804,9 +914,9 @@ class Network(object):
         return a (link to) an in memory QgsVectorLayer of the current active
         tree. The layer will be updated during when the tree (or tree start
         point) changes
-        :return: QgsVectorLayer in memory.
+
+        return (QgsVectorLayer): QgsVectorLayer in memory.
         """
-        # Enter editing mode
 
         if not self._track_layer:
             # create_layer
@@ -828,9 +938,9 @@ class Network(object):
         return a (link to) an in memory QgsVectorLayer of the current active
         tree. The layer will be updated during when the tree (or tree start
         point) changes
-        :return: QgsVectorLayer in memory.
+
+        return (QgsVectorLayer): QgsVectorLayer in memory.
         """
-        # Enter editing mode
 
         if not self._hover_layer:
             # create_layer
@@ -852,9 +962,9 @@ class Network(object):
         return a (link to) an in memory QgsVectorLayer of the current active
         tree. The layer will be updated during when the tree (or tree start
         point) changes
-        :return: QgsVectorLayer in memory.
+
+        return (QgsVectorLayer): QgsVectorLayer in memory.
         """
-        # Enter editing mode
 
         if not self._selected_layer:
             # create_layer
@@ -876,9 +986,9 @@ class Network(object):
         return a (link to) an in memory QgsVectorLayer of the current active
         tree. The layer will be updated during when the tree (or tree start
         point) changes
-        :return: QgsVectorLayer in memory.
+
+        return (QgsVectorLayer): QgsVectorLayer in memory.
         """
-        # Enter editing mode
 
         if not self._hover_startpoint_layer:
             # create_layer
@@ -898,7 +1008,8 @@ class Network(object):
     def reset(self):
         """
         reset found route
-        :return:
+
+        return: None
         """
 
         self.id_start_tree = None

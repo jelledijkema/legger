@@ -45,8 +45,6 @@ class LeggerWidget(QDockWidget):
         self.path_legger_db = path_legger_db
 
         # init parameters
-        self.ep = None
-        self.sp = None
         self.network_tool_active = False
         self.measured_model = ProfileModel()
         self.variant_model = ProfileModel()
@@ -389,7 +387,7 @@ class LeggerWidget(QDockWidget):
             area_item = self.area_model.data(index, role=Qt.UserRole)
 
             self.network.reset()
-            self.network.set_tree_startpoint(area_item.area.get('vertex_id'))
+            self.network.set_tree_start_arc(area_item.area.get('arc_id'))
 
             self.legger_model.clear()
 
