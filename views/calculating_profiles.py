@@ -156,7 +156,8 @@ class ProfileCalculationWidget(QWidget):  # , FORM_CLASS):
         timestamp = 'laatst' if self.timestep == 0 else '{0} op {1:.0f} s'.format(self.timestep + 1, self.timestamps[self.timestep])
         self.feedbackmessage = 'Neem tijdstap {0}'.format(timestamp)
 
-        try:
+        #try:
+        if True:
             # read 3di channel results
             result = read_tdi_results(
                 self.path_model_db,
@@ -167,10 +168,10 @@ class ProfileCalculationWidget(QWidget):  # , FORM_CLASS):
             )
             self.feedbackmessage += "\nDatabases zijn gekoppeld."
 
-        except Exception, e:
-            self.feedbackmessage += "\nDatabases zijn niet gekoppeld. melding: {0}\n".format(e.message)
-        finally:
-            self.feedbacktext.setText(self.feedbackmessage)
+        # except Exception, e:
+        #     self.feedbackmessage += "\nDatabases zijn niet gekoppeld. melding: {0}\n".format(e.message)
+        # finally:
+        #     self.feedbacktext.setText(self.feedbackmessage)
 
         try:
             # write 3di channel result to legger spatialite

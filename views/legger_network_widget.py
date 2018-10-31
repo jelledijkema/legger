@@ -126,9 +126,9 @@ class LeggerWidget(QDockWidget):
 
         self.network = Network(
             line_direct, full_line_layer, director,
-            weight_properter=LeggerDistancePropeter(),  # 'q_end'
-            distance_properter=LeggerDistancePropeter())  # 'q_end'
-        #
+            #weight_properter=LeggerDistancePropeter(),  # 'q_end'
+            #distance_properter=LeggerDistancePropeter()  # 'q_end'
+        )  #
 
         #  link route map tool
         self.network_tool = NetworkTool(
@@ -215,7 +215,7 @@ class LeggerWidget(QDockWidget):
             geometry_col
         )
 
-        layer.setSubsetString('"categorieoppwaterlichaam"=1')
+        #layer.setSubsetString('"categorieoppwaterlichaam"=1')
         return layer
 
     def unset_network_tool(self):
@@ -387,7 +387,7 @@ class LeggerWidget(QDockWidget):
             area_item = self.area_model.data(index, role=Qt.UserRole)
 
             self.network.reset()
-            self.network.set_tree_start_arc(area_item.area.get('arc_id'))
+            self.network.set_tree_startpoint(area_item.area.get('start_vertex_id'))
 
             self.legger_model.clear()
 
@@ -567,7 +567,7 @@ class LeggerWidget(QDockWidget):
 
         if len(selected_features) > 0:
             self.network.reset()
-            self.network.add_point(next_point)
+            self.network.add_point_to_path(next_point)
 
         self.legger_model.clear()
 

@@ -104,3 +104,8 @@ ENV/
 external/
 
 tests/data/tdimodel/subgrid_map_original.nc
+tests/data/
+remote_debugger_settings.py
+remote_debugger_settings.py
+tests/data/20180613_legger_Marken.sqlite
+tests/data/20180619_legger_Heerhugowaard.sqlite

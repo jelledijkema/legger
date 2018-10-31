@@ -37,8 +37,9 @@ class HydroObject(Base):
     categorieoppwaterlichaam = Column(Integer)
     streefpeil = Column(Float)
     debiet = Column(Float)
-    channnel_id = Column(Integer)  # link to 3di id
+    channel_id = Column(Integer)  # link to 3di id
     flowline_id = Column(Integer)  # link to 3di id
+    score = Column(Float)
     # shape_length = Column(Float)
 
     varianten = relationship("Varianten",
@@ -246,7 +247,7 @@ class DuikerSifonHevel(Base):
     # shape_lengte = Column(Float)
 
     debiet = Column(Float)  # extra?
-    channnel_id = Column(Integer)  # extra?
+    channel_id = Column(Integer)  # extra?
     flowline_id = Column(Integer)  # extra?
 
     def __str__(self):
