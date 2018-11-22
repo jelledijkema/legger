@@ -3,20 +3,21 @@ import os
 
 from PyQt4.QtCore import QMetaObject, QSize, Qt, pyqtSignal
 from PyQt4.QtGui import (QApplication, QDockWidget, QHBoxLayout, QPushButton, QSizePolicy, QSpacerItem, QTabWidget,
-                         QVBoxLayout, QWidget)
+                         QVBoxLayout, QWidget, QComboBox)
 from legger.qt_models.area_tree import AreaTreeItem, AreaTreeModel, area_class
 from legger.qt_models.legger_tree import LeggerTreeModel, LeggerTreeItem
 from legger.qt_models.profile import ProfileModel
 from legger.sql_models.legger import GeselecteerdeProfielen, HydroObject, Varianten
 from legger.sql_models.legger_database import LeggerDatabase
 from legger.utils.network import Network
-from legger.utils.network_utils import LeggerDistancePropeter, LeggerMapVisualisation, NetworkTool
+from legger.utils.network_utils import LeggerDistancePropeter, LeggerMapVisualisation
 from legger.views.input_widget import NewWindow
 from network_graph_widgets import LeggerPlotWidget, LeggerSideViewPlotWidget
 from qgis.core import QgsDataSourceURI, QgsFeature, QgsGeometry, QgsMapLayerRegistry, QgsPoint, QgsVectorLayer
 from qgis.networkanalysis import (QgsLineVectorLayerDirector)
 
 from .network_table_widgets import LeggerTreeWidget, PlotItemTable, StartpointTreeWidget
+from legger.utils.new_network import NewNetwork
 
 log = logging.getLogger('legger.' + __name__)
 
@@ -45,7 +46,6 @@ class LeggerWidget(QDockWidget):
         self.path_legger_db = path_legger_db
 
         # init parameters
-        self.network_tool_active = False
         self.measured_model = ProfileModel()
         self.variant_model = ProfileModel()
         self.legger_model = LeggerTreeModel()
@@ -67,6 +67,10 @@ class LeggerWidget(QDockWidget):
         self.legger_model.setTreeWidget(self.legger_tree_widget)
         self.area_model.setTreeWidget(self.startpoint_tree_widget)
 
+        self.category_combo.insertItems(0, ['4', '3', '2', '1'])
+        self.category_combo.setCurrentIndex(0)
+        self.category_filter = 4
+
         # create line layer and add to map
         # todo: move to map manager?
         self.line_layer = self.get_line_layer()
@@ -78,18 +82,13 @@ class LeggerWidget(QDockWidget):
         self.init_network_tool()
 
         # add listeners
-        self.select_startpoint_button.toggled.connect(
-            self.toggle_startpoint_button)
-        # self.reset_network_tree_button.clicked.connect(
-        #     self.reset_network_tree)
+        self.category_combo.currentIndexChanged.connect(self.category_change)
         self.variant_model.dataChanged.connect(self.data_changed_variant)
         self.legger_model.dataChanged.connect(self.data_changed_legger_tree)
         self.area_model.dataChanged.connect(self.data_changed_area_model)
         self.show_manual_input_button.clicked.connect(
             self.show_manual_input_window)
 
-        # initially turn on tool
-        # self.select_startpoint_button.toggle()
         def loop_over(parent, data):
             for child in data['children']:
                 area = area_class(child)
@@ -98,7 +97,7 @@ class LeggerWidget(QDockWidget):
                 loop_over(item, child)
 
         # get startingpoints and select first
-        sp_tree = self.network.get_startpoint_tree()
+        sp_tree = self.network.get_start_arc_tree()
 
         root = AreaTreeItem(None, None)
         loop_over(root, sp_tree)
@@ -124,20 +123,9 @@ class LeggerWidget(QDockWidget):
         else:
             raise NotImplementedError("director '%s' not implemented" % director_type)
 
-        self.network = Network(
-            line_direct, full_line_layer, director,
-            #weight_properter=LeggerDistancePropeter(),  # 'q_end'
-            #distance_properter=LeggerDistancePropeter()  # 'q_end'
-        )  #
-
-        #  link route map tool
-        self.network_tool = NetworkTool(
-            self.iface.mapCanvas(),
-            line_direct,
-            # self.line_layer,  # for tool, the original one for consistent selection of lines equal to layer visible for user
-            self.on_start_point_select)
-
-        self.network_tool.deactivated.connect(self.unset_network_tool)
+        self.network = NewNetwork(
+            line_direct, full_line_layer, director
+        )
 
         self.map_visualisation = LeggerMapVisualisation(
             self.iface, line_direct.crs())
@@ -205,24 +193,32 @@ class LeggerWidget(QDockWidget):
             uri2.setDatabase(spatialite_path)
             uri2.setDataSource('', table_name, geom_column)
 
-            return QgsVectorLayer(uri2.uri(),
-                                  table_name,
-                                  'spatialite')
+            return QgsVectorLayer(
+                uri2.uri(),
+                table_name,
+                'spatialite')
 
         layer = get_layer(
             self.path_legger_db,
             'hydroobjects_kenmerken',
-            geometry_col
-        )
+            geometry_col)
 
-        #layer.setSubsetString('"categorieoppwaterlichaam"=1')
+        layer.setSubsetString('"direction"!=3')
         return layer
 
-    def unset_network_tool(self):
-        pass
-
-    def reset_network_tree(self):
-        pass
+    def category_change(self, nr):
+        """
+        set current selected parameter and trigger refresh of graphs
+        :param nr: nr of selected option of combobox
+        :return:
+        """
+        self.category_filter = int(self.category_combo.currentText())
+        root = LeggerTreeItem(None, None)
+        self.network.get_tree_data(root, self.category_filter)
+        self.legger_model.setNewTree(root.childs)
+        self.legger_model.set_column_sizes_on_view(self.legger_tree_widget)
+        if len(root.childs) > 0:
+            self.initial_loop_tree(root.childs[0])
 
     def show_manual_input_window(self):
         self._new_window = NewWindow(
@@ -230,20 +226,6 @@ class LeggerWidget(QDockWidget):
             self.session,
             callback_on_save=self.update_available_profiles)
         self._new_window.show()
-
-    def unset_tool(self):
-        pass
-
-    def toggle_startpoint_button(self):
-        if self.network_tool_active:
-            self.network_tool_active = False
-            self.iface.mapCanvas().unsetMapTool(self.network_tool)
-        else:
-            self.network_tool_active = True
-            self.iface.mapCanvas().setMapTool(self.network_tool)
-
-    def select_profile(self, item):
-        pass
 
     def initial_loop_tree(self, node):
         """
@@ -278,7 +260,8 @@ class LeggerWidget(QDockWidget):
                     over_width = "{0:.2f}*".format(figuur.t_overbreedte_l + figuur.t_overbreedte_r) \
                         if figuur.t_overbreedte_l is not None else over_width
                     score = "{0:.2f}".format(figuur.t_fit)
-                    over_depth = "{0:.2f}*".format(figuur.t_overdiepte) if figuur.t_overdiepte is not None else over_depth
+                    over_depth = "{0:.2f}*".format(
+                        figuur.t_overdiepte) if figuur.t_overdiepte is not None else over_depth
 
                 self.legger_model.setDataItemKey(node, 'over_depth', over_depth)
                 self.legger_model.setDataItemKey(node, 'over_width', over_width)
@@ -339,8 +322,8 @@ class LeggerWidget(QDockWidget):
             if node.hydrovak.get('selected'):
                 self.on_select_edit_hydrovak(self.legger_model.data(index, role=Qt.UserRole))
                 self.show_manual_input_button.setDisabled(False)
-            elif self.legger_model.selected is None or self.legger_model.data(index,
-                                                                              role=Qt.UserRole) == self.legger_model.selected:
+            elif (self.legger_model.selected is None or
+                    self.legger_model.data(index, role=Qt.UserRole) == self.legger_model.selected):
                 self.variant_model.removeRows(0, len(self.variant_model.rows))
                 self.show_manual_input_button.setDisabled(True)
 
@@ -387,12 +370,12 @@ class LeggerWidget(QDockWidget):
             area_item = self.area_model.data(index, role=Qt.UserRole)
 
             self.network.reset()
-            self.network.set_tree_startpoint(area_item.area.get('start_vertex_id'))
+            self.network.set_tree_start_arc(area_item.area.get('arc_nr'))
 
             self.legger_model.clear()
 
             root = LeggerTreeItem(None, None)
-            self.network.get_tree_data(root)
+            self.network.get_tree_data(root, self.category_filter)
             self.legger_model.setNewTree(root.childs)
             self.legger_model.set_column_sizes_on_view(self.legger_tree_widget)
             if len(root.childs) > 0:
@@ -470,7 +453,8 @@ class LeggerWidget(QDockWidget):
                             over_width = "{0:.2f}*".format(figuur.t_overbreedte_l + figuur.t_overbreedte_r) \
                                 if figuur.t_overbreedte_l is not None else over_width
                             score = "{0:.2f}".format(figuur.t_fit)
-                            over_depth = "{0:.2f}*".format(figuur.t_overdiepte) if figuur.t_overdiepte is not None else over_depth
+                            over_depth = "{0:.2f}*".format(
+                                figuur.t_overdiepte) if figuur.t_overdiepte is not None else over_depth
 
                         self.legger_model.setDataItemKey(node, 'over_depth', over_depth)
                         self.legger_model.setDataItemKey(node, 'over_width', over_width)
@@ -654,10 +638,7 @@ class LeggerWidget(QDockWidget):
         if self.vl_startpoint_hover_layer in QgsMapLayerRegistry.instance().mapLayers().values():
             QgsMapLayerRegistry.instance().removeMapLayer(self.vl_startpoint_hover_layer)
 
-        if self.network_tool_active:
-            self.toggle_startpoint_button()
-
-        self.select_startpoint_button.toggled.disconnect(self.toggle_startpoint_button)
+        self.category_combo.currentIndexChanged.disconnect(self.category_change)
         self.show_manual_input_button.clicked.disconnect(self.show_manual_input_window)
         self.variant_model.dataChanged.disconnect(self.data_changed_variant)
         self.legger_model.dataChanged.disconnect(self.data_changed_legger_tree)
@@ -685,16 +666,13 @@ class LeggerWidget(QDockWidget):
 
         # add button to add objects to graphs
         self.button_bar_hlayout = QHBoxLayout(self)
-        self.select_startpoint_button = QPushButton(self)
-        self.select_startpoint_button.setCheckable(True)
-        self.button_bar_hlayout.addWidget(self.select_startpoint_button)
-
-        # self.reset_network_tree_button = QPushButton(self)
-        # self.button_bar_hlayout.addWidget(self.reset_network_tree_button)
 
         self.show_manual_input_button = QPushButton(self)
         self.button_bar_hlayout.addWidget(self.show_manual_input_button)
         self.show_manual_input_button.setDisabled(True)
+
+        self.category_combo = QComboBox(self)
+        self.button_bar_hlayout.addWidget(self.category_combo)
 
         spacer_item = QSpacerItem(40,
                                   20,
@@ -798,7 +776,5 @@ class LeggerWidget(QDockWidget):
         pass
         dock_widget.setWindowTitle(_translate(
             "DockWidget", "Legger", None))
-        self.select_startpoint_button.setText(_translate(
-            "DockWidget", "Selecteer een startpunt", None))
         self.show_manual_input_button.setText(_translate(
             "DockWidget", "Voeg profiel toe", None))

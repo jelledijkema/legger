@@ -34,7 +34,7 @@ class hydrovak_class(object):
     a trivial custom data object
     """
 
-    def __init__(self, data_dict, feature, startpoint_feature, endpoint_feature):
+    def __init__(self, data_dict, feature, startpoint_feature=None, endpoint_feature=None):
         """
 
         data_dict (dict):

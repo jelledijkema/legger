@@ -7,67 +7,6 @@ from qgis.networkanalysis import QgsArcProperter
 from .formats import python_value
 
 
-class NetworkTool(QgsMapTool):
-    def __init__(self, canvas, line_layer, callback_on_select):
-        QgsMapTool.__init__(self, canvas)
-        self.canvas = canvas
-        self.line_layer = line_layer
-        self.callback_on_select = callback_on_select
-
-    def canvasPressEvent(self, event):
-        pass
-
-    def canvasMoveEvent(self, event):
-        pass
-
-    def canvasReleaseEvent(self, event):
-        # Get the click
-        x = event.pos().x()
-        y = event.pos().y()
-
-        # use 5 pixels for selecting
-        point_ll = self.canvas.getCoordinateTransform().toMapCoordinates(x - 5,
-                                                                         y - 5)
-        point_ru = self.canvas.getCoordinateTransform().toMapCoordinates(x + 5,
-                                                                         y + 5)
-        rect = QgsRectangle(min(point_ll.x(), point_ru.x()),
-                            min(point_ll.y(), point_ru.y()),
-                            max(point_ll.x(), point_ru.x()),
-                            max(point_ll.y(), point_ru.y()))
-
-        transform = QgsCoordinateTransform(
-            self.canvas.mapSettings().destinationCrs(), self.line_layer.crs())
-
-        rect = transform.transform(rect)
-        filter = QgsFeatureRequest().setFilterRect(rect)
-        selected = self.line_layer.getFeatures(filter)
-
-        clicked_point = self.canvas.getCoordinateTransform(
-        ).toMapCoordinates(x, y)
-        # transform to wgs84 (lon, lat) if not already:
-        transformed_point = transform.transform(clicked_point)
-
-        selected_points = [s for s in selected]
-        if len(selected_points) > 0:
-            self.callback_on_select(selected_points, transformed_point)
-
-    def activate(self):
-        self.canvas.setCursor(QCursor(Qt.CrossCursor))
-
-    def deactivate(self):
-        self.deactivated.emit()
-        self.canvas.setCursor(QCursor(Qt.ArrowCursor))
-
-    def isZoomTool(self):
-        return False
-
-    def isTransient(self):
-        return False
-
-    def isEditTool(self):
-        return False
-
-
 class LeggerDistancePropeter(QgsArcProperter):
     """custom properter for graph layer"""
 
