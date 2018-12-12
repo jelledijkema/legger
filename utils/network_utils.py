@@ -7,33 +7,6 @@ from qgis.networkanalysis import QgsArcProperter
 from .formats import python_value
 
 
-class LeggerDistancePropeter(QgsArcProperter):
-    """custom properter for graph layer"""
-
-    def __init__(self, field=None):
-        QgsArcProperter.__init__(self)
-        self.field = 'distance' if field is None else field
-
-    def property(self, distance, feature):
-
-        if self.field == 'distance':
-            value = distance  # feature['real_length']
-            if python_value(value) is None:
-                # provided distance is not correct, so do a correct calculation
-                # value = distance
-                d = QgsDistanceArea()
-                value, unit = d.convertMeasurement(
-                    feature.geometry().length(),
-                    QGis.Degrees, QGis.Meters, False)
-            return value
-        else:
-            return feature[self.field]
-
-
-    def requiredAttributes(self):
-        # Must be a list of the attribute indexes (int), not strings:
-        attributes = []
-        return attributes
 
 
 class LeggerMapVisualisation(object):

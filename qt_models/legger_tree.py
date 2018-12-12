@@ -4,6 +4,7 @@ from PyQt4.QtCore import Qt
 from PyQt4.QtGui import QBrush, QColor, QIcon
 from legger import settings
 from tree import BaseTreeItem, BaseTreeModel, CHECKBOX_FIELD
+from qgis.core import NULL
 
 HORIZONTAL_HEADERS = (
     {'field': 'hydro_id', 'column_width': 150},
@@ -14,12 +15,13 @@ HORIZONTAL_HEADERS = (
      'single_selection': True},
     {'field': 'hover', 'field_type': CHECKBOX_FIELD, 'show': False, 'column_width': 50},
     {'field': 'distance', 'header': 'afstand', 'show': False, 'column_width': 50},
+    {'field': 'category', 'header': 'cat', 'column_width': 30},
     {'field': 'flow', 'header': 'debiet', 'column_width': 50},
     {'field': 'target_level', 'show': False, 'column_width': 50},
     {'field': 'depth', 'header': 'diepte', 'column_width': 50},
     {'field': 'width', 'header': 'breedte', 'column_width': 50},
-    {'field': 'variant_min', 'show': False, 'column_width': 60},
-    {'field': 'variant_max', 'show': False, 'column_width': 60},
+    {'field': 'variant_min_depth', 'show': False, 'column_width': 60},
+    {'field': 'variant_max_depth', 'show': False, 'column_width': 60},
     {'field': 'selected_depth', 'header': 'prof d', 'column_width': 60},
     {'field': 'selected_depth_tmp', 'header': 'sel', 'column_width': 50},
     {'field': 'selected_width', 'header': 'prof b', 'column_width': 60},
@@ -27,6 +29,18 @@ HORIZONTAL_HEADERS = (
     {'field': 'over_width', 'header': 'over b', 'column_width': 60},
     {'field': 'score', 'column_width': 50},
 )
+
+
+def transform_none(value):
+    """ Transform Qt NULL value to python None
+
+    value (any): input value
+    return (any): value or None when value is NULL
+    """
+    if value == NULL:
+        return None
+    else:
+        return value
 
 
 class hydrovak_class(object):
@@ -40,17 +54,44 @@ class hydrovak_class(object):
         data_dict (dict):
         """
         self.feature = feature
-        self.startpoint_feature = startpoint_feature
-        self.endpoint_feature = endpoint_feature
+        self.startpoint_feature = startpoint_feature  # todo: weg?
+        self.endpoint_feature = endpoint_feature  # todo: weg?
 
         self.feature_keys = {}
         self.data_dict = data_dict
 
+        self.field_mapping = {
+            'category': 'categorieoppwaterlichaam',
+            'flow': 'debiet',
+            'target_level': 'streefpeil',
+            'hydro_id': 'id',
+            'length': 'lengte',  # line_feature.geometry().length(),
+            'depth': 'diepte',
+            'width': 'breedte',
+            'variant_min_depth': 'min_diepte',
+            'variant_max_depth': 'max_diepte',
+            'selected_depth': 'geselecteerd_diepte',
+            'selected_width': 'geselecteerd_breedte',
+        }
+
     def __repr__(self):
         return "hydrovak - %s" % (self.get('hydro_id'))
 
+    def __getattr__(self, key):
+        return self.get(key)
+
+    def __setattr__(self, key, value):
+        self.set(key, value)
+        return self
+
+    def update(self, update_dict):
+        """ same as dict.update. set mulitple values at once"""
+        for key, value in update_dict.items():
+            self.set(key.value)
+        return self
+
     def data(self, column_nr, qvalue=False):
-        # required
+        """get function used by QtModel"""
         if column_nr <= len(HORIZONTAL_HEADERS):
             if qvalue:
                 if HORIZONTAL_HEADERS[column_nr].get('field_type') == CHECKBOX_FIELD:
@@ -63,6 +104,7 @@ class hydrovak_class(object):
             return None
 
     def setData(self, column, value, role):
+        """ set function used by QtModel"""
         if HORIZONTAL_HEADERS[column].get('field_type') == CHECKBOX_FIELD:
             if type(value) == bool:
                 value = value
@@ -72,6 +114,7 @@ class hydrovak_class(object):
                 value = False
 
         if value == self.get(HORIZONTAL_HEADERS[column]['field']):
+            # data not changed
             return False
         else:
             return self.set(HORIZONTAL_HEADERS[column]['field'], value)
@@ -84,26 +127,33 @@ class hydrovak_class(object):
         elif key == 'endpoint':
             return self.endpoint_feature
         elif key == 'icon':
-            if not self.endpoint_feature:
+            if not self.data_dict.get('end_arc_type'):
                 return QIcon()
-            elif self.endpoint_feature.attributes()[2] == 'target':
+            elif self.data_dict.get('end_arc_type') == 'target':
                 return QIcon(':/plugins/legger/media/circle_blue.png')
-            elif self.endpoint_feature.attributes()[2] == 'end':
+            elif self.data_dict.get('end_arc_type') == 'end':
                 return QIcon(':/plugins/legger/media/circle_white.png')
             else:
                 return QIcon()
-        elif key in self.feature_keys:
-            return self.feature[key]
+        elif key in self.field_mapping and self.field_mapping[key] in self.feature_keys:
+            return transform_none(self.feature[self.field_mapping[key]])
         else:
             return self.data_dict.get(key, default_value)
 
     def set(self, key, value):
-
-        # if key in self.feature_keys:
-        #     return False  # not implemented yet
-        # else:
-        self.data_dict[key] = value
-        return True
+        if key == 'feature':
+            self.feature = value
+        elif key == 'startpoint':
+            self.startpoint_feature = value
+        elif key == 'endpoint':
+            self.endpoint_feature = value
+        elif key == 'icon':
+            pass
+        elif key in self.field_mapping and self.field_mapping[key] in self.feature_keys:
+            self.feature[key] = value
+        else:
+            self.data_dict[key] = value
+        return self
 
 
 class LeggerTreeItem(BaseTreeItem):
@@ -118,9 +168,16 @@ class LeggerTreeItem(BaseTreeItem):
 
     @property
     def hydrovak(self):
+        """access to hydrovak class object"""
         return self.data_item
 
     def up(self, end=None):
+        """get list of path of hydrovakken downstream hydrovak (following the mainstream) till end hydrovak or
+        till there are no downstream hydrovakken anymore
+        end (LeggerTreeItem): node where to stop
+
+        """
+
         up_list = []
         node = self
         while node != end and node is not None and node.hydrovak is not None:
@@ -135,6 +192,8 @@ class LeggerTreeItem(BaseTreeItem):
         return up_list
 
     def younger(self):
+        """go from hydrovak to upstream hydrovakken"""
+
         nodes = []
         if self.row() < self.parent().childCount() - 1:
             nodes.append(self.parent().child(self.row() + 1))
@@ -143,6 +202,8 @@ class LeggerTreeItem(BaseTreeItem):
         return nodes
 
     def older(self):
+        """go from hydrovak to downstream hydrovak"""
+
         if self.row() == 0:
             return self.parent()
         else:

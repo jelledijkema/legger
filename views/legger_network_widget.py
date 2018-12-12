@@ -9,15 +9,15 @@ from legger.qt_models.legger_tree import LeggerTreeModel, LeggerTreeItem
 from legger.qt_models.profile import ProfileModel
 from legger.sql_models.legger import GeselecteerdeProfielen, HydroObject, Varianten
 from legger.sql_models.legger_database import LeggerDatabase
-from legger.utils.network import Network
-from legger.utils.network_utils import LeggerDistancePropeter, LeggerMapVisualisation
+from legger.utils.network_utils import LeggerMapVisualisation
 from legger.views.input_widget import NewWindow
 from network_graph_widgets import LeggerPlotWidget, LeggerSideViewPlotWidget
 from qgis.core import QgsDataSourceURI, QgsFeature, QgsGeometry, QgsMapLayerRegistry, QgsPoint, QgsVectorLayer
-from qgis.networkanalysis import (QgsLineVectorLayerDirector)
+from qgis.networkanalysis import QgsLineVectorLayerDirector
 
 from .network_table_widgets import LeggerTreeWidget, PlotItemTable, StartpointTreeWidget
 from legger.utils.new_network import NewNetwork
+from legger.utils.legger_map_manager import LeggerMapManager
 
 log = logging.getLogger('legger.' + __name__)
 
@@ -25,8 +25,6 @@ precision = 0.000001
 
 try:
     _encoding = QApplication.UnicodeUTF8
-
-
     def _translate(context, text, disambig):
         return QApplication.translate(context, text, disambig, _encoding)
 except AttributeError:
@@ -35,6 +33,12 @@ except AttributeError:
 
 
 class LeggerWidget(QDockWidget):
+    """Legger Network widget with tree tables, cross section and sideview and
+    legger profile selection"""
+    # todo:
+    #   - category filter on map and tree instead of shortcut
+    #   - improve performance 'initial loop tree'
+
     closingWidget = pyqtSignal()
 
     def __init__(self, parent=None, iface=None, path_legger_db=None):
@@ -53,9 +57,7 @@ class LeggerWidget(QDockWidget):
 
         # create session (before setup_ui)
         db = LeggerDatabase(
-            {
-                'db_path': path_legger_db
-            },
+            {'db_path': path_legger_db},
             'spatialite'
         )
         db.create_and_check_fields()
@@ -72,14 +74,28 @@ class LeggerWidget(QDockWidget):
         self.category_filter = 4
 
         # create line layer and add to map
-        # todo: move to map manager?
-        self.line_layer = self.get_line_layer()
-        self.line_layer.loadNamedStyle(os.path.join(
-            os.path.dirname(__file__), os.pardir,
-            'layer_styles', 'legger', 'line.qml'))
-        QgsMapLayerRegistry.instance().addMapLayer(self.line_layer)
+        self.layer_manager = LeggerMapManager(self.path_legger_db)
 
-        self.init_network_tool()
+        self.line_layer = self.layer_manager.get_line_layer(add_to_map=True)
+        self.vl_tree_layer = self.layer_manager.get_virtual_tree_layer(add_to_map=True)
+        self.vl_endpoint_layer = self.layer_manager.get_endpoint_layer(add_to_map=True)
+        self.vl_track_layer = self.layer_manager.get_track_layer(add_to_map=True)
+        self.vl_hover_layer = self.layer_manager.get_hover_layer(add_to_map=True)
+        self.vl_selected_layer = self.layer_manager.get_selected_layer(add_to_map=True)
+        self.vl_startpoint_hover_layer = self.layer_manager.get_hover_startpoint_layer(add_to_map=True)
+
+        self.map_visualisation = LeggerMapVisualisation(
+            self.iface, self.line_layer.crs())
+
+        # init network
+        line_direct = self.layer_manager.get_line_layer(geometry_col='line')
+        field_nr = line_direct.fieldNameIndex('direction')
+        director = QgsLineVectorLayerDirector(
+            line_direct, field_nr, '2', '1', '3', 3)
+
+        self.network = NewNetwork(
+            line_direct, self.line_layer, director, None, self.vl_tree_layer, self.vl_endpoint_layer
+        )
 
         # add listeners
         self.category_combo.currentIndexChanged.connect(self.category_change)
@@ -89,6 +105,7 @@ class LeggerWidget(QDockWidget):
         self.show_manual_input_button.clicked.connect(
             self.show_manual_input_window)
 
+        # create and init startpoint (AreaTree) model
         def loop_over(parent, data):
             for child in data['children']:
                 area = area_class(child)
@@ -103,115 +120,17 @@ class LeggerWidget(QDockWidget):
         loop_over(root, sp_tree)
         self.area_model.setNewTree(root.childs)
 
+        # initial, select first area
         first_area = root.child(0)
         self.area_model.setDataItemKey(first_area, 'selected', True)
-
-    def init_network_tool(self, director_type='flow_direction'):
-        # init network graph
-
-        # line_direct = self.get_line_layer(geometry_col='line')
-        line_direct = self.get_line_layer(geometry_col='line')
-        full_line_layer = self.get_line_layer(geometry_col='geometry')
-
-        if director_type == 'connected':
-            director = QgsLineVectorLayerDirector(
-                line_direct, -1, '', '', '', 3)
-        elif director_type == 'flow_direction':
-            field_nr = line_direct.fieldNameIndex('direction')
-            director = QgsLineVectorLayerDirector(
-                line_direct, field_nr, '2', '1', '3', 3)
-        else:
-            raise NotImplementedError("director '%s' not implemented" % director_type)
-
-        self.network = NewNetwork(
-            line_direct, full_line_layer, director
-        )
-
-        self.map_visualisation = LeggerMapVisualisation(
-            self.iface, line_direct.crs())
-
-        # todo: move to map manage?
-        # add tree layer to map (for fun and testing purposes)
-        self.vl_tree_layer = self.network.get_virtual_tree_layer()
-
-        self.vl_tree_layer.loadNamedStyle(os.path.join(
-            os.path.dirname(os.path.realpath(__file__)), os.pardir,
-            'layer_styles', 'legger', 'tree_classified.qml'))
-
-        QgsMapLayerRegistry.instance().addMapLayer(self.vl_tree_layer)
-
-        # add tree layer to map (for fun and testing purposes)
-        self.vl_endpoint_layer = self.network.get_endpoint_layer()
-
-        self.vl_endpoint_layer.loadNamedStyle(os.path.join(
-            os.path.dirname(os.path.realpath(__file__)), os.pardir,
-            'layer_styles', 'legger', 'end_points.qml'))
-
-        QgsMapLayerRegistry.instance().addMapLayer(self.vl_endpoint_layer)
-
-        # add selected track layer
-        self.vl_track_layer = self.network.get_track_layer()
-
-        self.vl_track_layer.loadNamedStyle(os.path.join(
-            os.path.dirname(os.path.realpath(__file__)), os.pardir,
-            'layer_styles', 'legger', 'selected_traject.qml'))
-
-        QgsMapLayerRegistry.instance().addMapLayer(self.vl_track_layer)
-
-        # add selected track layer
-        self.vl_hover_layer = self.network.get_hover_layer()
-
-        self.vl_hover_layer.loadNamedStyle(os.path.join(
-            os.path.dirname(os.path.realpath(__file__)), os.pardir,
-            'layer_styles', 'legger', 'hover_hydro.qml'))
-
-        QgsMapLayerRegistry.instance().addMapLayer(self.vl_hover_layer)
-
-        # add selected track layer
-        self.vl_selected_layer = self.network.get_selected_layer()
-
-        self.vl_selected_layer.loadNamedStyle(os.path.join(
-            os.path.dirname(os.path.realpath(__file__)), os.pardir,
-            'layer_styles', 'legger', 'selected_hydro.qml'))
-
-        QgsMapLayerRegistry.instance().addMapLayer(self.vl_selected_layer)
-
-        # add selected startpoint layer
-        self.vl_startpoint_hover_layer = self.network.get_hover_startpoint_layer()
-
-        self.vl_startpoint_hover_layer.loadNamedStyle(os.path.join(
-            os.path.dirname(os.path.realpath(__file__)), os.pardir,
-            'layer_styles', 'legger', 'hover_startpoint.qml'))
-
-        QgsMapLayerRegistry.instance().addMapLayer(self.vl_startpoint_hover_layer)
-
-    def get_line_layer(self, geometry_col='geometry'):
-        # todo: move to map manage?
-
-        def get_layer(spatialite_path, table_name, geom_column=''):
-            uri2 = QgsDataSourceURI()
-            uri2.setDatabase(spatialite_path)
-            uri2.setDataSource('', table_name, geom_column)
-
-            return QgsVectorLayer(
-                uri2.uri(),
-                table_name,
-                'spatialite')
-
-        layer = get_layer(
-            self.path_legger_db,
-            'hydroobjects_kenmerken',
-            geometry_col)
-
-        layer.setSubsetString('"direction"!=3')
-        return layer
 
     def category_change(self, nr):
         """
         set current selected parameter and trigger refresh of graphs
-        :param nr: nr of selected option of combobox
-        :return:
+        nr: nr of selected option of combobox
+        return: -
         """
+        # todo: change this current shortcut way of category filtering
         self.category_filter = int(self.category_combo.currentText())
         root = LeggerTreeItem(None, None)
         self.network.get_tree_data(root, self.category_filter)
@@ -234,6 +153,9 @@ class LeggerWidget(QDockWidget):
         :param node:
         :return:
         """
+        # todo: function is very slow. Can be improved?
+        # todo: checked till here
+
         depth = node.hydrovak.get('selected_depth')
 
         if depth is not None:
@@ -369,7 +291,6 @@ class LeggerWidget(QDockWidget):
 
             area_item = self.area_model.data(index, role=Qt.UserRole)
 
-            self.network.reset()
             self.network.set_tree_start_arc(area_item.area.get('arc_nr'))
 
             self.legger_model.clear()
@@ -477,10 +398,10 @@ class LeggerWidget(QDockWidget):
                         # todo: score
 
                     for young in node.younger():
-                        if (young.hydrovak.get('variant_min') is None or
-                                young.hydrovak.get('variant_max') is None or
-                                (depth >= young.hydrovak.get('variant_min') - precision and
-                                 depth <= young.hydrovak.get('variant_max') + precision)):
+                        if (young.hydrovak.get('variant_min_depth') is None or
+                                young.hydrovak.get('variant_max_depth') is None or
+                                (depth >= young.hydrovak.get('variant_min_depth') - precision and
+                                 depth <= young.hydrovak.get('variant_max_depth') + precision)):
                             self.legger_model.setDataItemKey(young, 'selected_depth', depth)
 
                             loop(young)
@@ -503,10 +424,10 @@ class LeggerWidget(QDockWidget):
                     :return:
                     """
                     for young in node.younger():
-                        if (young.hydrovak.get('variant_min') is None or
-                                young.hydrovak.get('variant_max') is None or
-                                (depth >= young.hydrovak.get('variant_min') - precision and
-                                 depth <= young.hydrovak.get('variant_max') + precision)):
+                        if (young.hydrovak.get('variant_min_depth') is None or
+                                young.hydrovak.get('variant_max_depth') is None or
+                                (depth >= young.hydrovak.get('variant_min_depth') - precision and
+                                 depth <= young.hydrovak.get('variant_max_depth') + precision)):
                             # index = self.legger_model.createIndex(young.row(), 0, young)
                             self.legger_model.setDataItemKey(young, 'selected_depth_tmp', depth)
                             ids.append(str(young.hydrovak.get('hydro_id')))
@@ -521,44 +442,6 @@ class LeggerWidget(QDockWidget):
             else:
                 self.network._virtual_tree_layer.setSubsetString('')
                 self.legger_model.set_column_value('selected_depth_tmp', None)
-
-    def on_start_point_select(self, selected_features, clicked_coordinate):
-        """Select and add the closest point from the list of selected features.
-
-        Args:
-            selected_features: list of features selected by click
-            clicked_coordinate: (lon, lat) (transformed) of the click
-        """
-
-        def distance(coordinate):
-            """Calculate the distance w.r.t. the clicked location."""
-            import math
-            xc, yc = clicked_coordinate
-            x, y = coordinate[0]
-            dist = math.sqrt((x - xc) ** 2 + (y - yc) ** 2)
-            return dist
-
-        selected_coordinates = reduce(
-            lambda accum, f: accum + [(f.geometry().vertexAt(0), f),
-                                      (f.geometry().vertexAt(len(f.geometry().asPolyline()) - 1), f)],
-            selected_features, [])
-
-        if len(selected_coordinates) == 0:
-            return
-
-        closest_point, feature = min(selected_coordinates, key=distance)
-        next_point = QgsPoint(closest_point)
-
-        if len(selected_features) > 0:
-            self.network.reset()
-            self.network.add_point_to_path(next_point)
-
-        self.legger_model.clear()
-
-        root = LeggerTreeItem(None, None)
-        self.network.get_tree_data(root)
-        self.legger_model.setNewTree(root.childs)
-        self.legger_model.set_column_sizes_on_view(self.legger_tree_widget)
 
     def on_select_edit_hydrovak(self, item):
         """
@@ -605,11 +488,11 @@ class LeggerWidget(QDockWidget):
         self.on_select_edit_hydrovak(item)
         diepte = float(variant.diepte)
 
-        if item.hydrovak.get('variant_max') is None or diepte > item.hydrovak.get('variant_max'):
-            self.legger_model.setDataItemKey(item, 'variant_max', diepte)
+        if item.hydrovak.get('variant_max_depth') is None or diepte > item.hydrovak.get('variant_max_depth'):
+            self.legger_model.setDataItemKey(item, 'variant_max_depth', diepte)
 
-        if item.hydrovak.get('variant_min') is None or diepte < item.hydrovak.get('variant_min'):
-            self.legger_model.setDataItemKey(item, 'variant_min', diepte)
+        if item.hydrovak.get('variant_min_depth') is None or diepte < item.hydrovak.get('variant_min_depth'):
+            self.legger_model.setDataItemKey(item, 'variant_min_depth', diepte)
 
     def on_hover_profile(self):
         pass

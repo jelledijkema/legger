@@ -13,7 +13,7 @@
     <edittype widgetv2type="TextEdit" name="outvertex_id">
       <widgetv2config IsMultiline="0" fieldEditable="1" UseHtml="0" labelOnTop="0"/>
     </edittype>
-    <edittype widgetv2type="TextEdit" name="arc_id">
+    <edittype widgetv2type="TextEdit" name="arc_nr">
       <widgetv2config IsMultiline="0" fieldEditable="1" UseHtml="0" labelOnTop="0"/>
     </edittype>
   </edittypes>

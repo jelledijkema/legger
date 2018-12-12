@@ -42,11 +42,11 @@ class TestTheoreticalNetwork(unittest.TestCase):
         network = Network(line_layer, line_layer, director, distance_properter, id_field='id')
         vertex_nrs = network.get_start_vertex_nrs()
         point = network.graph.vertex(vertex_nrs[0]).point()
-        arc_ids = [network.graph.arc(arc_nr).property(2)
+        arc_nrs = [network.graph.arc(arc_nr).property(2)
                    for arc_nr in network.get_arc_nrs_of_vertex_nrs(vertex_nrs)]
 
         self.assertTupleEqual((0, 0), (point.x(), point.y()))
-        self.assertListEqual([1], arc_ids)
+        self.assertListEqual([1], arc_nrs)
 
     def test_startnrs_two_networks(self):
         """ test get start nrs with one simple network with 2 end points
@@ -63,12 +63,12 @@ class TestTheoreticalNetwork(unittest.TestCase):
 
         network = Network(line_layer, line_layer, director, distance_properter, id_field='id')
         vertex_nrs = network.get_start_vertex_nrs()
-        arc_ids = [network.graph.arc(arc_nr).property(2)
+        arc_nrs = [network.graph.arc(arc_nr).property(2)
                    for arc_nr in network.get_arc_nrs_of_vertex_nrs(vertex_nrs)]
-        arc_ids.sort()
+        arc_nrs.sort()
 
         self.assertEqual(2, len(vertex_nrs))
-        self.assertListEqual([1, 5], arc_ids)
+        self.assertListEqual([1, 5], arc_nrs)
 
     def test_startnrs_one_shared_startpoint(self):
         """ test get start nrs with one simple network with 2 end points
@@ -86,13 +86,13 @@ class TestTheoreticalNetwork(unittest.TestCase):
         network = Network(line_layer, line_layer, director, distance_properter, id_field='id')
         vertex_nrs = network.get_start_vertex_nrs()
         point = network.graph.vertex(vertex_nrs[0]).point()
-        arc_ids = [network.graph.arc(arc_nr).property(2)
+        arc_nrs = [network.graph.arc(arc_nr).property(2)
                    for arc_nr in network.get_arc_nrs_of_vertex_nrs(vertex_nrs)]
-        arc_ids.sort()
+        arc_nrs.sort()
 
         self.assertEqual(1, len(vertex_nrs))
         self.assertTupleEqual((0, 1), (point.x(), point.y()))
-        self.assertListEqual([1, 2, 3], arc_ids)
+        self.assertListEqual([1, 2, 3], arc_nrs)
 
     def test_startnrs_splitted_stream(self):
         """ test get start nrs with one simple network with 2 end points
@@ -110,12 +110,12 @@ class TestTheoreticalNetwork(unittest.TestCase):
         network = Network(line_layer, line_layer, director, distance_properter, id_field='id')
         vertex_nrs = network.get_start_vertex_nrs()
         point = network.graph.vertex(vertex_nrs[0]).point()
-        arc_ids = [network.graph.arc(arc_nr).property(2)
+        arc_nrs = [network.graph.arc(arc_nr).property(2)
                    for arc_nr in network.get_arc_nrs_of_vertex_nrs(vertex_nrs)]
-        arc_ids.sort()
+        arc_nrs.sort()
 
         self.assertEqual(2, len(vertex_nrs))
-        self.assertListEqual([1, 3], arc_ids)
+        self.assertListEqual([1, 3], arc_nrs)
 
     def test_startnrs_shuffled_input(self):
         """ test with network of test 'test_startnrs_one_shared_startpoint', with different
@@ -130,13 +130,13 @@ class TestTheoreticalNetwork(unittest.TestCase):
             network = Network(line_layer, line_layer, director, distance_properter, id_field='id')
             vertex_nrs = network.get_start_vertex_nrs()
             point = network.graph.vertex(vertex_nrs[0]).point()
-            arc_ids = [network.graph.arc(arc_nr).property(2)
+            arc_nrs = [network.graph.arc(arc_nr).property(2)
                        for arc_nr in network.get_arc_nrs_of_vertex_nrs(vertex_nrs)]
-            arc_ids.sort()
+            arc_nrs.sort()
 
             self.assertEqual(1, len(vertex_nrs))
             self.assertTupleEqual((0, 1), (point.x(), point.y()))
-            self.assertListEqual([1, 2, 3], arc_ids)
+            self.assertListEqual([1, 2, 3], arc_nrs)
 
     def test_build_tree_simple_network(self):
         """ test init network en get start nrs  with one simple network
@@ -154,7 +154,7 @@ class TestTheoreticalNetwork(unittest.TestCase):
         self.assertEqual(1, len(start_arcs))
         self.assertEqual(5.5, start_arcs[0]['cum_weight'])
 
-        elem_two = [arc for arc in arc_dict.values() if arc['branch_id'] == 2][0]
+        elem_two = [arc for arc in arc_dict.values() if arc['feat_id'] == 2][0]
         self.assertEqual(1, elem_two['min_category_in_path'])
 
     def test_build_tree_splitted_stream(self):
@@ -175,14 +175,14 @@ class TestTheoreticalNetwork(unittest.TestCase):
         arc_dict, start_arcs = network.build_tree()
 
         self.assertEqual(2, len(start_arcs))
-        self.assertEqual(1, arc_dict[start_arcs[0]['arc_nr']]['branch_id'])
+        self.assertEqual(1, arc_dict[start_arcs[0]['arc_nr']]['feat_id'])
         self.assertEqual(4.5, start_arcs[0]['cum_weight'])
         self.assertEqual(1, start_arcs[0]['min_category_in_path'])
-        self.assertEqual(3, arc_dict[start_arcs[1]['arc_nr']]['branch_id'])
+        self.assertEqual(3, arc_dict[start_arcs[1]['arc_nr']]['feat_id'])
         self.assertEqual(0.5, start_arcs[1]['cum_weight'])
         self.assertEqual(4, start_arcs[1]['min_category_in_path'])
 
-        elem_tree = [arc for arc in arc_dict.values() if arc['branch_id'] == 3][0]
+        elem_tree = [arc for arc in arc_dict.values() if arc['feat_id'] == 3][0]
         self.assertListEqual([], elem_tree['upstream_arcs'])
 
     def test_build_tree_small_bidirectional(self):
@@ -205,7 +205,7 @@ class TestTheoreticalNetwork(unittest.TestCase):
         self.assertEqual(1, len(start_arcs))
         self.assertEqual(5.5, start_arcs[0]['cum_weight'])
 
-        elem_two = [arc for arc in arc_dict.values() if arc['branch_id'] == 2][0]
+        elem_two = [arc for arc in arc_dict.values() if arc['feat_id'] == 2][0]
         self.assertEqual(1, elem_two['min_category_in_path'])
 
 
