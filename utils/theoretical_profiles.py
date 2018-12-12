@@ -17,8 +17,8 @@ Boundary Conditions
 Km = 25  # Manning coefficient in m**(1/3/s)
 Kb = 23  # Bos and Bijkerk coefficient in 1/s
 
-ini_waterdepth = 0.30  # Initial water depth (m).
-min_ditch_bottom_width = 0.5  # (m) Ditch bottom width can not be smaller dan 0,5m.
+ini_waterdepth = 0.30  # Initial water depth (m). Water depth is never less than 0.30m
+min_ditch_bottom_width = 0.50  # (m) Ditch bottom width can not be smaller dan 0,50m.
 
 
 """
