@@ -4,6 +4,9 @@ from __future__ import division
 import logging
 import os
 import urllib2
+import geopandas as gpd
+import pandas as pd
+import fiona
 
 from PyQt4.QtCore import pyqtSignal, QSettings, QModelIndex, QThread
 from PyQt4.QtGui import QWidget, QFileDialog, QComboBox
@@ -17,6 +20,8 @@ from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import relationship
 import ogr
 
+from legger.sql_models.legger import HydroObject, Waterdeel, DuikerSifonHevel
+from legger.sql_models.legger import Kenmerken, Profielen, Profielpunten
 from legger.sql_models.legger_database import LeggerDatabase
 
 try:
@@ -128,6 +133,10 @@ class PolderSelectionWidget(QWidget):#, FORM_CLASS):
         """
         Select a "dump" or "export" that is send to the N&S datachecker to create a spatialite database based on this.
         The output of this step is a legger_{polder}_{datetime}.sqlite file with all the necessary tables and data.
+        Step 1: make empty legger database
+        Step 2: Read DAMO and HDB (geopandas)
+        Step 3: make dataframes from data according to right format
+        Step 4: write dataframes to legger database (sqlalchemy)
         """
 
         try:
@@ -143,201 +152,221 @@ class PolderSelectionWidget(QWidget):#, FORM_CLASS):
         if os.path.exists(database_path):
             os.remove(database_path)
 
+        ## Make new database
         db = LeggerDatabase(
             {
-                'db_file': database_path
+                'db_file': database_path,
+                'db_path': database_path # N&S inconsistent gebruik van  :-O
             },
             'spatialite'
         )
 
         db.create_db()
 
-    #def fill_database(self):
+        ## Saves the database path so it can be used in the calculation screen
+        settings = QSettings('last_used_legger_spatialite_path', 'filepath')
+        self.root_tool.polder_datasource=database_path
+        self.var_text_leggerdatabase.setText(self.root_tool.polder_datasource)
 
-        # drv = ogr.GetDriverByName('SQLite')
-        # db = drv.CreateDataSource(database_path, ["SPATIALITE=YES"])
+        if self.root_tool.polder_datasource == "":
+            return False
+
+        settings.setValue('last_used_legger_spatialite_path',
+                          os.path.dirname(self.root_tool.polder_datasource)) # verwijzing naar de class.variable in het hoofdscherm
+
+
+        ## Step 2: Read databases
+        ## Read DAMO.gdb
+        filepath_DAMO = self.var_text_DAMO.text()
+        # list_of_layers = fiona.listlayers(filepath_DAMO)
+        # 'DuikerSifonHevel', 'Profielen', 'Waterdeel', 'Profielpunten', 'HydroObject', 'Kenmerken'
+
+        DuikerSifonHevel = gdp.read_file(filepath_DAMO, driver='OpenFileGDB', layer='DuikerSifonHevel')
+        Profielen = gdp.read_file(filepath_DAMO, driver='OpenFileGDB', layer='Profielen')
+        Waterdeel = gdp.read_file(filepath_DAMO, driver='OpenFileGDB', layer='Waterdeel')
+        Profielpunten = gdp.read_file(filepath_DAMO, driver='OpenFileGDB', layer='Profielpunten')
+        HydroObject = gdp.read_file(filepath_DAMO, driver='OpenFileGDB', layer='HydroObject')
+        Kenmerken = gdp.read_file(filepath_DAMO, driver='OpenFileGDB', layer='Kenmerken')
+
+        ## inlezen HDB.gdp
+        filepath_HDB = self.var_text_HDB.text()
+        # list_of_layers = fiona.listlayers(filepath_HDB)
+        # 'vaste_dammen', 'polderclusters', 'Sturing_3Di', 'gemalen_op_peilgrens', 'duikers_op_peilgrens',
+        # 'stuwen_op_peilgrens', 'hydro_deelgebieden'
+
+        # vaste_dammen = gdp.read_file(filepath_HDB,driver='OpenFileGDB',layer='vaste_dammen')
+        # doet het niet
+        polderclusters = gdp.read_file(filepath_HDB, driver='OpenFileGDB', layer='polderclusters')
+        Sturing_3di = gdp.read_file(filepath_HDB, driver='OpenFileGDB', layer='Sturing_3di')
+        gemalen_op_peilgrens = gdp.read_file(filepath_HDB, driver='OpenFileGDB', layer='gemalen_op_peilgrens')
+        duikers_op_peilgrens = gdp.read_file(filepath_HDB, driver='OpenFileGDB', layer='duikers_op_peilgrens')
+        stuwen_op_peilgrens = gdp.read_file(filepath_HDB, driver='OpenFileGDB', layer='stuwen_op_peilgrens')
+        hydro_deelgebieden = gdp.read_file(filepath_HDB, driver='OpenFileGDB', layer='hydro_deelgebieden')
+
+        ## Step 3: dataframes from databases
+        ## met geo
         #
-        # engine = create_engine(str('sqlite:///')+str(database_path))
+        HydroObject_table = pd.DataFrame(HydroObject[['ID', 'CODE', 'CATEGORIEOPPWATERLICHAAM', 'STREEFPEIL',
+                                                      'DEBIET', 'CHANNEL_ID', 'FLOWLINE_ID', 'geometry']])
+        HydroObject_table = HydroObject_table.reset_index()
+        HydroObject_table.columns = ['objectid', 'id', 'code', 'categorieoppwaterlichaam', 'streefpeil',
+                                     'debiet', 'channel_id', 'flowline_id', 'geometry']
         #
-        # Base = declarative_base()
-        # class Waterdeel(Base):
-        #     __tablename__ = 'waterdeel'
-        #     extend_existing = True
+        Waterdeel_table = pd.DataFrame(Waterdeel[['ID', 'SHAPE_Length', 'SHAPE_Area', 'geometry']])
+        Waterdeel_table = Waterdeel_table.reset_index()
+        Waterdeel_table.columns = ['objectid', 'id', 'shape_length', 'shape_area', 'geometry']
+
         #
-        #     objectid = Column(Integer)
-        #     id = Column(Integer, primary_key=True)
-        #     shape_length = Column(Float)
-        #     shape_area = Column(Float)
-        #     #geometry = Column("GEOMETRY", Geometry(geometry_type='POLYGON', srid=28992))
+        DuikerSifonHevel_table = pd.DataFrame(DuikerSifonHevel[['ID', 'CODE', 'CATEGORIE', 'LENGTE', 'HOOGTEOPENING',
+                                                                'BREEDTEOPENING', 'HOOGTEBINNENONDERKANTBENE',
+                                                                'HOOGTEBINNENONDERKANTBOV', 'VORMKOKER', 'DEBIET',
+                                                                'geometry']])
+        DuikerSifonHevel_table = DuikerSifonHevel_table.reset_index()
+        DuikerSifonHevel_table.columns = ['objectid', 'id', 'code', 'categorie', 'lengte', 'hoogteopening',
+                                          'breedteopening',
+                                          'hoogtebinnenonderkantbene', 'hoogtebinnenonderkantbov', 'vormkoker',
+                                          'debiet',
+                                          'geometry']
+        DuikerSifonHevel_table['channel_id'] = ""
+        DuikerSifonHevel_table['flowline_id'] = ""
+
         #
-        #     def __str__(self):
-        #         return u'Waterdeel {0}'.format(
-        #             self.id)
-        #
-        # class HydroObject(Base):
-        #     __tablename__ = 'hydroobject'
-        #     extend_existing = True
-        #
-        #     objectid = Column(Integer)
-        #     id = Column(Integer, primary_key=True)
-        #     #geometry = Column("GEOMETRY", Geometry(geometry_type='LINESTRING', srid=28992))
-        #     code = Column(String(50), index=True)
-        #     categorieoppwaterlichaam = Column(Integer)
-        #     streefpeil = Column(Float)
-        #     debiet = Column(Float)
-        #     channnel_id = Column(Integer)  # link to 3di id
-        #     flowline_id = Column(Integer)  # link to 3di id
-        #     # shape_length = Column(Float)
-        #
-        #     def __str__(self):
-        #         return u'Hydro object {0}'.format(
-        #             self.code)
-        #
-        # class Profielen(Base):
-        #     __tablename__ = 'profielen'
-        #
-        #     objectid = Column(Integer)
-        #     id = Column(Integer, primary_key=True)  # varchar??
-        #     proident = Column(String(24))
-        #     bron_profiel = Column(String(50))
-        #     pro_id = Column(Integer, index=True)
-        #     hydro_id = Column(Integer,
-        #                       ForeignKey(HydroObject.__tablename__ + ".id"))
-        #     # shape_lengte = Column(Float)
-        #
-        #     profielpunten = relationship(
-        #         "Profielpunten",
-        #         back_populates="profiel")
-        #
-        #     def __str__(self):
-        #         return u'profiel {0} - {1}'.format(
-        #             self.id, self.proident)
-        #
-        # class Profielpunten(Base):
-        #     __tablename__ = 'profielpunten'
-        #
-        #     objectid = Column(Integer, primary_key=True)
-        #     pbp_id = Column(Integer)
-        #     prw_id = Column(Integer)
-        #     pbpident = Column(String(24))
-        #     osmomsch = Column(String(60))
-        #     iws_volgnr = Column(Integer)
-        #     iws_hoogte = Column(Float)
-        #     afstand = Column(Float)
-        #     pro_pro_id = Column(Integer,
-        #                         ForeignKey(Profielen.__tablename__ + '.pro_id'))
-        #     #geometry = Column("GEOMETRY", Geometry(geometry_type='POINT', srid=28992))
-        #
-        #     def __str__(self):
-        #         return u'profielpunt {0}'.format(
-        #             self.pbpident)
-        #
-        # class Kenmerken(Base):
-        #     __tablename__ = 'kenmerken'
-        #
-        #     objectid = Column(Integer)
-        #     id = Column(Integer, primary_key=True)
-        #     diepte = Column(Float)
-        #     bron_diepte = Column(String(50))
-        #     bodemhoogte = Column(Float)
-        #     breedte = Column(Float)
-        #     bron_breedte = Column(String(50))
-        #     lengte = Column(Float)
-        #     taludvoorkeur = Column(Float)
-        #     steilste_talud = Column(Float)
-        #     grondsoort = Column(String(50))
-        #     bron_grondsoort = Column(String(50))
-        #     hydro_id = Column(Integer,
-        #                       ForeignKey(HydroObject.__tablename__ + ".objectid"))
-        #
-        #     def __str__(self):
-        #         return u'kenmerken {0}'.format(
-        #             self.id)
-        #
-        # class Varianten(Base):
-        #     __tablename__ = 'varianten'
-        #
-        #     id = Column(String(), primary_key=True)
-        #     diepte = Column(Float)
-        #     waterbreedte = Column(Float)
-        #     bodembreedte = Column(Float)
-        #     talud = Column(Float)
-        #     # maatgevend_debiet = Column(Float)
-        #     verhang_bos_bijkerk = Column(Float)
-        #     opmerkingen = Column(String())
-        #     hydro_id = Column(Integer,
-        #                       ForeignKey(HydroObject.__tablename__ + ".id"))
-        #
-        #     # geselecteerd = relationship("GeselecteerdeProfielen",
-        #     #                        back_populates="variant")
-        #
-        #     def __str__(self):
-        #         return u'profiel_variant {0}'.format(
-        #             self.id)
-        #
-        # class GeselecteerdeProfielen(Base):
-        #     __tablename__ = 'geselecteerd'
-        #
-        #     hydro_id = Column(Integer,
-        #                       ForeignKey(HydroObject.__tablename__ + ".id"),
-        #                       primary_key=True)
-        #     variant_id = Column(String(),
-        #                         ForeignKey(Varianten.__tablename__ + ".id"))
-        #     selected_on = Column(DateTime, default=datetime.datetime.utcnow)
-        #
-        #     variant = relationship(Varianten)
-        #     # back_populates="geselecteerd")
-        #
-        # class ProfielFiguren(Base):
-        #     __tablename__ = 'profielfiguren'
-        #
-        #     # object_id = Column(Integer, primary_key=True)
-        #     hydro_id = Column('id_hydro', Integer,
-        #                       ForeignKey(HydroObject.__tablename__ + ".id"))
-        #     profid = Column(String(16), primary_key=True)
-        #     type_prof = Column(String(1))
-        #     coord = Column(String())
-        #     peil = Column(Float)
-        #     t_talud = Column(Float)
-        #     t_waterdiepte = Column(Float)
-        #     t_bodembreedte = Column(Float)
-        #     t_fit = Column(Float)
-        #     t_afst = Column(Float)
-        #     g_rest = Column(Float)
-        #     t_overdiepte = Column(Float)
-        #     t_overbreedte_l = Column(Float)
-        #     t_overbreedte_r = Column(Float)
-        #
-        #     def __str__(self):
-        #         return u'profiel_figuren {0} - {1}'.format(
-        #             self.hydro_id, self.profid)
-        #
-        # class DuikerSifonHevel(Base):
-        #     __tablename__ = 'duikersifonhevel'
-        #     extend_existing = True
-        #
-        #     objectid = Column(Integer)
-        #     id = Column(Integer, primary_key=True)
-        #     #geometry = Column("GEOMETRY", Geometry(geometry_type='LINESTRING', srid=28992))
-        #     code = Column(String(50), index=True)
-        #     categorie = Column(Integer)
-        #     lengte = Column(Float)
-        #     hoogteopening = Column(Float)
-        #     breedteopening = Column(Float)
-        #     hoogtebinnenonderkantbene = Column(Float)
-        #     hoogtebinnenonderkantbov = Column(Float)
-        #     vormkoker = Column(Float)
-        #     # shape_lengte = Column(Float)
-        #
-        #     debiet = Column(Float)  # extra?
-        #     channnel_id = Column(Integer)  # extra?
-        #     flowline_id = Column(Integer)  # extra?
-        #
-        #     def __str__(self):
-        #         return u'DuikerSifonHevel {0}'.format(
-        #             self.code)
-        #
-        # Base.metadata.create_all(engine)
+        Profielpunten_table = Profielpunten.reset_index()
+        Profielpunten_table.columns = ['objectid', 'pbp_id', 'prw_id', 'pbpident', 'osmomsch', 'iws_volgnr',
+                                       'iws_hoogte', 'pro_pro_id', 'geometry']
+        ## zonder geo
+        Kenmerken_table = pd.DataFrame(Kenmerken[['ID', 'DIEPTE', 'BRON_DIEPTE', 'BODEMHOOGTE', 'BREEDTE',
+                                                  'BRON_BREEDTE', 'LENGTE', 'TALUDVOORKEUR', 'STEILSTE_TALUD',
+                                                  'GRONDSOORT', 'BRON_GRONDSOORT', 'HYDRO_ID']])
+        Kenmerken_table = Kenmerken_table.reset_index()
+        Kenmerken_table.columns = ['objectid', 'id', 'diepte', 'bron_diepte', 'bodemhoogte', 'breedte',
+                                   'bron_breedte', 'lengte', 'taludvoorkeur', 'steilste_talud',
+                                   'grondsoort', 'bron_grondsoort', 'hydro_id']
+
+        Profielen_table = pd.DataFrame(Profielen[['ID', 'PROIDENT', 'BRON_PROFIEL', 'PRO_ID', 'HYDRO_ID']])
+        Profielen_table = Profielen_table.reset_index()
+        Profielen_table.columns = ['objectid', 'id', 'proident', 'bron_profiel', 'pro_id', 'hydro_id']
+
+        ## Stap 4: write dataframes to leggerdatabase
+        db.create_and_check_fields()
+
+        session = db.get_session()
+        hydroobject = []
+        for i, rows in HydroObject_table.iterrows():
+            hydroobject.append(HydroObject(
+                objectid=HydroObject_table.object_id[i],
+                id=HydroObject_table.id[i],
+                code=HydroObject_table.code[i],
+                categorieoppwaterlichaam=HydroObject_table.categorieoppwaterlichaam[i],
+                streefpeil=HydroObject_table.streefpeil[i],
+                debiet=HydroObject_table.debiet[i],
+                channel_id=HydroObject_table.channel_id[i],
+                flowline_id=HydroObject_table.flowline_id[i],
+                geometry=HydroObject_table.geometry[i]
+            ))
+
+        session.execute("Delete from {0}".format(HydroObject.__tablename__))
+        session.bulk_save_objects(hydroobject)
+        session.commit()
+
+        session = db.get_session()
+        waterdeel = []
+        for i, rows in Waterdeel_table.iterrows():
+            waterdeel.append(Waterdeel(
+                obejctid=Waterdeel_table.objectid[i],
+                id=Waterdeel_table.id[i],
+                shape_length=Waterdeel_table.shape_length[i],
+                shape_area=Waterdeel_table.shape_area[i],
+                geometry=Waterdeel_table.geometry[i]
+            ))
+
+        session.execute("Delete from {0}".format(Waterdeel.__tablename__))
+        session.bulk_save_objects(waterdeel)
+        session.commit()
+
+        session = db.get_session()
+        duikersifonhevel = []
+        for i, rows in DuikerSifonHevel_table.iterrows():
+            duikersifonhevel.append(DuikerSifonHevel(
+                objectid=DuikerSifonHevel_table.objectid[i],
+                id=DuikerSifonHevel_table.id[i],
+                code=DuikerSifonHevel_table.code[i],
+                categorie=DuikerSifonHevel_table.categorie[i],
+                lengte=DuikerSifonHevel_table.lengte[i],
+                hoogteopening=DuikerSifonHevel_table.hoogteopening[i],
+                breedteopening=DuikerSifonHevel_table.breedteopening[i],
+                hoogtebinnenonderkantbene=DuikerSifonHevel_table.hoogtebinnenonderkantbene[i],
+                hoogtebinnenonderkantbov=DuikerSifonHevel_table.hoogtebinnenonderkantbov[i],
+                vormkoker=DuikerSifonHevel_table.vormkoker[i],
+                debiet=DuikerSifonHevel_table.debiet[i],
+                channel_id=DuikerSifonHevel_table.channel_id[i],
+                flowline_id=DuikerSifonHevel_table.flowline_id[i],
+                geometry=DuikerSifonHevel_table.geometry[i]
+            ))
+
+        session.execute("Delete from {0}".format(DuikerSifonHevel.__tablename__))
+        session.bulk_save_objects(duikersifonhevel)
+        session.commit()
+
+        session = db.get_session()
+        profielpunten = []
+        for i, rows in Profielpunten_table.iterrows():
+            profielpunten.append(Profielpunten(
+                objectid=Profielpunten_table.objectid[i],
+                pbp_id=Profielpunten_table.pbp_id[i],
+                prw_id=Profielpunten_table.prw_id[i],
+                pbpident=Profielpunten_table.pbpident[i],
+                osmomsch=Profielpunten_table.osmomsch[i],
+                iws_volgnr=Profielpunten_table.iws_volgnr[i],
+                iws_hoogte=Profielpunten_table.iws_hoogte[i],
+                pro_pro_id=Profielpunten_table.pro_pro_id[i],
+                geometry=Profielpunten_table.geometry[i]
+            ))
+
+        session.execute("Delete from {0}".format(Profielpunten.__tablename__))
+        session.bulk_save_objects(profielpunten)
+        session.commit()
+
+        session = db.get_session()
+        kenmerken = []
+        for i, rows in Kenmerken_table.iterrows():
+            kenmerken.append(Kenmerken(
+                objectid=Kenmerken_table.objectid[i],
+                id=Kenmerken_table.id[i],
+                diepte=Kenmerken_table.diepte[i],
+                bron_diepte=Kenmerken_table.bron_diepte[i],
+                bodemhoogte=Kenmerken_table.bodemhoogte[i],
+                breedte=Kenmerken_table.breedte[i],
+                bron_breedte=Kenmerken_table.bron_breedte[i],
+                lengte=Kenmerken_table.lengte[i],
+                breedte=Kenmerken_table.breedte[i],
+                taludvoorkeur=Kenmerken_table.taludvoorkeur[i],
+                steilste_talud=Kenmerken_table.steilste_talud[i],
+                grondsoort=Kenmerken_table.grondsoort[i],
+                bron_grondsoort=Kenmerken_table.bron_grondsoort[i],
+                hydro_id=Kenmerken_table.hydro_id[i]
+            ))
+
+        session.execute("Delete from {0}".format(Kenmerken.__tablename__))
+        session.bulk_save_objects(kenmerken)
+        session.commit()
+
+        session = db.get_session()
+        profielen = []
+        for i, rows in Profielen_table.iterrows():
+            profielen.append(Profielen(
+                obejctid=Profielen_table.objectid[i],
+                id=Profielen_table.id[i],
+                proident=Profielen_table.proident[i],
+                bron_profiel=Profielen_table.bron_profiel[i],
+                pro_id=Profielen_table.pro_id[i],
+                hydro_id=Profielen_table.hydro_id[i]
+            ))
+
+        session.execute("Delete from {0}".format(Profielen.__tablename__))
+        session.bulk_save_objects(profielen)
+        session.commit()
+        return
 
     def select_spatialite(self):
         """
@@ -346,7 +375,7 @@ class PolderSelectionWidget(QWidget):#, FORM_CLASS):
         """
 
         # saves the last opened path
-        settings = QSettings('last_used_spatialite_path', 'filepath')
+        settings = QSettings('last_used_legger_spatialite_path', 'filepath')
 
         # set initial path to right folder
         try:
@@ -366,7 +395,7 @@ class PolderSelectionWidget(QWidget):#, FORM_CLASS):
         if self.root_tool.polder_datasource == "":
             return False
 
-        settings.setValue('last_used_spatialite_path',
+        settings.setValue('last_used_legger_spatialite_path',
                           os.path.dirname(self.root_tool.polder_datasource)) # verwijzing naar de class.variable in het hoofdscherm
         return
 
@@ -417,17 +446,17 @@ class PolderSelectionWidget(QWidget):#, FORM_CLASS):
         self.var_text_leggerdatabase.setText("leeg")
 
         ## Assembling
-        ## Create buttons with functions and add it to rows
+        ## Create buttons with functions to select damo and hdb and database creation and add it to rows
         self.box_leggerdatabase_create = QtGui.QVBoxLayout()
         self.box_leggerdatabase_create.addWidget(self.load_DAMO_dump_button)
         self.box_leggerdatabase_create.addWidget(self.load_HDB_dump_button)
-        self.box_leggerdatabase_create.addWidget(self.create_leggerdatabase_button)
+        self.box_leggerdatabase_create.addWidget(self.var_text_DAMO)
+        self.box_leggerdatabase_create.addWidget(self.var_text_HDB)
 
         self.feedback_box_leggerdatabase_create = QtGui.QVBoxLayout()
-        self.feedback_box_leggerdatabase_create.addWidget(self.var_text_DAMO)
-        self.feedback_box_leggerdatabase_create.addWidget(self.var_text_HDB)
 
-        self.box_leggerdatabase_input = QtGui.QHBoxLayout()
+        self.box_leggerdatabase_input = QtGui.QVBoxLayout()
+        self.box_leggerdatabase_input.addWidget(self.create_leggerdatabase_button)
         self.box_leggerdatabase_input.addWidget(self.load_leggerdatabase_button)
 
         self.feedback_box_leggerdatabase_select = QtGui.QVBoxLayout()
@@ -435,7 +464,7 @@ class PolderSelectionWidget(QWidget):#, FORM_CLASS):
 
         ## Create groupbox and add HBoxes to it
         self.groupBox_leggerdatabase_create = QtGui.QGroupBox(self)
-        self.groupBox_leggerdatabase_create.setTitle("Maak legger database:")
+        self.groupBox_leggerdatabase_create.setTitle("Selecteer bestanden voor legger database:")
         self.groupBox_leggerdatabase_create.setLayout(self.box_leggerdatabase_create)
 
         self.groupBox_leggerdatabase_input = QtGui.QGroupBox(self)
