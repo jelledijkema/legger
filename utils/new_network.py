@@ -99,7 +99,7 @@ class NewNetwork(object):
         self.id_field = id_field
 
         # build graph for network
-        properter_1 = distance_properter | QgsDistanceArcProperter()
+        properter_1 = distance_properter or QgsDistanceArcProperter()
         properter_2 = AttributeProperter(id_field, [line_layer.dataProvider().fieldNameIndex(id_field)])
 
         self.director.addProperter(properter_1)

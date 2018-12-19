@@ -4,7 +4,7 @@ import math
 
 from qgis.core import QgsGeometry, QgsLineStringV2, QgsPoint
 
-from ThreeDiToolbox.datasource.netcdf_groundwater import NetcdfGroundwaterDataSource
+# from ThreeDiToolbox.datasource.netcdf_groundwater import NetcdfGroundwaterDataSource
 from legger.utils.geom_collections.lines import LineCollection
 from legger.utils.geometries import LineString
 from legger.utils.geometries import shape
