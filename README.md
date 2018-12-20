@@ -30,9 +30,15 @@ Steps for installation of this QGIS plugin:
    ```
    Then:
    ```
-    python -m pip install path/to/wheel
+    python -m pip install path/to/wheel/wheel.whl
    ```
-   or type in command prompt, and replace between <..> with package name (like pandas)
+   or navigate to folder where wheel is downloaded to and:
+   ```
+    python -m pip install wheel.whl
+   ```
+
+   A short-cut might be to not work with wheels. It's a bit faster, but be careful with package versions.
+   Type in command prompt, and replace between <..> with package name (like pandas), example:
    ```
     python -m pip install <package>
    ```

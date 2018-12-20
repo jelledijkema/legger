@@ -32,6 +32,7 @@ class LeggerPlotWidget(pg.PlotWidget):
         self.series = {}
         self.hydro_object = None #todo: verwijzing naar hydro object in kwestie
 
+
     def set_data(self,ditch_width,waterdepth,ditch_slope,ditch_bottomwidth):
         self.ditch_width = ditch_width
         self.waterdepth = waterdepth
@@ -84,7 +85,6 @@ class NewWindow(QtGui.QWidget):
         self.waterdepth = None
         self.ditch_slope = None
 
-
     def calculate(self):
         verhang_bericht = ""
         bodembreedte_bericht = ""
@@ -125,10 +125,9 @@ class NewWindow(QtGui.QWidget):
 
         except:
             verhang_bericht = "Om onbekende redenen kan er geen berekening voor verhang worden gemaakt."
-            bodembreedte_bericht = ""
+            bodembreedte_bericht = "Controleer of dit hydro object alle input variabelen heeft."
 
         finally:
-
             self.output_info.setText(verhang_bericht)
             self.comments.setText(str(bodembreedte_bericht))
 

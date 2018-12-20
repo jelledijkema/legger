@@ -19,7 +19,7 @@ class Waterdeel(Base):
     id = Column(Integer, primary_key=True)
     shape_length = Column(Float)
     shape_area = Column(Float)
-    geometry = Column("GEOMETRY", Geometry(geometry_type='POLYGON', srid=28992))
+    geometry = Column("GEOMETRY", Geometry(geometry_type='MULTIPOLYGON', srid=28992))
 
     def __str__(self):
         return u'Waterdeel {0}'.format(
@@ -32,12 +32,12 @@ class HydroObject(Base):
 
     objectid = Column(Integer)
     id = Column(Integer, primary_key=True)
-    geometry = Column("GEOMETRY", Geometry(geometry_type='LINESTRING', srid=28992))
+    geometry = Column("GEOMETRY", Geometry(geometry_type='MULTILINESTRING', srid=28992))
     code = Column(String(50), index=True)
     categorieoppwaterlichaam = Column(Integer)
     streefpeil = Column(Float)
     debiet = Column(Float)
-    channnel_id = Column(Integer)  # link to 3di id
+    channel_id = Column(Integer)  # link to 3di id
     flowline_id = Column(Integer)  # link to 3di id
     # shape_length = Column(Float)
 
@@ -221,7 +221,7 @@ class DuikerSifonHevel(Base):
 
     objectid = Column(Integer)
     id = Column(Integer, primary_key=True)
-    geometry = Column("GEOMETRY", Geometry(geometry_type='LINESTRING', srid=28992))
+    geometry = Column("GEOMETRY", Geometry(geometry_type='MULTILINESTRING', srid=28992))
     code = Column(String(50), index=True)
     categorie = Column(Integer)
     lengte = Column(Float)
@@ -233,7 +233,7 @@ class DuikerSifonHevel(Base):
     # shape_lengte = Column(Float)
 
     debiet = Column(Float)  # extra?
-    channnel_id = Column(Integer)  # extra?
+    channel_id = Column(Integer)  # extra?
     flowline_id = Column(Integer)  # extra?
 
     def __str__(self):
