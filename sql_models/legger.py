@@ -2,13 +2,26 @@ import datetime
 import logging
 
 from geoalchemy2.types import Geometry
-from sqlalchemy import (Column, DateTime, Float, ForeignKey, Integer, String)
+from sqlalchemy import (Column, DateTime, Float, ForeignKey, Integer, String, )
 from sqlalchemy.ext.declarative import declarative_base
+from sqlalchemy.sql.expression import ClauseElement
 from sqlalchemy.orm import relationship
 
 logger = logging.getLogger('legger.sql_models.legger')
 
 Base = declarative_base()
+
+
+def get_or_create(session, model, defaults=None, **kwargs):
+    instance = session.query(model).filter_by(**kwargs).first()
+    if instance:
+        return instance, False
+    else:
+        params = dict((k, v) for k, v in kwargs.iteritems() if not isinstance(v, ClauseElement))
+        params.update(defaults or {})
+        instance = model(**params)
+        session.add(instance)
+        return instance, True
 
 
 class Waterdeel(Base):
@@ -142,10 +155,24 @@ class Kenmerken(Base):
             self.id)
 
 
+class BegroeiingsVariant(Base):
+    __tablename__ = 'begroeiingsvariant'
+
+    id = Column(Integer(), primary_key=True, autoincrement=True)
+    naam = Column(String(20))
+    friction = Column(Float())
+
+    def __str__(self):
+        return u'profiel_variant {0}'.format(
+            self.id)
+
+
 class Varianten(Base):
     __tablename__ = 'varianten'
 
     id = Column(String(), primary_key=True)
+    begroeiingsvariant_id = Column(Integer,
+                                   ForeignKey(HydroObject.__tablename__ + ".id"))
     diepte = Column(Float)
     waterbreedte = Column(Float)
     bodembreedte = Column(Float)
@@ -156,16 +183,20 @@ class Varianten(Base):
     hydro_id = Column(Integer,
                       ForeignKey(HydroObject.__tablename__ + ".id"))
 
+    begroeiingsvariant = relationship(BegroeiingsVariant,
+                                      # foreign_keys='ws_in_peilgebied',
+                                      uselist=False,
+                                      back_populates="profielvariant")
+
     hydro = relationship(HydroObject,
                          # foreign_keys='ws_in_peilgebied',
                          uselist=False,
                          back_populates="varianten")
 
     figuren = relationship('ProfielFiguren',
-                         primaryjoin="Varianten.id == ProfielFiguren.profid",
-                         # foreign_keys=[hydro_id],
-                         back_populates="prof")
-
+                           primaryjoin="Varianten.id == ProfielFiguren.profid",
+                           # foreign_keys=[hydro_id],
+                           back_populates="prof")
 
     # geselecteerd = relationship("GeselecteerdeProfielen",
     #                        back_populates="variant")
@@ -199,7 +230,7 @@ class ProfielFiguren(Base):
     # object_id = Column(Integer, primary_key=True)
     hydro_id = Column('id_hydro', Integer,
                       ForeignKey(HydroObject.__tablename__ + ".id"))
-    profid = Column(String(16), ForeignKey(Varianten.__tablename__ + ".id"), primary_key=True,)
+    profid = Column(String(16), ForeignKey(Varianten.__tablename__ + ".id"), primary_key=True, )
     type_prof = Column(String(1))
     coord = Column(String())
     peil = Column(Float)
@@ -219,10 +250,9 @@ class ProfielFiguren(Base):
                          back_populates="figuren")
 
     prof = relationship(Varianten,
-                         primaryjoin="Varianten.id == ProfielFiguren.profid",
-                         # foreign_keys=[hydro_id],
-                         back_populates="figuren")
-
+                        primaryjoin="Varianten.id == ProfielFiguren.profid",
+                        # foreign_keys=[hydro_id],
+                        back_populates="figuren")
 
     def __str__(self):
         return u'profiel_figuren {0} - {1}'.format(
