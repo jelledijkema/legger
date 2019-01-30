@@ -162,9 +162,14 @@ class BegroeiingsVariant(Base):
     naam = Column(String(20))
     friction = Column(Float())
 
+    profielvariant = relationship('Varianten',
+                                  primaryjoin="Varianten.begroeiingsvariant_id == BegroeiingsVariant.id",
+                                  # foreign_keys='ws_in_peilgebied',
+                                  back_populates="begroeiingsvariant")
+
     def __str__(self):
-        return u'profiel_variant {0}'.format(
-            self.id)
+        return u'begroeiingsvariant {0}'.format(
+            self.naam)
 
 
 class Varianten(Base):
@@ -172,7 +177,7 @@ class Varianten(Base):
 
     id = Column(String(), primary_key=True)
     begroeiingsvariant_id = Column(Integer,
-                                   ForeignKey(HydroObject.__tablename__ + ".id"))
+                                   ForeignKey(BegroeiingsVariant.__tablename__ + ".id"))
     diepte = Column(Float)
     waterbreedte = Column(Float)
     bodembreedte = Column(Float)
@@ -184,12 +189,13 @@ class Varianten(Base):
                       ForeignKey(HydroObject.__tablename__ + ".id"))
 
     begroeiingsvariant = relationship(BegroeiingsVariant,
-                                      # foreign_keys='ws_in_peilgebied',
+                                      #foreign_keys='begroeiingsvariant_id',
+                                      primaryjoin="Varianten.begroeiingsvariant_id == BegroeiingsVariant.id",
                                       uselist=False,
                                       back_populates="profielvariant")
 
     hydro = relationship(HydroObject,
-                         # foreign_keys='ws_in_peilgebied',
+                         #foreign_keys='hydro_id',
                          uselist=False,
                          back_populates="varianten")
 

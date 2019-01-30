@@ -239,7 +239,7 @@ class ProfileCalculationWidget(QWidget):  # , FORM_CLASS):
             friction_bos_bijkerk = bv.friction
 
             try:
-                profiles = create_theoretical_profiles(self.polder_datasource)
+                profiles = create_theoretical_profiles(self.polder_datasource, friction_bos_bijkerk)
                 self.feedbackmessage = "Profielen zijn berekend."
             except:
                 self.feedbackmessage = "Profielen konden niet worden berekend."
@@ -247,7 +247,7 @@ class ProfileCalculationWidget(QWidget):  # , FORM_CLASS):
                 self.feedbacktext.setText(self.feedbackmessage)
 
             try:
-                write_theoretical_profile_results_to_db(profiles, self.polder_datasource)
+                write_theoretical_profile_results_to_db(profiles, self.polder_datasource, bv)
                 self.feedbackmessage = self.feedbackmessage + ("\nProfielen opgeslagen in legger db.")
             except:
                 self.feedbackmessage = self.feedbackmessage + ("\nProfielen niet opgeslagen in legger database.")

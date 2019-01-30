@@ -470,7 +470,7 @@ def create_theoretical_profiles(legger_db_filepath, friction_bos_bijkerk):
     return profile_variants
 
 
-def write_theoretical_profile_results_to_db(profile_results, path_legger_db):
+def write_theoretical_profile_results_to_db(profile_results, path_legger_db, bv):
     log.info("Writing output to db...\n")
     db = LeggerDatabase(
         {
@@ -491,6 +491,7 @@ def write_theoretical_profile_results_to_db(profile_results, path_legger_db):
 
         profiles.append(Varianten(
             hydro_id=profile_results.object_id[i],
+            begroeiingsvariant=bv,
             id=profile_results.object_waterdepth_id[i],
             talud=profile_results.slope[i],
             diepte=profile_results.water_depth[i],
