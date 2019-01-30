@@ -57,7 +57,7 @@ class hydrovak_class(object):
         self.startpoint_feature = startpoint_feature  # todo: weg?
         self.endpoint_feature = endpoint_feature  # todo: weg?
 
-        self.feature_keys = {}
+        self.feature_keys = [field.name() for field in feature.fields()]
         self.data_dict = data_dict
 
         self.field_mapping = {
@@ -77,17 +77,17 @@ class hydrovak_class(object):
     def __repr__(self):
         return "hydrovak - %s" % (self.get('hydro_id'))
 
-    def __getattr__(self, key):
-        return self.get(key)
+    def __getitem__(self, key, default_value=None):
+        return self.get(key, default_value)
 
-    def __setattr__(self, key, value):
+    def __setitem__(self, key, value):
         self.set(key, value)
         return self
 
     def update(self, update_dict):
         """ same as dict.update. set mulitple values at once"""
         for key, value in update_dict.items():
-            self.set(key.value)
+            self.set(key, value)
         return self
 
     def data(self, column_nr, qvalue=False):
@@ -150,7 +150,7 @@ class hydrovak_class(object):
         elif key == 'icon':
             pass
         elif key in self.field_mapping and self.field_mapping[key] in self.feature_keys:
-            self.feature[key] = value
+            self.feature[self.field_mapping[key]] = value
         else:
             self.data_dict[key] = value
         return self

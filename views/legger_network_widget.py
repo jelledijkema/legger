@@ -209,10 +209,10 @@ class LeggerWidget(QDockWidget):
                 features = []
 
                 feat = QgsFeature()
-                feat.setGeometry(node.hydrovak.get('line_feature').geometry())
+                feat.setGeometry(node.hydrovak.get('feature').geometry())
 
                 feat.setAttributes([
-                    node.hydrovak.get('line_feature')['id']])
+                    node.hydrovak.get('feature')['id']])
 
                 features.append(feat)
                 self.vl_hover_layer.dataProvider().addFeatures(features)
@@ -229,10 +229,10 @@ class LeggerWidget(QDockWidget):
                 features = []
 
                 feat = QgsFeature()
-                feat.setGeometry(node.hydrovak.get('line_feature').geometry())
+                feat.setGeometry(node.hydrovak.get('feature').geometry())
 
                 feat.setAttributes([
-                    node.hydrovak.get('line_feature')['id']])
+                    node.hydrovak.get('feature')['id']])
 
                 features.append(feat)
                 self.vl_selected_layer.dataProvider().addFeatures(features)
@@ -258,10 +258,10 @@ class LeggerWidget(QDockWidget):
 
                 def loop_rec(node):
                     feat = QgsFeature()
-                    feat.setGeometry(node.hydrovak.get('line_feature').geometry())
+                    feat.setGeometry(node.hydrovak.get('feature').geometry())
 
                     feat.setAttributes([
-                        node.hydrovak.get('line_feature')['id']])
+                        node.hydrovak.get('feature')['id']])
 
                     features.append(feat)
 
