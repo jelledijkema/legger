@@ -12,11 +12,11 @@ from PyQt4 import QtCore, QtGui
 from legger.utils.read_tdi_results import (
     read_tdi_results, write_tdi_results_to_db, read_tdi_culvert_results, get_timestamps,
     write_tdi_culvert_results_to_db)
-from legger.utils.theoretical_profiles import create_theoretical_profiles, write_theoretical_profile_results_to_db
+from legger.utils.theoretical_profiles import create_theoretical_profiles, write_theoretical_profile_results_to_db, Kb
 from legger.sql_models.legger_views import create_legger_views
 from pyspatialite import dbapi2 as dbapi
 from legger.sql_models.legger_database import LeggerDatabase
-from legger.sql_models.legger import HydroObject
+from legger.sql_models.legger import HydroObject, BegroeiingsVariant, get_or_create
 from legger.utils.profile_match_a import doe_profinprof, maaktabellen
 
 log = logging.getLogger(__name__)
@@ -215,21 +215,44 @@ class ProfileCalculationWidget(QWidget):  # , FORM_CLASS):
 
     def execute_step2(self):
 
-        try:
-            profiles = create_theoretical_profiles(self.polder_datasource)
-            self.feedbackmessage = "Profielen zijn berekend."
-        except:
-            self.feedbackmessage = "Profielen konden niet worden berekend."
-        finally:
-            self.feedbacktext.setText(self.feedbackmessage)
+        db = LeggerDatabase(
+            {
+                'db_path': self.polder_datasource
+            },
+            'spatialite'
+        )
+        db.create_and_check_fields()
+        # do one query, don't know what the reason was for this...
+        session = db.get_session()
 
-        try:
-            write_theoretical_profile_results_to_db(profiles, self.polder_datasource)
-            self.feedbackmessage = self.feedbackmessage + ("\nProfielen opgeslagen in legger db.")
-        except:
-            self.feedbackmessage = self.feedbackmessage + ("\nProfielen niet opgeslagen in legger database.")
-        finally:
-            self.feedbacktext.setText(self.feedbackmessage)
+        bv, new = get_or_create(session, BegroeiingsVariant, naam='standaard',
+                                defaults={'friction': Kb})
+
+        bv, new = get_or_create(session, BegroeiingsVariant, naam='deels begroeid',
+                                defaults={'friction': 1.5 * Kb})
+
+        bv, new = get_or_create(session, BegroeiingsVariant, naam='sterk begroeid',
+                                defaults={'friction': 2 * Kb})
+
+        for bv in session.query(BegroeiingsVariant).all():
+
+            friction_bos_bijkerk = bv.friction
+
+            try:
+                profiles = create_theoretical_profiles(self.polder_datasource, friction_bos_bijkerk)
+                self.feedbackmessage = "Profielen zijn berekend."
+            except:
+                self.feedbackmessage = "Profielen konden niet worden berekend."
+            finally:
+                self.feedbacktext.setText(self.feedbackmessage)
+
+            try:
+                write_theoretical_profile_results_to_db(profiles, self.polder_datasource, bv)
+                self.feedbackmessage = self.feedbackmessage + ("\nProfielen opgeslagen in legger db.")
+            except:
+                self.feedbackmessage = self.feedbackmessage + ("\nProfielen niet opgeslagen in legger database.")
+            finally:
+                self.feedbacktext.setText(self.feedbackmessage)
 
     def execute_step3(self):
 
