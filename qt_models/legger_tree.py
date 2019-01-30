@@ -117,7 +117,8 @@ class hydrovak_class(object):
             # data not changed
             return False
         else:
-            return self.set(HORIZONTAL_HEADERS[column]['field'], value)
+            self.set(HORIZONTAL_HEADERS[column]['field'], value)
+            return True
 
     def get(self, key, default_value=None):
         if key == 'feature':
