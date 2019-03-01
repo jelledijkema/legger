@@ -2,16 +2,27 @@
 import os
 from PyQt4.QtCore import QVariant
 from qgis.core import QgsField, QgsVectorLayer, QgsDataSourceURI, QgsMapLayerRegistry
+from legger.utils.map_layers import LayerManager
 
 
 class LeggerMapManager(object):
 
-    def __init__(self, path_legger_db):
+    def __init__(self, iface, path_legger_db):
         """
             path_legger_db (str): path to legger sqlite
          """
 
         self.path_legger_db = path_legger_db
+        self.iface = iface
+
+        self.map_manager = LayerManager(self.iface, self.path_legger_db)
+        self.map_manager.add_layers_to_map()
+
+        self.network_layer_group, new = self.map_manager.get_or_create_networktool_root(clear=True)
+        self.style_path = os.path.join(
+            os.path.dirname(__file__),
+            os.pardir,
+            'layer_styles', 'legger')
 
         self._virtual_tree_layer = None
         self._endpoint_layer = None
@@ -20,8 +31,7 @@ class LeggerMapManager(object):
         self._hover_startpoint_layer = None
         self._selected_layer = None
 
-
-    def get_line_layer(self,add_to_map=False, geometry_col='geometry'):
+    def get_line_layer(self, add_to_map=False, geometry_col='geometry'):
         """ get QGis instance of hydrovak with kenmerken as layer
 
         add_to_map (bool): add layer to map, including default styling
@@ -49,10 +59,11 @@ class LeggerMapManager(object):
         layer.setSubsetString('"direction"!=3')
 
         if add_to_map:
-            layer.loadNamedStyle(os.path.join(
-                os.path.dirname(__file__), os.pardir,
-                'layer_styles', 'legger', 'line.qml'))
-            QgsMapLayerRegistry.instance().addMapLayer(layer)
+            self.map_manager.add_layer_to_group(
+                self.network_layer_group,
+                layer,
+                os.path.join(self.style_path, 'line.qml')
+            )
 
         return layer
 
@@ -86,12 +97,11 @@ class LeggerMapManager(object):
             self._virtual_tree_layer.updateFields()
 
         if add_to_map:
-            self._virtual_tree_layer.loadNamedStyle(os.path.join(
-                os.path.dirname(os.path.realpath(__file__)), os.pardir,
-                'layer_styles', 'legger', 'tree_classified.qml'))
-
-            QgsMapLayerRegistry.instance().addMapLayer(self._virtual_tree_layer)
-
+            self.map_manager.add_layer_to_group(
+                self.network_layer_group,
+                self._virtual_tree_layer,
+                os.path.join(self.style_path, 'tree_classified.qml')
+            )
         return self._virtual_tree_layer
 
     def get_endpoint_layer(self, add_to_map=False):
@@ -120,11 +130,11 @@ class LeggerMapManager(object):
             self._endpoint_layer.updateFields()
 
         if add_to_map:
-            self._endpoint_layer.loadNamedStyle(os.path.join(
-                os.path.dirname(os.path.realpath(__file__)), os.pardir,
-                'layer_styles', 'legger', 'end_points.qml'))
-
-            QgsMapLayerRegistry.instance().addMapLayer(self._endpoint_layer)
+            self.map_manager.add_layer_to_group(
+                self.network_layer_group,
+                self._endpoint_layer,
+                os.path.join(self.style_path, 'end_points.qml')
+            )
 
         return self._endpoint_layer
 
@@ -151,11 +161,11 @@ class LeggerMapManager(object):
             self._track_layer.updateFields()
 
         if add_to_map:
-            self._track_layer.loadNamedStyle(os.path.join(
-                os.path.dirname(os.path.realpath(__file__)), os.pardir,
-                'layer_styles', 'legger', 'selected_traject.qml'))
-
-            QgsMapLayerRegistry.instance().addMapLayer(self._track_layer)
+            self.map_manager.add_layer_to_group(
+                self.network_layer_group,
+                self._track_layer,
+                os.path.join(self.style_path, 'selected_traject.qml')
+            )
 
         return self._track_layer
 
@@ -182,11 +192,11 @@ class LeggerMapManager(object):
             self._hover_layer.updateFields()
 
         if add_to_map:
-            self._hover_layer.loadNamedStyle(os.path.join(
-                os.path.dirname(os.path.realpath(__file__)), os.pardir,
-                'layer_styles', 'legger', 'hover_hydro.qml'))
-
-            QgsMapLayerRegistry.instance().addMapLayer(self._hover_layer)
+            self.map_manager.add_layer_to_group(
+                self.network_layer_group,
+                self._hover_layer,
+                os.path.join(self.style_path, 'hover_hydro.qml')
+            )
 
         return self._hover_layer
 
@@ -213,11 +223,11 @@ class LeggerMapManager(object):
             self._selected_layer.updateFields()
 
         if add_to_map:
-            self._selected_layer.loadNamedStyle(os.path.join(
-                os.path.dirname(os.path.realpath(__file__)), os.pardir,
-                'layer_styles', 'legger', 'selected_hydro.qml'))
-
-            QgsMapLayerRegistry.instance().addMapLayer(self._selected_layer)
+            self.map_manager.add_layer_to_group(
+                self.network_layer_group,
+                self._selected_layer,
+                os.path.join(self.style_path, 'selected_hydro.qml')
+            )
 
         return self._selected_layer
 
@@ -244,10 +254,10 @@ class LeggerMapManager(object):
             self._hover_startpoint_layer.updateFields()
 
         if add_to_map:
-            self._hover_startpoint_layer.loadNamedStyle(os.path.join(
-                os.path.dirname(os.path.realpath(__file__)), os.pardir,
-                'layer_styles', 'legger', 'hover_startpoint.qml'))
-
-            QgsMapLayerRegistry.instance().addMapLayer(self._hover_startpoint_layer)
+            self.map_manager.add_layer_to_group(
+                self.network_layer_group,
+                self._hover_startpoint_layer,
+                os.path.join(self.style_path, 'hover_startpoint.qml')
+            )
 
         return self._hover_startpoint_layer

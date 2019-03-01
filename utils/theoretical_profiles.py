@@ -249,7 +249,6 @@ def calc_profile_variants(hydro_objects_satisfy, friction_bos_bijkerk=Kb):
             tolerance = 0.5  # will be substracted from the gradient norm
             # todo: why - not better to loop different, till the real gradient norm?
             while gradient_bos_bijkerk < (gradient_norm - tolerance):
-
                 ditch_bottom_width = ditch_width - 2 * water_depth * slope
 
                 gradient_bos_bijkerk = calc_bos_bijkerk(normative_flow, ditch_bottom_width, water_depth, slope,
@@ -262,8 +261,10 @@ def calc_profile_variants(hydro_objects_satisfy, friction_bos_bijkerk=Kb):
             if ditch_bottom_width < min_ditch_bottom_width:
                 break
 
-            object_waterdepth_id = (str(hydro_objects_satisfy.object_id[i]) + "_" +
-                                    str(round(hydro_objects_satisfy.water_depth[i] * 100 + (count * 5), 0)))
+            object_waterdepth_id = "{0}_{1:.0f}-{2:.1f}".format(
+                hydro_objects_satisfy.object_id[i],
+                hydro_objects_satisfy.water_depth[i] * 100 + (count * 5),
+                friction_bos_bijkerk)
             df_temp = pd.DataFrame([
                 [object_id,
                  object_waterdepth_id,
@@ -282,8 +283,10 @@ def calc_profile_variants(hydro_objects_satisfy, friction_bos_bijkerk=Kb):
 
             count = count + 1
 
-        object_waterdepth_id = (str(hydro_objects_satisfy.object_id[i]) + "_" +
-                                str(round(hydro_objects_satisfy.water_depth[i] * 100 + (count * 5), 0)))
+        object_waterdepth_id = "{0}_{1:.0f}-{2:.1f}".format(
+            hydro_objects_satisfy.object_id[i],
+            hydro_objects_satisfy.water_depth[i] * 100 + (count * 5),
+            friction_bos_bijkerk)
         if count == 0:
             # When normative flow is small, the necessary profile dimensions are smaller than the minimum requirements.
             ditch_bottom_width = 0.5
@@ -357,8 +360,9 @@ This is were the main code starts:
 """
 
 
-def create_theoretical_profiles(legger_db_filepath, friction_bos_bijkerk):
+def create_theoretical_profiles(legger_db_filepath, bv):
     # create Begroeiingsvarianten if they don't exist already
+    friction_bos_bijkerk = bv.friction
 
     # Part 1: read SpatiaLite
     # The original Spatialite database is read into Python for further analysis.
@@ -432,14 +436,17 @@ def create_theoretical_profiles(legger_db_filepath, friction_bos_bijkerk):
 
     hydro_objects_unsatisfy = profile_max_ditch_width[profile_max_ditch_width['gradient_bos_bijkerk'] > gradient_norm]
 
-    profile_variants = calc_profile_variants(hydro_objects_satisfy)
+    profile_variants = calc_profile_variants(hydro_objects_satisfy, bv.friction)
 
     log.info("Finished 7: variants created\n")
 
     for i, rows in hydro_objects_unsatisfy.iterrows():
         object_id = hydro_objects_unsatisfy.object_id[i]
-        object_waterdepth_id = (str(hydro_objects_unsatisfy.object_id[i]) + "_"
-                                + str(round(hydro_objects_unsatisfy.water_depth[i], 2)))
+        object_waterdepth_id = "{0}_{1:.0f}-{2:.1f}".format(
+            hydro_objects_unsatisfy.object_id[i],
+            hydro_objects_unsatisfy.water_depth[i],
+            bv.friction)
+
         # todo: question. why not 'veenweide' slope here?
         slope = hydro_objects_unsatisfy.slope[i]
         water_depth = hydro_objects_unsatisfy.water_depth[i]
@@ -470,18 +477,8 @@ def create_theoretical_profiles(legger_db_filepath, friction_bos_bijkerk):
     return profile_variants
 
 
-def write_theoretical_profile_results_to_db(profile_results, path_legger_db, bv):
+def write_theoretical_profile_results_to_db(session, profile_results, path_legger_db, bv):
     log.info("Writing output to db...\n")
-    db = LeggerDatabase(
-        {
-            'db_path': path_legger_db
-        },
-        'spatialite'
-    )
-    db.create_and_check_fields()
-    session = db.get_session()
-
-    profiles = []
 
     for i, rows in profile_results.iterrows():
         if profile_results.gradient_bos_bijkerk[i] > gradient_norm:
@@ -489,19 +486,23 @@ def write_theoretical_profile_results_to_db(profile_results, path_legger_db, bv)
         else:
             opmerkingen = ""
 
-        profiles.append(Varianten(
-            hydro_id=profile_results.object_id[i],
-            begroeiingsvariant=bv,
+        variant, new = get_or_create(
+            session,
+            Varianten,
             id=profile_results.object_waterdepth_id[i],
-            talud=profile_results.slope[i],
-            diepte=profile_results.water_depth[i],
-            waterbreedte=profile_results.ditch_width[i],
-            bodembreedte=profile_results.ditch_bottom_width[i],
-            verhang_bos_bijkerk=profile_results.gradient_bos_bijkerk[i],
-            opmerkingen=opmerkingen
-        ))
+            defaults={
+                'hydro_id': profile_results.object_id[i],
+                'begroeiingsvariant': bv,
+                'talud': profile_results.slope[i],
+                'diepte': profile_results.water_depth[i]
+            }
 
-    session.execute("Delete from {0}".format(Varianten.__tablename__))
+        )
+        variant.begroeiingsvariant = bv
+        variant.diepte = profile_results.water_depth[i]
+        variant.waterbreedte = profile_results.ditch_width[i]
+        variant.bodembreedte = profile_results.ditch_bottom_width[i]
+        variant.verhang_bos_bijkerk = profile_results.gradient_bos_bijkerk[i]
+        variant.opmerkingen = opmerkingen
 
-    session.bulk_save_objects(profiles)
     session.commit()

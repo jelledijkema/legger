@@ -14,6 +14,8 @@ from legger.views.input_widget import NewWindow
 from network_graph_widgets import LeggerPlotWidget, LeggerSideViewPlotWidget
 from qgis.core import QgsDataSourceURI, QgsFeature, QgsGeometry, QgsMapLayerRegistry, QgsPoint, QgsVectorLayer
 from qgis.networkanalysis import QgsLineVectorLayerDirector
+from sqlalchemy.orm import joinedload
+from sqlalchemy import or_, and_
 
 from .network_table_widgets import LeggerTreeWidget, PlotItemTable, StartpointTreeWidget
 from legger.utils.new_network import NewNetwork
@@ -74,7 +76,7 @@ class LeggerWidget(QDockWidget):
         self.category_filter = 4
 
         # create line layer and add to map
-        self.layer_manager = LeggerMapManager(self.path_legger_db)
+        self.layer_manager = LeggerMapManager(self.iface, self.path_legger_db)
 
         self.line_layer = self.layer_manager.get_line_layer(add_to_map=True)
         self.vl_tree_layer = self.layer_manager.get_virtual_tree_layer(add_to_map=True)
@@ -342,6 +344,7 @@ class LeggerWidget(QDockWidget):
                         row.active.value = False
 
                 depth = item.depth.value
+                selected_variant_id = item.name.value
 
                 def loop(node):
                     """
@@ -352,22 +355,31 @@ class LeggerWidget(QDockWidget):
                     """
                     profile_variant = self.session.query(Varianten).filter(
                         Varianten.hydro_id == node.hydrovak.get('hydro_id'),
+                        or_(Varianten.hydro.has(HydroObject.begroeiingsvariant_id == Varianten.begroeiingsvariant_id),
+                            and_(Varianten.hydro.has(HydroObject.begroeiingsvariant_id == None),
+                                 Varianten.begroeiingsvariant.has(is_default=True))),
                         Varianten.diepte < depth + precision,
                         Varianten.diepte > depth - precision
                     )
 
-                    self.legger_model.setDataItemKey(self.legger_model.selected, 'selected_depth', depth)
-                    over_depth = node.hydrovak.get('depth') - depth if node.hydrovak.get('depth') is not None else None
-
                     if profile_variant.count() > 0:
-                        profile = profile_variant.first()
-                        width = profile.waterbreedte
+                        profilev = profile_variant.first()
+
+                        self.legger_model.setDataItemKey(self.legger_model.selected, 'selected_depth', depth)
+                        self.legger_model.setDataItemKey(
+                            self.legger_model.selected, 'selected_variant_id', profilev.id)
+
+                        over_depth = node.hydrovak.get('depth') - depth if node.hydrovak.get(
+                            'depth') is not None else None
+
+
+                        width = profilev.waterbreedte
                         self.legger_model.setDataItemKey(node, 'selected_width', width)
 
                         over_width = node.hydrovak.get('width') - width \
                             if node.hydrovak.get('width') is not None else None
 
-                        figuren = profile.figuren
+                        figuren = profilev.figuren
                         score = None
                         if len(figuren) > 0:
                             figuur = figuren[0]
@@ -385,12 +397,11 @@ class LeggerWidget(QDockWidget):
                         selected = self.session.query(GeselecteerdeProfielen).filter(
                             GeselecteerdeProfielen.hydro_id == node.hydrovak.get('hydro_id')).first()
                         if selected:
-                            selected.variant = profile
-
+                            selected.variant = profilev
                         else:
                             selected = GeselecteerdeProfielen(
                                 hydro_id=node.hydrovak.get('hydro_id'),
-                                variant_id=profile.id
+                                variant_id=profilev.id
                             )
 
                         self.session.add(selected)
@@ -463,15 +474,17 @@ class LeggerWidget(QDockWidget):
 
         self.variant_model.removeRows(0, len(self.variant_model.rows))
         profs = []
+        #todo: store selected variant id instead of depth!
         selected_depth = item.hydrovak.get('selected_depth')
+        selected_variant_id = item.hydrovak.get('selected_variant_id')
 
-        for profile in hydro_object.varianten.order_by(Varianten.diepte):
-            active = abs(profile.diepte - selected_depth) < 0.00001 if selected_depth is not None else False
-
+        for profile in hydro_object.varianten.options(joinedload(Varianten.begroeiingsvariant)).order_by(Varianten.diepte):
+            active = selected_variant_id == profile.id
             profs.append({
                 'name': profile.id,
                 'active': active,  # digits differ far after the
                 'depth': profile.diepte,
+                'begroeiingsvariant': profile.begroeiingsvariant.naam,
                 'color': (243, 132, 0, 255) if active else (243, 132, 0, 20),
                 'points': [
                     (-0.5 * profile.waterbreedte, hydro_object.streefpeil),

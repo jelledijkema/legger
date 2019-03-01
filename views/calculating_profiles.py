@@ -225,33 +225,33 @@ class ProfileCalculationWidget(QWidget):  # , FORM_CLASS):
         # do one query, don't know what the reason was for this...
         session = db.get_session()
 
-        bv, new = get_or_create(session, BegroeiingsVariant, naam='standaard',
+        get_or_create(session, BegroeiingsVariant, naam='standaard',
                                 defaults={'friction': Kb})
 
-        bv, new = get_or_create(session, BegroeiingsVariant, naam='deels begroeid',
-                                defaults={'friction': 1.5 * Kb})
+        get_or_create(session, BegroeiingsVariant, naam='deels begroeid',
+                                defaults={'friction': 0.75 * Kb})
 
-        bv, new = get_or_create(session, BegroeiingsVariant, naam='sterk begroeid',
-                                defaults={'friction': 2 * Kb})
+        get_or_create(session, BegroeiingsVariant, naam='sterk begroeid',
+                                defaults={'friction': 0.5 * Kb})
+        session.commit()
 
         for bv in session.query(BegroeiingsVariant).all():
 
-            friction_bos_bijkerk = bv.friction
-
-            try:
-                profiles = create_theoretical_profiles(self.polder_datasource, friction_bos_bijkerk)
+            if True:
+            #try:
+                profiles = create_theoretical_profiles(self.polder_datasource, bv)
                 self.feedbackmessage = "Profielen zijn berekend."
-            except:
+            #except:
                 self.feedbackmessage = "Profielen konden niet worden berekend."
-            finally:
+            #finally:
                 self.feedbacktext.setText(self.feedbackmessage)
 
-            try:
-                write_theoretical_profile_results_to_db(profiles, self.polder_datasource, bv)
+            #try:
+                write_theoretical_profile_results_to_db(session, profiles, self.polder_datasource, bv)
                 self.feedbackmessage = self.feedbackmessage + ("\nProfielen opgeslagen in legger db.")
-            except:
+            #except:
                 self.feedbackmessage = self.feedbackmessage + ("\nProfielen niet opgeslagen in legger database.")
-            finally:
+            #finally:
                 self.feedbacktext.setText(self.feedbackmessage)
 
     def execute_step3(self):

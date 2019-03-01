@@ -8,6 +8,7 @@ from PyQt4.QtGui import QAction, QIcon
 from legger.tools.legger_network_tool import LeggerNetworkTool
 from legger.tools.sqlite_polder_selection import DatabaseSelection
 from legger.tools.profile_variant_calculations import ProfileCalculations
+from legger.tools.set_begroeiingsvariant import SetBegroeiingsvariant
 import resources  # can be essential for the tool pictograms
 
 # Initialize Qt resources from file resources.py
@@ -48,7 +49,8 @@ class Legger(QObject):
             if qVersion() > '4.3.3':
                 QCoreApplication.installTranslator(self.translator)
 
-        self.polder_datasource = "Kies eerst een legger database"
+        self.polder_datasource = r'C:\Users\basti\.qgis2\python\plugins\legger\tests\data\20180613_legger_Marken.sqlite'
+            # "Kies eerst een legger database"
 
         # self.db_path_result_sqlite = self.ts_datasource.rows[0].spatialite_cache_filepath().replace('\\', '/')
         # db_path_model_sqlite = ts_datasource.model_spatialite_filepath
@@ -149,11 +151,13 @@ class Legger(QObject):
         self.read_database = DatabaseSelection(self.iface, self)
         self.load_profiles = ProfileCalculations(self.iface, self)
         self.network_tool = LeggerNetworkTool(self.iface, self)
+        self.set_begroeiingsveriant = SetBegroeiingsvariant(self.iface, self)
 
         self.tools = []
         self.tools.append(self.read_database)
         self.tools.append(self.load_profiles)
         self.tools.append(self.network_tool)
+        self.tools.append(self.set_begroeiingsveriant)
 
         try:
             import remote_debugger_settings
@@ -162,12 +166,18 @@ class Legger(QObject):
             pass
 
         for tool in self.tools:
-            self.add_action(
-                tool,
-                tool.icon_path,
-                text=self.tr(tool.menu_text),
-                callback=tool.run,
-                parent=self.iface.mainWindow())
+            if hasattr(tool, 'get_action'):
+                action = tool.get_action()
+                self.actions.append(action)
+                self.toolbar.addAction(action)
+
+            else:
+                self.add_action(
+                    tool,
+                    tool.icon_path,
+                    text=self.tr(tool.menu_text),
+                    callback=tool.run,
+                    parent=self.iface.mainWindow())
 
     def unload(self):
         """Removes the plugin menu item and icon from QGIS GUI."""

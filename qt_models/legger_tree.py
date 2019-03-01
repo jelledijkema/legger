@@ -27,7 +27,9 @@ HORIZONTAL_HEADERS = (
     {'field': 'selected_width', 'header': 'prof b', 'column_width': 60},
     {'field': 'over_depth', 'header': 'over d', 'column_width': 60},
     {'field': 'over_width', 'header': 'over b', 'column_width': 60},
-    {'field': 'score', 'column_width': 50},
+    {'field': 'score', 'show': False, 'column_width': 50},
+    {'field': 'selected_variant_id', 'show': True, 'column_width': 50},
+
 )
 
 
@@ -72,6 +74,7 @@ class hydrovak_class(object):
             'variant_max_depth': 'max_diepte',
             'selected_depth': 'geselecteerd_diepte',
             'selected_width': 'geselecteerd_breedte',
+            'selected_variant_id': 'variant'
         }
 
     def __repr__(self):

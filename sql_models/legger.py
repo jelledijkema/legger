@@ -2,7 +2,7 @@ import datetime
 import logging
 
 from geoalchemy2.types import Geometry
-from sqlalchemy import (Column, DateTime, Float, ForeignKey, Integer, String, )
+from sqlalchemy import (Column, DateTime, Float, ForeignKey, Integer, String, Boolean)
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.sql.expression import ClauseElement
 from sqlalchemy.orm import relationship
@@ -22,6 +22,26 @@ def get_or_create(session, model, defaults=None, **kwargs):
         instance = model(**params)
         session.add(instance)
         return instance, True
+
+
+class BegroeiingsVariant(Base):
+    __tablename__ = 'begroeiingsvariant'
+
+    id = Column(Integer(), primary_key=True, autoincrement=True)
+    naam = Column(String(20))
+    friction = Column(Float())
+    is_default = Column(Boolean, default=False)
+
+    profielvariant = relationship('Varianten',
+                                  # primaryjoin="Varianten.begroeiingsvariant_id == BegroeiingsVariant.id",
+                                  uselist=True,
+                                  lazy='dynamic',
+                                  # foreign_keys='ws_in_peilgebied',
+                                  back_populates="begroeiingsvariant")
+
+    def __str__(self):
+        return u'begroeiingsvariant {0}'.format(
+            self.naam)
 
 
 class Waterdeel(Base):
@@ -53,12 +73,10 @@ class HydroObject(Base):
     channel_id = Column(Integer)  # link to 3di id
     flowline_id = Column(Integer)  # link to 3di id
     score = Column(Float)
-    # shape_length = Column(Float)
+    begroeiingsvariant_id = Column(Integer,
+                                   ForeignKey(BegroeiingsVariant.__tablename__ + ".id"))
 
-    varianten = relationship("Varianten",
-                             uselist=True,
-                             lazy='dynamic',
-                             back_populates="hydro")
+    # shape_length = Column(Float)
 
     profielen = relationship("Profielen",
                              back_populates="hydro")
@@ -75,6 +93,18 @@ class HydroObject(Base):
                            lazy='dynamic',
                            # foreign_keys=[id],
                            back_populates="hydro")
+
+    varianten = relationship("Varianten",
+                             primaryjoin="HydroObject.id == Varianten.hydro_id",
+                             # uselist=True,
+                             lazy='dynamic',
+                             back_populates="hydro")
+
+    begroeiingsvariant = relationship(BegroeiingsVariant,
+                                      # foreign_keys='begroeiingsvariant_id',
+                                      # primaryjoin="Varianten.begroeiingsvariant_id == BegroeiingsVariant.id",
+                                      uselist=False)
+
 
     def __str__(self):
         return u'Hydro object {0}'.format(
@@ -146,6 +176,10 @@ class Kenmerken(Base):
     hydro_id = Column(Integer,
                       ForeignKey(HydroObject.__tablename__ + ".objectid"))
 
+    na_lengte = Column(Float)
+    voor_lengte = Column(Float)
+    new_category = Column(Integer)
+
     hydro = relationship(HydroObject,
                          # foreign_keys='ws_in_peilgebied',
                          back_populates="kenmerken")
@@ -153,23 +187,6 @@ class Kenmerken(Base):
     def __str__(self):
         return u'kenmerken {0}'.format(
             self.id)
-
-
-class BegroeiingsVariant(Base):
-    __tablename__ = 'begroeiingsvariant'
-
-    id = Column(Integer(), primary_key=True, autoincrement=True)
-    naam = Column(String(20))
-    friction = Column(Float())
-
-    profielvariant = relationship('Varianten',
-                                  primaryjoin="Varianten.begroeiingsvariant_id == BegroeiingsVariant.id",
-                                  # foreign_keys='ws_in_peilgebied',
-                                  back_populates="begroeiingsvariant")
-
-    def __str__(self):
-        return u'begroeiingsvariant {0}'.format(
-            self.naam)
 
 
 class Varianten(Base):
@@ -189,13 +206,13 @@ class Varianten(Base):
                       ForeignKey(HydroObject.__tablename__ + ".id"))
 
     begroeiingsvariant = relationship(BegroeiingsVariant,
-                                      #foreign_keys='begroeiingsvariant_id',
+                                      # foreign_keys='begroeiingsvariant_id',
                                       primaryjoin="Varianten.begroeiingsvariant_id == BegroeiingsVariant.id",
                                       uselist=False,
                                       back_populates="profielvariant")
 
     hydro = relationship(HydroObject,
-                         #foreign_keys='hydro_id',
+                         # foreign_keys='hydro_id',
                          uselist=False,
                          back_populates="varianten")
 
