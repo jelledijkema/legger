@@ -1,15 +1,16 @@
 # -*- coding: utf-8 -*-
 from __future__ import division
 
+import datetime
 import logging
 import os
 
 from PyQt4 import QtCore, QtGui
 from PyQt4.QtCore import QSettings, pyqtSignal
 from PyQt4.QtGui import QFileDialog, QWidget
+from legger.utils.read_data_and_make_leggerdatabase import CreateLeggerSpatialite
 
 log = logging.getLogger(__name__)
-import datetime
 
 try:
     _fromUtf8 = QtCore.QString.fromUtf8
@@ -125,8 +126,6 @@ class PolderSelectionWidget(QWidget):#, FORM_CLASS):
             'scripts'
         ))
 
-        from create_spatialite import create_spatialite_database
-
         try:
             init_path = os.path.expanduser("~")  # get path to respectively "user" folder
             init_path = os.path.abspath(os.path.join(init_path, ".qgis2/python/plugins/legger/tests/data"))
@@ -136,11 +135,9 @@ class PolderSelectionWidget(QWidget):#, FORM_CLASS):
         filename = "test_ " + str(datetime.datetime.today().strftime('%Y%m%d')) + ".sqlite"
         database_path = os.path.abspath(os.path.join(init_path, filename))
 
+        # todo: select output location
         filepath_DAMO = self.var_text_DAMO.text()
         filepath_HDB = self.var_text_HDB.text()
-
-        filepath_DAMO = r'C:\Users\basti\.qgis2\python\plugins\legger\tests\data\Hoekje_leggertool_database.gdb'
-        filepath_HDB = r'C:\Users\basti\.qgis2\python\plugins\legger\tests\data\Hoekje_leggertool_HDB.gdb'
 
         settings = QSettings('last_used_legger_spatialite_path', 'filepath')
         self.root_tool.polder_datasource = database_path
@@ -152,12 +149,23 @@ class PolderSelectionWidget(QWidget):#, FORM_CLASS):
         settings.setValue('last_used_legger_spatialite_path',
                           os.path.dirname(self.root_tool.polder_datasource)) # verwijzing naar de class.variable in het hoofdscherm
 
-        create_spatialite_database(
+        # test_data_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), os.pardir, 'tests', 'data'))
+        #
+        # database_path = os.path.join(
+        #     test_data_dir,
+        #     "test_{0}.sqlite".format(str(datetime.datetime.today().strftime('%Y%m%d')))
+        # )
+        #
+        # filepath_DAMO = os.path.join(test_data_dir, 'DAMO.gdb')  # 'Hoekje_leggertool_database.gdb')
+        # filepath_HDB = os.path.join(test_data_dir, 'HDB.gdb')  # 'Hoekje_leggertool_HDB.gdb')
+
+        legger_class = CreateLeggerSpatialite(
             filepath_DAMO,
             filepath_HDB,
             database_path
         )
 
+        legger_class.full_import_ogr2ogr()
 
     def select_spatialite(self):
         """

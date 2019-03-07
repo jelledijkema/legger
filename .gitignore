@@ -104,3 +104,4 @@ ENV/
 external/
 
 tests/data/tdimodel/subgrid_map_original.nc
+tests/data/
