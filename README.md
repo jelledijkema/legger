@@ -7,7 +7,7 @@ the water gradiant calculated with 3di model results
 
 Steps for installation of this QGIS plugin:
 
-1. Make sure the 64-bit version of QGIS 2.18.x is installed
+1. Make sure the 64-bit version of QGIS 2.18.x is installed. Version 2.18.23 and 2.18.26 are known to work properly. Versions 2.18.27 and 2.18.28 of QGIS don't seem to support this plugin.
 
 2. Install the 3di QGIS plugin. See installation instruction on:
    https://github.com/nens/threedi-qgis-plugin/wiki
@@ -22,9 +22,9 @@ Steps for installation of this QGIS plugin:
    https://www.lfd.uci.edu/~gohlke/pythonlibs/#shapely
    Probably you need the version Shapely‑1.6.xxx‑cp27‑cp27m‑win_amd64.whl
 
-4. Find the program root of your QGIS installation or OSGeo4w64 installation
+4. Find the program root of your QGIS installation or OSGeo4w64 installation (Windows Batch file)
 
-5. It might be required to update pip before installing pandas and descartes: 
+5. For PANDAS and DESCARTES: It might be required to update pip before installing pandas and descartes: 
    ```
     python -m pip install --upgrade pip
    ```
@@ -43,7 +43,7 @@ Steps for installation of this QGIS plugin:
     python -m pip install <package>
    ```
    
-6. For installing shapely start a command prompt (cmd) and go to the QGIS or OSgeo4w64 root directory (cd xxxx)
+6. For installing SHAPELY start a command prompt (cmd) and go to the QGIS or OSgeo4w64 root directory (cd xxxx)
    First remove the old version of shapely
    ```
     del apps\python27\lib\site-packages\shapely.pth
