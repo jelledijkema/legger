@@ -1,4 +1,11 @@
 # coding: utf-8
+
+# todo:
+#  - DuikerSifonHevel
+#  - objectid vullen
+#  - verwijderen imp tabellen
+#  - grondsoort? --> voorlopig niet
+
 import datetime
 import logging
 import os
@@ -6,7 +13,7 @@ import os.path
 import subprocess
 import sys
 
-from sql_models.legger_database import LeggerDatabase
+from legger.sql_models.legger_database import LeggerDatabase
 
 log = logging.getLogger(__name__)
 
@@ -75,7 +82,6 @@ class CreateLeggerSpatialite(object):
     def full_import_ogr2ogr(self):
 
         # Volgende activiteiten:
-
         # stap 1: aanmaken lege sqlite met de juiste tabellen en de juiste kolommen in tabellen lukt niet in mijn testomgeving.
         self.create_spatialite()
 
@@ -108,7 +114,7 @@ class CreateLeggerSpatialite(object):
         nr_tables = len(tables)
         for i, table in enumerate(tables):
 
-            print("--- copy {0}/{1} table {2} ---".format(i, nr_tables, table))
+            log.info("--- copy {0}/{1} table {2} ---".format(i+1, nr_tables, table))
 
             # "-overwrite"
             cmd = '{ogr_exe} -a_srs EPSG:28992 -f SQLite -dsco SPATIALITE=YES -append -nln {dest_table}' \
@@ -119,7 +125,6 @@ class CreateLeggerSpatialite(object):
                 dest_table="imp_{0}".format(table),
                 spatialite_path=self.database_path
             )
-            print(cmd)
 
             ret = subprocess.call(cmd, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
 
@@ -205,8 +210,6 @@ class CreateLeggerSpatialite(object):
         session.commit()
 
         # todo: sifon
-        # todo: ...
-
 
 def main():
     test_data_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), os.pardir, 'tests', 'data'))
