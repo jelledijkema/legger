@@ -62,6 +62,7 @@ class ProfileCalculationWidget(QWidget):  # , FORM_CLASS):
         self.polder_datasource = polder_datasource
         self.ts_datasource = ts_datasource
         self.timestep = -1
+        self.surge_selection = -1
 
         errormessage = "Kies eerst 3di output (model en netCDF) in de 'Select 3di results' van 3di plugin."
         try:
@@ -82,6 +83,7 @@ class ProfileCalculationWidget(QWidget):  # , FORM_CLASS):
         if self.path_model_db is None:
             self.path_model_db = errormessage
 
+        # timestep combobox
         self.last_timestep_text = 'laatste tijdstap'
         self.timestamps = []
 
@@ -97,9 +99,22 @@ class ProfileCalculationWidget(QWidget):  # , FORM_CLASS):
         self.timestep_combo_box.insertItems(0, choices)
         self.timestep_combo_box.setCurrentIndex(0)
 
-        # set listeners
+        # set time combobox listeners
         self.timestep_combo_box.currentIndexChanged.connect(
             self.timestep_selection_change)
+
+        # surge combobox
+        self.last_surge_text = "kies opstuwingsnorm"
+
+        # fill surge combobox
+        surge_choices = [self.last_surge_text] + ['%s' % s for s in [2.0,2.5,3.0,3.5,4.0,4.5,5.0]]
+        self.surge_combo_box.insertItems(0,surge_choices)
+        self.surge_combo_box.setCurrentIndex(0)
+
+        # set surge combobox listeners
+        self.surge_combo_box.currentIndexChanged.connect(
+            self.surge_selection_change)
+
 
     def timestep_selection_change(self, nr):
         """Proces new selected timestep in combobox
@@ -112,6 +127,18 @@ class ProfileCalculationWidget(QWidget):  # , FORM_CLASS):
             self.timestep = -1
         else:
             self.timestep = nr - 1
+
+    def surge_selection_change(self, nr):
+        """Proces new selected timestep in combobox
+
+        :param nr:
+        :return:
+        """
+        text = self.surge_combo_box.currentText()
+        if text == self.last_surge_text:
+            self.surge_selection = 3.0
+        else:
+            self.surge_selection = text
 
     def closeEvent(self, event):
         """
@@ -325,13 +352,17 @@ class ProfileCalculationWidget(QWidget):  # , FORM_CLASS):
         self.groupBox_step1.setLayout(self.box_step1)  # box toevoegen aan groupbox
         self.upper_row.addWidget(self.groupBox_step1)
 
+        # surge selection:
+        self.surge_combo_box = QComboBox(self)
+
         # Assembling step 2 row
         self.step2_button = QtGui.QPushButton(self)
         self.step2_button.setObjectName(_fromUtf8("Step2"))
         self.step2_button.clicked.connect(self.execute_step2)
         self.groupBox_step2 = QtGui.QGroupBox(self)
         self.groupBox_step2.setTitle("Step2:")
-        self.box_step2 = QtGui.QHBoxLayout()
+        self.box_step2 = QtGui.QVBoxLayout()
+        self.box_step2.addWidget(self.surge_combo_box)
         self.box_step2.addWidget(self.step2_button)
         self.groupBox_step2.setLayout(self.box_step2)  # box toevoegen aan groupbox
         self.middle_row.addWidget(self.groupBox_step2)

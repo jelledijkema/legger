@@ -52,7 +52,7 @@ class Waterdeel(Base):
     id = Column(Integer, primary_key=True)
     shape_length = Column(Float)
     shape_area = Column(Float)
-    geometry = Column("GEOMETRY", Geometry(geometry_type='POLYGON', srid=28992))
+    geometry = Column("GEOMETRY", Geometry(geometry_type='MULTIPOLYGON', srid=28992))
 
     def __str__(self):
         return u'Waterdeel {0}'.format(
@@ -65,7 +65,7 @@ class HydroObject(Base):
 
     objectid = Column(Integer)
     id = Column(Integer, primary_key=True)
-    geometry = Column("GEOMETRY", Geometry(geometry_type='LINESTRING', srid=28992))
+    geometry = Column("GEOMETRY", Geometry(geometry_type='MULTILINESTRING', srid=28992))
     code = Column(String(50), index=True)
     categorieoppwaterlichaam = Column(Integer)
     streefpeil = Column(Float)
@@ -114,8 +114,8 @@ class HydroObject(Base):
 class Profielen(Base):
     __tablename__ = 'profielen'
 
-    objectid = Column(Integer)
-    id = Column(Integer, primary_key=True)  # varchar??
+    objectid = Column(Integer, autoincrement=True)
+    id = Column(Integer, primary_key=True, autoincrement=True)
     proident = Column(String(24))
     bron_profiel = Column(String(50))
     pro_id = Column(Integer, index=True)
@@ -137,7 +137,7 @@ class Profielen(Base):
 class Profielpunten(Base):
     __tablename__ = 'profielpunten'
 
-    objectid = Column(Integer, primary_key=True)
+    objectid = Column(Integer, primary_key=True, autoincrement=True)
     pbp_id = Column(Integer)
     prw_id = Column(Integer)
     pbpident = Column(String(24))
@@ -161,7 +161,7 @@ class Profielpunten(Base):
 class Kenmerken(Base):
     __tablename__ = 'kenmerken'
 
-    objectid = Column(Integer)
+    objectid = Column(Integer, autoincrement=True)
     id = Column(Integer, primary_key=True)
     diepte = Column(Float)
     bron_diepte = Column(String(50))
@@ -286,9 +286,9 @@ class DuikerSifonHevel(Base):
     __tablename__ = 'duikersifonhevel'
     extend_existing = True
 
-    objectid = Column(Integer)
+    objectid = Column(Integer, autoincrement=True)
     id = Column(Integer, primary_key=True)
-    geometry = Column("GEOMETRY", Geometry(geometry_type='LINESTRING', srid=28992))
+    geometry = Column("GEOMETRY", Geometry(geometry_type='MULTILINESTRING', srid=28992))
     code = Column(String(50), index=True)
     categorie = Column(Integer)
     lengte = Column(Float)
