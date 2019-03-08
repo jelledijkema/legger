@@ -40,13 +40,14 @@ class PlotItemTable(QTableView):
 
         self.setStyleSheet("QTableView::item:hover{background-color:#FFFF00;}")
 
-    def closeEvent(self, event):
+    def destroy(self, event):
         """
         overwrite of QDockWidget class to emit signal
         :param event: QEvent
         """
         self.setMouseTracking(False)
         self.viewport().removeEventFilter(self)
+        super(PlotItemTable, self).destroy(event)
         event.accept()
 
     def eventFilter(self, widget, event):
@@ -136,6 +137,7 @@ class StartpointTreeWidget(QTreeView):
         self.clicked.disconnect(self.click_leaf)
         self.setMouseTracking(False)
         self.viewport().removeEventFilter(self)
+        super(StartpointTreeWidget, self).closeEvent(event)
         event.accept()
 
     def click_leaf(self, index):
@@ -229,6 +231,7 @@ class LeggerTreeWidget(QTreeView):
         self.clicked.disconnect(self.click_leaf)
         self.setMouseTracking(False)
         self.viewport().removeEventFilter(self)
+        # super(LeggerTreeWidget, self).closeEvent(event)
         event.accept()
 
     def click_leaf(self, index):

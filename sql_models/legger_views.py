@@ -61,7 +61,7 @@ def create_legger_views(session):
                 v.diepte as geselecteerd_diepte,
                 v.waterbreedte as geselecteerd_breedte
                 FROM geselecteerd g, varianten v
-                WHERE	g.variant_id = v.id) as sel
+                WHERE g.variant_id = v.id) as sel
                 ON sel.hydro_id = h.id       
         """)
 

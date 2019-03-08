@@ -1,13 +1,22 @@
 import json
 import logging
+import math
 
-#from ThreeDiToolbox.datasource.netcdf_groundwater import NetcdfGroundwaterDataSource
+from qgis.core import QgsGeometry, QgsLineStringV2, QgsPoint
+
+try:
+    from ThreeDiToolbox.datasource.netcdf_groundwater_h5py import NetcdfGroundwaterDataSourceH5py as NetcdfGroundwaterDataSource
+except ImportError:
+    from ThreeDiToolbox.datasource.netcdf_groundwater import NetcdfGroundwaterDataSource
+
+
 from legger.utils.geom_collections.lines import LineCollection
 from legger.utils.geometries import LineString
 from legger.utils.geometries import shape
 from legger.sql_models.legger import DuikerSifonHevel, HydroObject
 from legger.sql_models.legger_database import LeggerDatabase
 from pyspatialite import dbapi2 as dbapi
+
 
 log = logging.getLogger(__name__)
 
@@ -19,10 +28,10 @@ log = logging.getLogger(__name__)
 
 def read_tdi_results(path_model_db, path_result_db,
                      path_result_nc, path_legger_db,
-                     timestep,
-                     max_link_distance=1.0,
+                     timestep=-1,
+                     max_link_distance=5.0,
                      match_criteria=3):
-    """ joins hydoobjects to 3di-flowlines (through channels) and add the discharge of the last timestep
+    """ joins hydoobjects to 3di-flowlines (through channels) and add the discharge of the selected timestep
 
     path_model_db (str): filepath to sqlite database with 3di model
     path_result_db (str): filepath to sqlite database linked to the 3di results (.sqlite1 file)
@@ -51,6 +60,14 @@ def read_tdi_results(path_model_db, path_result_db,
     con_res.row_factory = dbapi.Row
     con_legger.row_factory = dbapi.Row
 
+    # read discharge of timestep. Returns numpy array with index number is idx.
+    # to link to model channels, the id mapping is needed.
+    if timestep == -1:
+        timestep = len(result_ds.timestamps) - 1
+
+    qts = result_ds.get_values_by_timestep_nr('q', timestep)
+
+    # get all 3di channels (for linking to flowlines and hydrovakken)
     channel_cursor = con_model.execute(
         'SELECT '
         'id,'
@@ -61,20 +78,13 @@ def read_tdi_results(path_model_db, path_result_db,
         # 'WHERE id=7119 ' # for testing and debugging
     )
 
-    # read discharge of timestep. Returns numpy array with index number is idx.
-    # to link to model channels, the id mapping is needed.
-    if timestep == -1:
-        timestep = len(result_ds.timestamps) - 1
-
-
-    qts = result_ds.get_values_by_timestep_nr('q', timestep)
-
     channel_col = LineCollection()
 
     for channel in channel_cursor.fetchall():
         flowlines = []
 
-        # get flowlines on channel, including start distance and end distance of flowline on channel
+        # get flowlines on channel (join on spatialite_id),
+        # including start distance and end distance of flowline on channel
         flowline_cursor = con_res.execute(
             "SELECT fl.id, fl.spatialite_id, fl.type, "
             "Line_Locate_Point(GEOMFROMTEXT(:wkt), TRANSFORM(sn.the_geom, 28992)) * :length AS start_distance, "
@@ -90,7 +100,7 @@ def read_tdi_results(path_model_db, path_result_db,
             }
         )
 
-        # append flowlines to channel, including flow on last timestep
+        # append flowlines to channel, including flow on selected timestep
         for fl in flowline_cursor.fetchall():
             flowline = {
                 'id': fl['id'],
@@ -125,26 +135,46 @@ def read_tdi_results(path_model_db, path_result_db,
     # loop over all hydroobjects and find flowline through link with channel
     for hydroobject in hydro_cursor.fetchall():
 
-        line = LineString(
-            json.loads(hydroobject['geojson'])['coordinates'])
+        if hydroobject['id'] in [198616, 198362, 659550]:
+            a = 1
 
-        bbox = line.bounds
-        bbox = (
-            bbox[0] - max_link_distance,
-            bbox[1] - max_link_distance,
-            bbox[2] + max_link_distance,
-            bbox[3] + max_link_distance,
-        )
+        line = QgsGeometry.fromPolyline([QgsPoint(c[0], c[1]) for c in json.loads(hydroobject['geojson'])['coordinates']])
+        # with shapely
+        # line = LineString(
+        #     json.loads(hydroobject['geojson'])['coordinates'])
+
+        bbox = line.boundingBox()
+        bbox = bbox.buffer(max_link_distance)
+        bbox = [bbox.xMinimum(), bbox.yMinimum(), bbox.xMaximum(), bbox.yMaximum()]
+        # with shapely
+        # bbox = line.bounds
+        # bbox = (
+        #     bbox[0] - max_link_distance,
+        #     bbox[1] - max_link_distance,
+        #     bbox[2] + max_link_distance,
+        #     bbox[3] + max_link_distance,
+        # )
 
         # create 9 point on the line to check matching geometries
+        length = line.length()
+        # with shapely
+        # length = line.length
+
         points_on_line = [
-            line.interpolate(dist * 0.1, normalized=True)
-            for dist in range(1, 10)
-        ]
+            line.interpolate((float(nr) / 10.0) * length)  # normalized=True
+            for nr in range(1, 10)
+            ]
+
+        # print(', '.join([str(point.x) for point in points_on_line]))
+
         candidates = []
 
         for channel in channel_col.filter(bbox=bbox):
-            geom_channel = shape(channel['geometry'])
+
+            geom_channel = QgsGeometry.fromPolyline([QgsPoint(c[0], c[1]) for c in channel['geometry']['coordinates']])
+            # with shapely
+            # geom_channel = shape(channel['geometry'])
+
             distances = [
                 geom_channel.distance(point)
                 for point in points_on_line
@@ -167,29 +197,47 @@ def read_tdi_results(path_model_db, path_result_db,
 
         if len(candidates) > 0:
             score, selected, geom_channel = sorted(candidates, key=lambda item: item[0])[0]
-            # hydroobject can have an other orientation than channel
-            dist1 = geom_channel.project(line.startpoint())
-            dist2 = geom_channel.project(line.endpoint())
+
+            # get orientation of hydroobject vs channel
+            vertexes = line.asPolyline()
+            d1, p1, v1 = geom_channel.closestSegmentWithContext(vertexes[0])
+            d2, p2, v2 = geom_channel.closestSegmentWithContext(vertexes[-1])
+
+            if (d1 > 50 or d2> 50):
+                a = 2
+
+            # v1 = v1 -1 if v1 > 0 else 0
+            # v2 = v2 - 1 if v2 > 0 else 0
+
+            dist1 = geom_channel.distanceToVertex(v1) - math.sqrt(geom_channel.sqrDistToVertexAt(p1, v1))
+            dist2 = geom_channel.distanceToVertex(v2) - math.sqrt(geom_channel.sqrDistToVertexAt(p2, v2))
+            # dist1 = dist1 * line.length()
+            # dist2 = dist2 * line.length()
+            # with shapely:
+            # dist1 = geom_channel.project(line.startpoint())
+            # dist2 = geom_channel.project(line.endpoint())
+
             dist_startpoint = min(dist1, dist2)
             dist_endpoint = max(dist1, dist2)
             if dist2 < dist1:
                 factor = -1
             else:
                 factor = 1
-            # get best flowline
 
+            # get best flowline
             flowline_candidates = []
 
             for fl in selected['properties']['flowlines']:
-                if (dist_startpoint <= fl['end_distance'] and
-                            dist_endpoint >= fl['start_distance']):
-                    matching_length = (min(dist_endpoint, fl['end_distance'] -
-                                           max(dist_startpoint, fl['start_distance'])))
+                # add 1.0 meter because distance calculation differ a small bit between platforms
+                # if (dist_startpoint <= fl['end_distance'] + 1.0 and
+                #             dist_endpoint >= fl['start_distance'] - 1.0):
+                matching_length = (min(dist_endpoint, fl['end_distance'] -
+                                       max(dist_startpoint, fl['start_distance'])))
 
-                    flowline_candidates.append((
-                        matching_length,
-                        fl
-                    ))
+                flowline_candidates.append((
+                    matching_length,
+                    fl
+                ))
 
             if len(flowline_candidates) == 0:
                 log.warning(
@@ -235,6 +283,7 @@ def write_tdi_results_to_db(hydroobject_results, path_legger_db):
             hydroobj.debiet = result['qend']
             hydroobj.channel_id = result['channel_id']
             hydroobj.flowline_id = result['flowline_id']
+            hydroobj.score = result['score']
 
     log.info("Save 3di results (update hydro objects) to database ")
     session.commit()

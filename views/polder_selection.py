@@ -66,28 +66,24 @@ class PolderSelectionWidget(QWidget):#, FORM_CLASS):
     def select_DAMO(self):
         """
         Select a dump or export of the DAMO database (.gdb)
-
         :return:
         """
-        # saves last opened datadump path
-        settings = QSettings('last_used_DAMO_path','filepath')
-
-        # set initial path to right folder
+        settings = QSettings('leggertool', 'filepaths')
         try:
+            init_path = settings.value('last_used_DAMO_path', type=str)
+        except:
             init_path = os.path.expanduser("~")  # get path to respectively "user" folder
-        except TypeError:
-            init_path = os.path.expanduser("~")
 
         DAMO_datasource = QFileDialog.getExistingDirectory(
             self,
-            'Open Directory',
+            'Selecteer DAMO FileGeoDatabase (.gdb) van polder',
             init_path
         )
 
-        self.var_text_DAMO.setText(DAMO_datasource)
-        settings.setValue('last_used_DAMO_path',
-                          os.path.dirname(
-                              DAMO_datasource))  # verwijzing naar de class.variable in het hoofdscherm
+        if DAMO_datasource:
+            self.var_text_DAMO.setText(DAMO_datasource)
+            settings.setValue('last_used_DAMO_path',
+                              os.path.dirname(DAMO_datasource))
         return
 
     def select_HDB(self):
@@ -96,111 +92,100 @@ class PolderSelectionWidget(QWidget):#, FORM_CLASS):
 
         :return:
         """
-        # saves last opened datadump path
-        settings = QSettings('last_used_HDB_path','filepath')
-
-        # set initial path to right folder
+        settings = QSettings('leggertool', 'filepaths')
         try:
+            init_path = settings.value('last_used_HDB_path', type=str)
+        except:
             init_path = os.path.expanduser("~")  # get path to respectively "user" folder
-        except TypeError:
-            init_path = os.path.expanduser("~")
 
         HDB_datasource = QFileDialog.getExistingDirectory(
             self,
-            'Open Directory',
+            'Selecteer Hydrologen fileGeoDatabase (.gdb) van polder',
             init_path
         )
 
-        self.var_text_HDB.setText(HDB_datasource)
-        settings.setValue('last_used_HDB_path',
-                          os.path.dirname(
-                              HDB_datasource))  # verwijzing naar de class.variable in het hoofdscherm
+        if HDB_datasource:
+            self.var_text_HDB.setText(HDB_datasource)
+            settings.setValue('last_used_HDB_path',
+                              os.path.dirname(
+                                  HDB_datasource))  # verwijzing naar de class.variable in het hoofdscherm
         return
-
-    def create_spatialite_database(self):
-        import sys
-
-        sys.path.append(os.path.join(
-            os.path.dirname(__file__),
-            os.path.pardir,
-            'scripts'
-        ))
-
-        try:
-            init_path = os.path.expanduser("~")  # get path to respectively "user" folder
-            init_path = os.path.abspath(os.path.join(init_path, ".qgis2/python/plugins/legger/tests/data"))
-        except TypeError:
-            init_path = os.path.expanduser("~")
-
-        filename = "test_ " + str(datetime.datetime.today().strftime('%Y%m%d')) + ".sqlite"
-        database_path = os.path.abspath(os.path.join(init_path, filename))
-
-        # todo: select output location
-        filepath_DAMO = self.var_text_DAMO.text()
-        filepath_HDB = self.var_text_HDB.text()
-
-        settings = QSettings('last_used_legger_spatialite_path', 'filepath')
-        self.root_tool.polder_datasource = database_path
-        self.var_text_leggerdatabase.setText(self.root_tool.polder_datasource)
-
-        if self.root_tool.polder_datasource == "":
-            return False
-
-        settings.setValue('last_used_legger_spatialite_path',
-                          os.path.dirname(self.root_tool.polder_datasource)) # verwijzing naar de class.variable in het hoofdscherm
-
-        # test_data_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), os.pardir, 'tests', 'data'))
-        #
-        # database_path = os.path.join(
-        #     test_data_dir,
-        #     "test_{0}.sqlite".format(str(datetime.datetime.today().strftime('%Y%m%d')))
-        # )
-        #
-        # filepath_DAMO = os.path.join(test_data_dir, 'DAMO.gdb')  # 'Hoekje_leggertool_database.gdb')
-        # filepath_HDB = os.path.join(test_data_dir, 'HDB.gdb')  # 'Hoekje_leggertool_HDB.gdb')
-
-        legger_class = CreateLeggerSpatialite(
-            filepath_DAMO,
-            filepath_HDB,
-            database_path
-        )
-
-        legger_class.full_import_ogr2ogr()
 
     def select_spatialite(self):
         """
         Open file dialog on click on button 'load
         :return: Boolean, if file is selected
         """
-
-        # saves the last opened path
-        settings = QSettings('last_used_legger_spatialite_path', 'filepath')
-
-        # set initial path to right folder
+        settings = QSettings('leggertool', 'filepaths')
         try:
-            init_path = os.path.expanduser("~") # get path to respectively "user" folder
-            init_path = os.path.abspath(os.path.join(init_path, ".qgis2/python/plugins/legger/tests/data"))
-        except TypeError:
-            init_path = os.path.expanduser("~")
+            init_path = settings.value('last_used_legger_spatialite_path', type=str)
+        except:
+            init_path = os.path.expanduser("~")  # get path to respectively "user" folder
 
-        self.root_tool.polder_datasource = QFileDialog.getOpenFileName(
+        database = QFileDialog.getOpenFileName(
             self,
-            'Open File',
+            'Selecteer leggerdatabase',
             init_path,
             'Spatialite (*.sqlite)'
         )
 
-        self.var_text_leggerdatabase.setText(self.root_tool.polder_datasource)
-        if self.root_tool.polder_datasource == "":
-            return False
+        if database:
+            self.root_tool.polder_datasource = database
+            self.var_text_leggerdatabase.setText(database)
 
-        settings.setValue('last_used_legger_spatialite_path',
-                          os.path.dirname(self.root_tool.polder_datasource)) # verwijzing naar de class.variable in het hoofdscherm
+            settings.setValue('last_used_legger_spatialite_path',
+                              os.path.dirname(database))
         return
 
+    def create_spatialite_database(self):
+        # todo:
+        #  feedback if input is incorrect.
+        #  feedback of proces en of het gelukt is
+
+        settings = QSettings('leggertool', 'filepaths')
+        try:
+            init_path = settings.value('last_used_legger_spatialite_path', type=str)
+        except:
+            init_path = os.path.expanduser("~")  # get path to respectively "user" folder
+
+        database = QFileDialog.getSaveFileName(
+            self,
+            'Selecteer bestandslocatie voor nieuwe leggerdatabase',
+            init_path,
+            'Spatialite (*.sqlite)'
+        )
+
+        if not database:
+            return
+
+        self.root_tool.polder_datasource = database
+        self.var_text_leggerdatabase.setText(database)
+
+        settings.setValue('last_used_legger_spatialite_path',
+                          os.path.dirname(database))
+
+        database_path = self.var_text_leggerdatabase.text()
+        filepath_DAMO = self.var_text_DAMO.text()
+        filepath_HDB = self.var_text_HDB.text()
+
+        if not filepath_DAMO:
+            # todo: raise error
+            raise Exception('Geselecteerde DAMO database mist')
+
+        legger_class = CreateLeggerSpatialite(
+            filepath_DAMO,
+            filepath_HDB,
+            database_path,
+        )
+
+        legger_class.full_import_ogr2ogr()
+
     def setup_ui(self):
+        self.setMinimumWidth(700)
+
         self.verticalLayout = QtGui.QVBoxLayout(self)
         self.verticalLayout.setObjectName(_fromUtf8("verticalLayout"))
+
         self.maak_leggerdatabase_row = QtGui.QVBoxLayout()
         self.maak_leggerdatabase_row.setObjectName(_fromUtf8("Maak leggerdatabase row"))
         self.kies_leggerdatabase_row = QtGui.QVBoxLayout()
@@ -208,27 +193,30 @@ class PolderSelectionWidget(QWidget):#, FORM_CLASS):
         self.bottom_row = QtGui.QHBoxLayout()
         self.bottom_row.setObjectName(_fromUtf8("Bottom row"))
 
-        ## connect signals
-        ## select input files for the creation of legger database
+        # connect signals
+        # select input files for the creation of legger database
         self.load_DAMO_dump_button = QtGui.QPushButton(self)
         self.load_DAMO_dump_button.setObjectName(_fromUtf8("Load DAMO"))
         self.load_DAMO_dump_button.clicked.connect(self.select_DAMO)
+        self.load_DAMO_dump_button.setMinimumWidth(190)
 
         self.load_HDB_dump_button = QtGui.QPushButton(self)
         self.load_HDB_dump_button.setObjectName(_fromUtf8("Load HDB"))
         self.load_HDB_dump_button.clicked.connect(self.select_HDB)
+        self.load_HDB_dump_button.setMinimumWidth(190)
 
-        ## make database routine
+        # make database routine
         self.create_leggerdatabase_button = QtGui.QPushButton(self)
         self.create_leggerdatabase_button.setObjectName(_fromUtf8("Create database"))
         self.create_leggerdatabase_button.clicked.connect(self.create_spatialite_database)
 
-        ## select legger database
+        # select legger database
         self.load_leggerdatabase_button = QtGui.QPushButton(self)
         self.load_leggerdatabase_button.setObjectName(_fromUtf8("Load"))
         self.load_leggerdatabase_button.clicked.connect(self.select_spatialite)
+        self.load_leggerdatabase_button.setMinimumWidth(190)
 
-        ## close screen
+        # close screen
         self.cancel_button = QtGui.QPushButton(self)
         self.cancel_button.setObjectName(_fromUtf8("Close"))
         self.cancel_button.clicked.connect(self.close)
@@ -244,40 +232,41 @@ class PolderSelectionWidget(QWidget):#, FORM_CLASS):
         self.var_text_leggerdatabase = QtGui.QLineEdit(self)
         self.var_text_leggerdatabase.setText("leeg")
 
-        ## Assembling
-        ## Create buttons with functions to select damo and hdb and database creation and add it to rows
+        # Assembling
+        # Create buttons with functions to select damo and hdb and database creation and add it to rows
         self.box_leggerdatabase_create = QtGui.QVBoxLayout()
-        self.box_leggerdatabase_create.addWidget(self.load_DAMO_dump_button)
-        self.box_leggerdatabase_create.addWidget(self.load_HDB_dump_button)
-        self.box_leggerdatabase_create.addWidget(self.var_text_DAMO)
-        self.box_leggerdatabase_create.addWidget(self.var_text_HDB)
+        self.hbox_DAMO = QtGui.QHBoxLayout()
+        self.hbox_DAMO.addWidget(self.var_text_DAMO)
+        self.hbox_DAMO.addWidget(self.load_DAMO_dump_button)
+        self.box_leggerdatabase_create.addLayout(self.hbox_DAMO)
 
-        self.feedback_box_leggerdatabase_create = QtGui.QVBoxLayout()
+        self.hbox_HDB = QtGui.QHBoxLayout()
+        self.hbox_HDB.addWidget(self.var_text_HDB)
+        self.hbox_HDB.addWidget(self.load_HDB_dump_button)
+        self.box_leggerdatabase_create.addLayout(self.hbox_HDB)
 
         self.box_leggerdatabase_input = QtGui.QVBoxLayout()
+        self.hbox_LDB = QtGui.QHBoxLayout()
+        self.hbox_LDB.addWidget(self.var_text_leggerdatabase)
+        self.hbox_LDB.addWidget(self.load_leggerdatabase_button)
+        self.box_leggerdatabase_input.addLayout(self.hbox_LDB)
         self.box_leggerdatabase_input.addWidget(self.create_leggerdatabase_button)
-        self.box_leggerdatabase_input.addWidget(self.load_leggerdatabase_button)
 
-        self.feedback_box_leggerdatabase_select = QtGui.QVBoxLayout()
-        self.feedback_box_leggerdatabase_select.addWidget(self.var_text_leggerdatabase)
-
-        ## Create groupbox and add HBoxes to it
+        # Create groupbox and add HBoxes to it
         self.groupBox_leggerdatabase_create = QtGui.QGroupBox(self)
-        self.groupBox_leggerdatabase_create.setTitle("Selecteer bestanden voor legger database:")
+        self.groupBox_leggerdatabase_create.setTitle("GDB bestanden voor aanmaken leggerdatabase")
         self.groupBox_leggerdatabase_create.setLayout(self.box_leggerdatabase_create)
 
         self.groupBox_leggerdatabase_input = QtGui.QGroupBox(self)
-        self.groupBox_leggerdatabase_input.setTitle("Database legger:")
+        self.groupBox_leggerdatabase_input.setTitle("Leggerdatabase")
         self.groupBox_leggerdatabase_input.setLayout(self.box_leggerdatabase_input)
 
-        ## Add groupbox to row
+        # Add groupbox to row
         self.maak_leggerdatabase_row.addWidget(self.groupBox_leggerdatabase_create)
-        self.maak_leggerdatabase_row.addLayout(self.feedback_box_leggerdatabase_create)
 
         self.kies_leggerdatabase_row.addWidget(self.groupBox_leggerdatabase_input)
-        self.kies_leggerdatabase_row.addLayout(self.feedback_box_leggerdatabase_select)
 
-        ## Add row to ui
+        # Add row to ui
         self.verticalLayout.addLayout(self.maak_leggerdatabase_row)
         self.verticalLayout.addLayout(self.kies_leggerdatabase_row)
         self.verticalLayout.addLayout(self.bottom_row)
@@ -286,10 +275,9 @@ class PolderSelectionWidget(QWidget):#, FORM_CLASS):
         QtCore.QMetaObject.connectSlotsByName(self)
 
     def retranslateUi(self, Dialog):
-        Dialog.setWindowTitle(_translate("Dialog", "Maak en/of Selecteer de database van de Polder", None))
-        self.load_DAMO_dump_button.setText(_translate("Dialog", "Load DAMO", None))
-        self.load_HDB_dump_button.setText(_translate("Dialog", "Load HDB", None))
-        self.create_leggerdatabase_button.setText(_translate("Dialog", "Create database", None))
-        self.load_leggerdatabase_button.setText(_translate("Dialog", "Load leggerdatabase", None))
-        self.cancel_button.setText(_translate("Dialog", "Close", None))
-
+        Dialog.setWindowTitle(_translate("Dialog", "Selecteer en/of maak de leggerdatabase van de polder", None))
+        self.load_DAMO_dump_button.setText(_translate("Dialog", "Selecteer DAMO gdb", None))
+        self.load_HDB_dump_button.setText(_translate("Dialog", "Selecteer HDB gdb", None))
+        self.create_leggerdatabase_button.setText(_translate("Dialog", "Aanmaken database", None))
+        self.load_leggerdatabase_button.setText(_translate("Dialog", "Selecteer leggerdb", None))
+        self.cancel_button.setText(_translate("Dialog", "Sluiten", None))

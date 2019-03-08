@@ -2,3 +2,4 @@ pandas
 geopandas
 descartes
 shapely==1.6.3
+osgeo

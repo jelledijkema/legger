@@ -426,8 +426,8 @@ class LeggerSideViewPlotWidget(pg.PlotWidget):
             self.hydrovak_ids.append(item['id'])
 
             d = ref_level - item['depth'] if item['depth'] is not None else np.nan
-            mind = ref_level - item['min_depth'] if item['min_depth'] is not None else np.nan
-            maxd = ref_level - item['max_depth'] if item['max_depth'] is not None else np.nan
+            mind = ref_level - item['variant_min_depth'] if item['variant_min_depth'] is not None else np.nan
+            maxd = ref_level - item['variant_max_depth'] if item['variant_max_depth'] is not None else np.nan
 
             dist.append(item['b_distance'])
             dist.append(item['e_distance'])
@@ -531,7 +531,7 @@ class LeggerSideViewPlotWidget(pg.PlotWidget):
         elif field in ['selected_depth', 'selected_depth_tmp']:
             self.draw_selected_lines(self._get_data())
 
-        elif field in ['variant_min', 'variant_max']:
+        elif field in ['variant_min_depth', 'variant_max_depth']:
             self.draw_base_lines(self._get_data())
 
     def _get_data(self):
@@ -552,8 +552,8 @@ class LeggerSideViewPlotWidget(pg.PlotWidget):
                 'e_distance': line.hydrovak.get('distance'),
                 'depth': line.hydrovak.get('depth'),
                 'target_level': line.hydrovak.get('target_level'),
-                'min_depth': line.hydrovak.get('variant_min'),
-                'max_depth': line.hydrovak.get('variant_max'),
+                'variant_min_depth': line.hydrovak.get('variant_min_depth'),
+                'variant_max_depth': line.hydrovak.get('variant_max_depth'),
                 'selected_depth': line.hydrovak.get('selected_depth'),
                 'selected_depth_tmp': line.hydrovak.get('selected_depth_tmp'),
             })
