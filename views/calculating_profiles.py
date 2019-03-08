@@ -175,7 +175,7 @@ class ProfileCalculationWidget(QWidget):  # , FORM_CLASS):
             },
             'spatialite'
         )
-        db.create_and_check_fields()
+        # db.create_and_check_fields()
         # do one query, don't know what the reason was for this...
         session = db.get_session()
         session.query(HydroObject)

@@ -1,10 +1,13 @@
 # coding: utf-8
-
 # todo:
 #  - DuikerSifonHevel
 #  - objectid vullen
 #  - verwijderen imp tabellen
+#  - oplossing verzinnen voor geo_alchemy fix
 #  - grondsoort? --> voorlopig niet
+#  X geometry colom vastzetten (op 'geometry')
+#  - logging van ogr2ogr terugsluizen naar logging
+#  - melding of proces gelukt is en verwijzen naar logging indien mislukt
 
 import datetime
 import logging
@@ -117,7 +120,8 @@ class CreateLeggerSpatialite(object):
             log.info("--- copy {0}/{1} table {2} ---".format(i+1, nr_tables, table))
 
             # "-overwrite"
-            cmd = '{ogr_exe} -a_srs EPSG:28992 -f SQLite -dsco SPATIALITE=YES -append -nln {dest_table}' \
+            cmd = '{ogr_exe} -a_srs EPSG:28992 -f SQLite -dsco SPATIALITE=YES -append ' \
+                  '-lco GEOMETRY_NAME=geom -nln {dest_table}' \
                   ' {spatialite_path} {gdb_path} {source_table}'.format(
                 ogr_exe=self.ogr_exe,
                 gdb_path=self.filepath_DAMO,
@@ -139,7 +143,7 @@ class CreateLeggerSpatialite(object):
         session = self.db.get_session()
         session.execute("""
         INSERT INTO profielpunten  (pbp_id, prw_id, pbpident, osmomsch, iws_volgnr, iws_hoogte, afstand, pro_pro_id, geometry)
-        SELECT pbp_id, prw_id, pbpident, osmomsch, iws_volgnr, iws_hoogte, iws_afstand, pro_pro_id, CastToXY(ipp.shape)
+        SELECT pbp_id, prw_id, pbpident, osmomsch, iws_volgnr, iws_hoogte, iws_afstand, pro_pro_id, CastToXY(ipp.geometry)
         FROM imp_gw_pbp pbp, imp_iws_geo_beschr_profielpunten ipp, imp_gw_prw prw 
         WHERE pbp.pbp_id = ipp.pbp_pbp_id AND pbp.prw_prw_id = prw.prw_id
         """)
@@ -149,7 +153,7 @@ class CreateLeggerSpatialite(object):
         INSERT INTO profielen  (proident, bron_profiel, pro_id, hydro_id)
         SELECT proident, osmomsch, pro_id, ho.hydroobject_id
         FROM imp_gw_pro pro
-        LEFT JOIN imp_hydroobject ho ON st_intersects(pro.shape, ho.shape)  
+        LEFT JOIN imp_hydroobject ho ON st_intersects(pro.geometry, ho.geometry)  
         where betrouwbaar = 1
         """)
 
@@ -194,17 +198,17 @@ class CreateLeggerSpatialite(object):
             min(ho.code),
             min(ho.categorieoppwaterlichaam),
             min(COALESCE(pgp.peil_wsa, pag.peil_wsa)) as streefpeil,
-            min(ho.shape)
+            min(ho.geometry)
         FROM imp_hydroobject ho
-        JOIN  imp_peilgebiedpraktijk pgp ON st_intersects(ho.shape, pgp.shape)  
-        LEFT OUTER JOIN  imp_peilafwijkinggebied pag ON st_intersects(ho.shape, pag.shape) 
+        JOIN  imp_peilgebiedpraktijk pgp ON st_intersects(ho.geometry, pgp.geometry)  
+        LEFT OUTER JOIN  imp_peilafwijkinggebied pag ON st_intersects(ho.geometry, pag.geometry) 
         GROUP BY id
         """)
 
         # vullen waterdeel =
         session.execute("""
         INSERT INTO waterdeel  (id, shape_length, shape_area, geometry)
-        SELECT ogc_fid as id, shape_length, shape_area, shape
+        SELECT ogc_fid as id, shape_length, shape_area, geometry
         FROM imp_waterdeel
         """)
         session.commit()
