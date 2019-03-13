@@ -1,9 +1,9 @@
 # coding: utf-8
 # todo:
-#  - DuikerSifonHevel
+#  X DuikerSifonHevel
 #  - objectid vullen
 #  - verwijderen imp tabellen
-#  - oplossing verzinnen voor geo_alchemy fix
+#  X oplossing verzinnen voor geo_alchemy fix
 #  - grondsoort? --> voorlopig niet
 #  X geometry colom vastzetten (op 'geometry')
 #  - logging van ogr2ogr terugsluizen naar logging
@@ -120,9 +120,9 @@ class CreateLeggerSpatialite(object):
             log.info("--- copy {0}/{1} table {2} ---".format(i+1, nr_tables, table))
 
             # "-overwrite"
-            cmd = '{ogr_exe} -a_srs EPSG:28992 -f SQLite -dsco SPATIALITE=YES -append ' \
-                  '-lco GEOMETRY_NAME=geom -nln {dest_table}' \
-                  ' {spatialite_path} {gdb_path} {source_table}'.format(
+            cmd = '"{ogr_exe}" -a_srs EPSG:28992 -f SQLite -dsco SPATIALITE=YES -append ' \
+                  '-lco GEOMETRY_NAME=geometry -nln {dest_table}' \
+                  ' "{spatialite_path}" "{gdb_path}" {source_table}'.format(
                 ogr_exe=self.ogr_exe,
                 gdb_path=self.filepath_DAMO,
                 source_table=table,  # ' '.join(tables),
