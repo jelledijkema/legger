@@ -257,6 +257,11 @@ class ProfileCalculationWidget(QWidget):  # , FORM_CLASS):
         # do one query, don't know what the reason was for this...
         session = db.get_session()
 
+        # delete existing variants
+        session.execute("Delete from varianten")
+        session.execute("Delete from begroeiingsvariant")
+        session.commit()
+
         get_or_create(session, BegroeiingsVariant, naam='standaard',
                                 defaults={'friction': Kb})
 
