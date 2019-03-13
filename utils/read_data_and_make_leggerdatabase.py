@@ -129,6 +129,7 @@ class CreateLeggerSpatialite(object):
                 dest_table="imp_{0}".format(table),
                 spatialite_path=self.database_path
             )
+            log.info(cmd)
 
             ret = subprocess.call(cmd, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
 
@@ -211,10 +212,36 @@ class CreateLeggerSpatialite(object):
         SELECT ogc_fid as id, shape_length, shape_area, geometry
         FROM imp_waterdeel
         """)
+
+        session.execute("""
+         INSERT INTO duikersifonhevel(
+             id, 
+             code, 
+             categorie, 
+             lengte, 
+             hoogteopening, 
+             breedteopening,
+             hoogtebinnenonderkantbene,
+             hoogtebinnenonderkantbov,
+             vormkoker,
+             debiet,
+             geometry)
+         SELECT 
+             ogc_fid, 
+             code, 
+             ws_categorie, 
+             lengte, 
+             hoogteopening, 
+             breedteopening,
+             hoogtebinnenonderkantbene,
+             hoogtebinnenonderkantbov,
+             vormkoker,
+             "0",
+             geometry
+         FROM imp_duikersifonhevel
+         """)
+
         session.commit()
-
-        # todo: sifon
-
 def main():
     test_data_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), os.pardir, 'tests', 'data'))
 
