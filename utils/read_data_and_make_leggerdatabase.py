@@ -1,8 +1,8 @@
 # coding: utf-8
 # todo:
 #  X DuikerSifonHevel
-#  - objectid vullen
-#  - verwijderen imp tabellen
+#  X objectid vullen --> verwijderd
+#  X verwijderen imp tabellen
 #  X oplossing verzinnen voor geo_alchemy fix
 #  - grondsoort? --> voorlopig niet
 #  X geometry colom vastzetten (op 'geometry')
@@ -74,6 +74,9 @@ class CreateLeggerSpatialite(object):
 
         self.ogr_exe = os.path.abspath(os.path.join(sys.executable, os.pardir, os.pardir, 'bin', 'ogr2ogr.exe'))
 
+        self.tables = ['DuikerSifonHevel', 'Waterdeel', 'HydroObject', 'PeilafwijkingGebied', 'PeilgebiedPraktijk',
+                  'GW_PRO', 'GW_PRW', 'GW_PBP', 'IWS_GEO_BESCHR_PROFIELPUNTEN']
+
         self.db = LeggerDatabase(
             {
                 'db_file': self.database_path,
@@ -95,7 +98,7 @@ class CreateLeggerSpatialite(object):
         self.vul_queries()
 
         # Stap 4: verwijder onnodige tabellen
-        # ...
+        self.delete_imported_tables()
 
     def create_spatialite(self, delete_existing=True):
         # Step 1: make empty legger database
@@ -111,11 +114,9 @@ class CreateLeggerSpatialite(object):
 
     def dump_gdb_to_spatialite(self):
         process_errors = []
-        tables = ['DuikerSifonHevel', 'Waterdeel', 'HydroObject', 'PeilafwijkingGebied', 'PeilgebiedPraktijk',
-                  'GW_PRO', 'GW_PRW', 'GW_PBP', 'IWS_GEO_BESCHR_PROFIELPUNTEN']
 
-        nr_tables = len(tables)
-        for i, table in enumerate(tables):
+        nr_tables = len(self.tables)
+        for i, table in enumerate(self.tables):
 
             log.info("--- copy {0}/{1} table {2} ---".format(i+1, nr_tables, table))
 
@@ -213,6 +214,7 @@ class CreateLeggerSpatialite(object):
         FROM imp_waterdeel
         """)
 
+        # duikersifonhevel
         session.execute("""
          INSERT INTO duikersifonhevel(
              id, 
@@ -242,6 +244,23 @@ class CreateLeggerSpatialite(object):
          """)
 
         session.commit()
+
+    def delete_imported_tables(self):
+        session = self.db.get_session()
+        for table in self.tables:
+            session.execute("DROP TABLE IF EXISTS imp_{0} ;".format(table.lower()))
+            session.execute("DROP TABLE IF EXISTS idx_imp_{0}_geometry;".format(table.lower()))
+            session.execute("DROP TABLE IF EXISTS idx_imp_{0}_geometry_node;".format(table.lower()))
+            session.execute("DROP TABLE IF EXISTS idx_imp_{0}_geometry_parent;".format(table.lower()))
+            session.execute("DROP TABLE IF EXISTS idx_imp_{0}_geometry_rowid;".format(table.lower()))
+            session.execute("DELETE FROM geometry_columns WHERE f_table_name = 'imp_{0}';".format(table.lower()))
+
+        session.commit()
+        # make space available by reducing filesize
+        session.execute("VACUUM")
+        session.commit()
+
+
 def main():
     test_data_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), os.pardir, 'tests', 'data'))
 
