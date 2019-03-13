@@ -9,12 +9,21 @@ sys.path.append(
     os.path.join(os.path.dirname(os.path.realpath(__file__)), 'external')
 )
 
-sys.path.append(
-    os.path.join(os.path.dirname(os.path.realpath(__file__)),
-                 os.path.pardir,
-                 'ThreeDiToolbox',
-                 'external')
-)
+tdi_external = os.path.join(os.path.dirname(os.path.realpath(__file__)),
+                            os.path.pardir,
+                            'ThreeDiToolbox',
+                            'external')
+
+# temporary fix of libary geoalchemy2 in ThreeDiToolbox
+geoalchemy_fix_file = os.path.join(tdi_external, 'geoalchemy2', '__init__.py')
+f = open(geoalchemy_fix_file, 'r')
+new_content = f.read().replace('bind.execute("VACUUM %s" % table.name)', 'pass')
+f.close()
+f = open(geoalchemy_fix_file, 'w')
+f.write(new_content)
+f.close()
+
+sys.path.append(tdi_external)
 
 
 # noinspection PyPep8Naming

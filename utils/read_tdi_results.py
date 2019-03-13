@@ -1,3 +1,8 @@
+# todo:
+#  - debiet koppeling op 'duiker' flowlines. werkt nu alleen op channels. Bijvoorbeeld hydroobject OAF-W-708 met flowline 2279
+#  - korte zijslootjes worden nu gekoppeld op hoofdwatergangen. in koppelingscriteria iets van de lengte van de watergang meenemen
+
+
 import json
 import logging
 import math
@@ -24,6 +29,21 @@ log = logging.getLogger(__name__)
 # suggestions for improvement:
 # - limit max_link_distance related to length of line (no somtimes small lines at end and
 #   begin point link.
+
+def create_geom_line(coordinates, maincall=True):
+    """recursive function to make QgsPoints from coordinates (point, linestring, multilinestring)"""
+    if len(coordinates) > 0 and type(coordinates[0]) == list:
+        list_of_geoms = [create_geom_line(coord, False) for coord in coordinates]
+
+        if maincall:
+            if type(list_of_geoms[0]) == QgsPoint:
+                return QgsGeometry.fromPolyline(list_of_geoms)
+            else:
+                return QgsGeometry.fromMultiPolyline(list_of_geoms)
+        else:
+            return list_of_geoms
+    else:
+        return QgsPoint(coordinates[0], coordinates[1])
 
 
 def read_tdi_results(path_model_db, path_result_db,
@@ -138,7 +158,7 @@ def read_tdi_results(path_model_db, path_result_db,
         if hydroobject['id'] in [198616, 198362, 659550]:
             a = 1
 
-        line = QgsGeometry.fromPolyline([QgsPoint(c[0], c[1]) for c in json.loads(hydroobject['geojson'])['coordinates']])
+        line = create_geom_line(json.loads(hydroobject['geojson'])['coordinates'])
         # with shapely
         # line = LineString(
         #     json.loads(hydroobject['geojson'])['coordinates'])
@@ -171,7 +191,7 @@ def read_tdi_results(path_model_db, path_result_db,
 
         for channel in channel_col.filter(bbox=bbox):
 
-            geom_channel = QgsGeometry.fromPolyline([QgsPoint(c[0], c[1]) for c in channel['geometry']['coordinates']])
+            geom_channel = create_geom_line(channel['geometry']['coordinates'])
             # with shapely
             # geom_channel = shape(channel['geometry'])
 
@@ -199,9 +219,14 @@ def read_tdi_results(path_model_db, path_result_db,
             score, selected, geom_channel = sorted(candidates, key=lambda item: item[0])[0]
 
             # get orientation of hydroobject vs channel
-            vertexes = line.asPolyline()
-            d1, p1, v1 = geom_channel.closestSegmentWithContext(vertexes[0])
-            d2, p2, v2 = geom_channel.closestSegmentWithContext(vertexes[-1])
+            if line.isMultipart():
+                vertexes = line.asMultiPolyline()
+                d1, p1, v1 = geom_channel.closestSegmentWithContext(vertexes[0][0])
+                d2, p2, v2 = geom_channel.closestSegmentWithContext(vertexes[-1][-1])
+            else:
+                vertexes = line.asPolyline()
+                d1, p1, v1 = geom_channel.closestSegmentWithContext(vertexes[0])
+                d2, p2, v2 = geom_channel.closestSegmentWithContext(vertexes[-1])
 
             if (d1 > 50 or d2> 50):
                 a = 2
@@ -272,7 +297,7 @@ def write_tdi_results_to_db(hydroobject_results, path_legger_db):
         },
         'spatialite'
     )
-    db.create_and_check_fields()
+    # db.create_and_check_fields()
     session = db.get_session()
 
     results = {hydro['id']: hydro for hydro in hydroobject_results}

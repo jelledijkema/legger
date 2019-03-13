@@ -1,3 +1,8 @@
+# todo:
+#  - 'opstuwingsnorm' selection?
+#  - correct or selectable friction values
+
+
 # -*- coding: utf-8 -*-
 from __future__ import division
 
@@ -175,7 +180,7 @@ class ProfileCalculationWidget(QWidget):  # , FORM_CLASS):
             },
             'spatialite'
         )
-        db.create_and_check_fields()
+        # db.create_and_check_fields()
         # do one query, don't know what the reason was for this...
         session = db.get_session()
         session.query(HydroObject)
@@ -211,7 +216,7 @@ class ProfileCalculationWidget(QWidget):  # , FORM_CLASS):
 
             self.feedbackmessage = self.feedbackmessage + "\n3Di resultaten weggeschreven naar polder database."
         except:
-            self.feedbackmessage = self.feedbackmessage + "\n3Di resultaten niet weggeschreven naar polder database."
+            self.feedbackmessage = self.feedbackmessage + "\nFout in wegschrijven 3Di resultaten naar polder database."
         finally:
             self.feedbacktext.setText(self.feedbackmessage)
 
@@ -226,7 +231,7 @@ class ProfileCalculationWidget(QWidget):  # , FORM_CLASS):
             )
             self.feedbackmessage = self.feedbackmessage + "\n3Di culverts ingelezen."
         except:
-            self.feedbackmessage = self.feedbackmessage + "\n3Di culverts niet ingelezen."
+            self.feedbackmessage = self.feedbackmessage + "\nFout, 3Di culverts niet ingelezen."
         finally:
             self.feedbacktext.setText(self.feedbackmessage)
 
@@ -236,7 +241,7 @@ class ProfileCalculationWidget(QWidget):  # , FORM_CLASS):
                                             self.polder_datasource)
             self.feedbackmessage = self.feedbackmessage + "\n3Di culvert resultaten weggeschreven."
         except:
-            self.feedbackmessage = self.feedbackmessage + "\n3Di culvert resultaten niet weggeschreven."
+            self.feedbackmessage = self.feedbackmessage + "\nFout, 3Di culvert resultaten niet weggeschreven."
         finally:
             self.feedbacktext.setText(self.feedbackmessage)
 
@@ -269,7 +274,7 @@ class ProfileCalculationWidget(QWidget):  # , FORM_CLASS):
                 profiles = create_theoretical_profiles(self.polder_datasource, bv)
                 self.feedbackmessage = "Profielen zijn berekend."
             #except:
-                self.feedbackmessage = "Profielen konden niet worden berekend."
+                self.feedbackmessage = "Fout, profielen konden niet worden berekend."
             #finally:
                 self.feedbacktext.setText(self.feedbackmessage)
 
@@ -277,7 +282,7 @@ class ProfileCalculationWidget(QWidget):  # , FORM_CLASS):
                 write_theoretical_profile_results_to_db(session, profiles, self.polder_datasource, bv)
                 self.feedbackmessage = self.feedbackmessage + ("\nProfielen opgeslagen in legger db.")
             #except:
-                self.feedbackmessage = self.feedbackmessage + ("\nProfielen niet opgeslagen in legger database.")
+                self.feedbackmessage = self.feedbackmessage + ("\nFout, profielen niet opgeslagen in legger database.")
             #finally:
                 self.feedbacktext.setText(self.feedbackmessage)
 
