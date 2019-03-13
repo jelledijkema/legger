@@ -54,7 +54,7 @@ def read_spatialite(legger_db_filepath):
     all_hits = c.fetchall()
 
     return DataFrame(all_hits, columns=[
-        'OBJECTID',
+        'OID',
         'DIEPTE',
         'BREEDTE',
         'INITIEELTALUD',
@@ -81,10 +81,10 @@ def filter_unused(df_in):
 
         df_unused = df_unused.drop_duplicates()  # In the case the same row occurs twice.
 
-        if df_unused['OBJECTID'].count() == 0:
+        if df_unused['OID'].count() == 0:
             log.info("No hydro objects removed.")
         else:
-            log.info("% i Hydro object(s) removed b/o missing data.", df_unused['OBJECTID'].count())
+            log.info("% i Hydro object(s) removed b/o missing data.", df_unused['OID'].count())
 
         df_out = df_in.drop(df_unused.index)
 
@@ -382,7 +382,7 @@ def create_theoretical_profiles(legger_db_filepath, bv):
 
     # Loop over the hydro objects table so hydro object specific information is temporarily saved to variables
     for i, rows in hydro_objects.iterrows():
-        object_id = hydro_objects.OBJECTID[i]
+        object_id = hydro_objects.OID[i]
         if hydro_objects.GRONDSOORT[i] == "veenweide":  # initial slope of ditch based on soil type
             slope = 3.0
         else:
