@@ -48,7 +48,6 @@ class Waterdeel(Base):
     __tablename__ = 'waterdeel'
     extend_existing = True
 
-    objectid = Column(Integer)
     id = Column(Integer, primary_key=True)
     shape_length = Column(Float)
     shape_area = Column(Float)
@@ -63,7 +62,6 @@ class HydroObject(Base):
     __tablename__ = 'hydroobject'
     extend_existing = True
 
-    objectid = Column(Integer)
     id = Column(Integer, primary_key=True)
     geometry = Column("GEOMETRY", Geometry(geometry_type='MULTILINESTRING', srid=28992))
     code = Column(String(50), index=True)
@@ -114,8 +112,7 @@ class HydroObject(Base):
 class Profielen(Base):
     __tablename__ = 'profielen'
 
-    objectid = Column(Integer, autoincrement=True)
-    id = Column(Integer, primary_key=True, autoincrement=True)
+    id = Column(Integer, primary_key=True)
     proident = Column(String(24))
     bron_profiel = Column(String(50))
     pro_id = Column(Integer, index=True)
@@ -161,7 +158,6 @@ class Profielpunten(Base):
 class Kenmerken(Base):
     __tablename__ = 'kenmerken'
 
-    objectid = Column(Integer, autoincrement=True)
     id = Column(Integer, primary_key=True)
     diepte = Column(Float)
     bron_diepte = Column(String(50))
@@ -174,7 +170,7 @@ class Kenmerken(Base):
     grondsoort = Column(String(50))
     bron_grondsoort = Column(String(50))
     hydro_id = Column(Integer,
-                      ForeignKey(HydroObject.__tablename__ + ".objectid"))
+                      ForeignKey(HydroObject.__tablename__ + ".id"))
 
     na_lengte = Column(Float)
     voor_lengte = Column(Float)
@@ -286,7 +282,6 @@ class DuikerSifonHevel(Base):
     __tablename__ = 'duikersifonhevel'
     extend_existing = True
 
-    objectid = Column(Integer, autoincrement=True)
     id = Column(Integer, primary_key=True)
     geometry = Column("GEOMETRY", Geometry(geometry_type='MULTILINESTRING', srid=28992))
     code = Column(String(50), index=True)

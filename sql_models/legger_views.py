@@ -9,7 +9,6 @@ def create_legger_views(session):
         """
             CREATE VIEW hydroobjects_kenmerken AS 
             SELECT 
-                h.objectid, 
                 h.id, 
                 code, 
                 categorieoppwaterlichaam, 
@@ -75,14 +74,14 @@ def create_legger_views(session):
         """
             INSERT INTO views_geometry_columns (view_name, view_geometry, view_rowid, f_table_name, 
               f_geometry_column, read_only)
-            VALUES('hydroobjects_kenmerken', 'geometry', 'objectid', 'hydroobject', 'geometry', 1);         
+            VALUES('hydroobjects_kenmerken', 'geometry', 'id', 'hydroobject', 'geometry', 1);         
         """)
 
     session.execute(
         """
             INSERT INTO views_geometry_columns (view_name, view_geometry, view_rowid, f_table_name, 
               f_geometry_column, read_only)
-            VALUES('hydroobjects_kenmerken', 'line', 'objectid', 'hydroobject', 'geometry', 1);         
+            VALUES('hydroobjects_kenmerken', 'line', 'id', 'hydroobject', 'geometry', 1);         
         """)
 
     session.commit()
@@ -99,7 +98,6 @@ def create_legger_views(session):
         """
             CREATE VIEW hydroobjects_selected_legger AS 
             SELECT 
-                h.objectid, 
                 h.id, 
                 h.code, 
                 h.categorieoppwaterlichaam, 
@@ -140,7 +138,7 @@ def create_legger_views(session):
         """
             INSERT INTO views_geometry_columns (view_name, view_geometry, view_rowid, f_table_name, 
               f_geometry_column, read_only)
-            VALUES('hydroobjects_selected_legger', 'geometry', 'objectid', 'hydroobject', 'geometry', 1);         
+            VALUES('hydroobjects_selected_legger', 'geometry', 'id', 'hydroobject', 'geometry', 1);         
         """)
 
 

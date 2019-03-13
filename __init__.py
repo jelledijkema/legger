@@ -17,7 +17,15 @@ tdi_external = os.path.join(os.path.dirname(os.path.realpath(__file__)),
 # temporary fix of libary geoalchemy2 in ThreeDiToolbox
 geoalchemy_fix_file = os.path.join(tdi_external, 'geoalchemy2', '__init__.py')
 f = open(geoalchemy_fix_file, 'r')
-new_content = f.read().replace('bind.execute("VACUUM %s" % table.name)', 'pass')
+new_content = f.read().replace(
+    """
+                            bind.execute("VACUUM %s" % table.name)""",
+    """
+                            try:
+                                bind.execute("VACUUM %s"%table.name)
+                            except:
+                                pass
+    """)
 f.close()
 f = open(geoalchemy_fix_file, 'w')
 f.write(new_content)

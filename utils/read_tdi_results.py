@@ -148,7 +148,6 @@ def read_tdi_results(path_model_db, path_result_db,
         'ASGEOJSON(geometry) AS geojson, '
         'ST_LENGTH(geometry) AS length '
         'FROM hydroobject '
-        # 'WHERE objectid=454401 ' # for testing and debugging
     )
     hydroobjects = []
 

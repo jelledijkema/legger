@@ -39,7 +39,7 @@ def mk_pro_x_hy_kompas(cur, straal=0.5, aantalstappen=90, srid=28992):
     cur.execute('drop table if exists pro_x_hy_kompas')
     cur.execute('create table pro_x_hy_kompas (pro_id bigint primary key, ovk_ovk_id bigint, kompas float,'
                 'CONSTRAINT fk_pro  FOREIGN KEY (pro_id) REFERENCES pro(pro_id), '
-                'CONSTRAINT fk_hy  FOREIGN KEY (ovk_ovk_id) REFERENCES hydroobject(objectid)) ')
+                'CONSTRAINT fk_hy  FOREIGN KEY (ovk_ovk_id) REFERENCES hydroobject(id)) ')
     cur.execute('select DiscardGeometryColumn("pro_x_hy_kompas","geometry")')
     cur.execute('select AddGeometryColumn("pro_x_hy_kompas", "geometry", %d, "POINT")' % srid)
     cur.execute('insert into pro_x_hy_kompas (pro_id, ovk_ovk_id, geometry, kompas)'
@@ -48,7 +48,7 @@ def mk_pro_x_hy_kompas(cur, straal=0.5, aantalstappen=90, srid=28992):
                 'PointN(Intersection(pro.GEOMETRY,Buffer(Intersection(pro.GEOMETRY, hydroobject.GEOMETRY),%f,%d)),1), '
                 'PointN(Intersection(pro.GEOMETRY,Buffer(Intersection(pro.GEOMETRY, hydroobject.GEOMETRY),%f,%d)),2)) '
                 'from pro inner join hydroobject on '
-                '(pro.ovk_ovk_id=hydroobject.objectid)' % (straal, aantalstappen, straal, aantalstappen))
+                '(pro.ovk_ovk_id=hydroobject.id)' % (straal, aantalstappen, straal, aantalstappen))
     return
 
 
@@ -68,18 +68,18 @@ def peilperprofiel(cur, peilcriterium="min", debug=0):
         if debug:
             logger.debug("PEILCRITERIUM AANGEPAST NAAR %s", peilcriterium)
     q = '''select pro.pro_id, pro.ovk_ovk_id, %s(streefpeil.waterhoogte) from 
-            pro left outer join hydroobject on (pro.ovk_ovk_id = hydroobject.objectid) 
+            pro left outer join hydroobject on (pro.ovk_ovk_id = hydroobject.id) 
             left outer join peilgebiedpraktijk on (hydroobject.ws_in_peilgebied = peilgebiedpraktijk.code) 
-            left outer join streefpeil on (peilgebiedpraktijk.objectid=streefpeil.peilgebiedpraktijkid)
+            left outer join streefpeil on (peilgebiedpraktijk.id=streefpeil.peilgebiedpraktijkid)
         group by pro.pro_id, pro.ovk_ovk_id
         ''' % peilcriterium
     prof = {}
     for r in cur.execute(q):
         prof[r[0]] = (r[1], r[2])
-    q = '''insert into hyob_voorkeurpeil select hydroobject.objectid, %s(streefpeil.waterhoogte) from 
+    q = '''insert into hyob_voorkeurpeil select hydroobject.id, %s(streefpeil.waterhoogte) from 
             hydroobject left outer join peilgebiedpraktijk on (hydroobject.ws_in_peilgebied = peilgebiedpraktijk.code) 
-            left outer join streefpeil on (peilgebiedpraktijk.objectid=streefpeil.peilgebiedpraktijkid)
-        group by hydroobject.objectid''' % peilcriterium
+            left outer join streefpeil on (peilgebiedpraktijk.id=streefpeil.peilgebiedpraktijkid)
+        group by hydroobject.id''' % peilcriterium
     cur.execute(q)
     if debug:
         logger.debug("aantal gemeten profielen in een hydro_object met een peil: %d ", len(prof))
@@ -97,7 +97,7 @@ def haal_meetprofielen1(cur, profielsoort="Z1", peilcriterium="min", debug=0):
                 het peil
                 de  punten van het gemeten profiel + extra begin- en eindpunt 100m hoger """
     prof = {}
-    peilvanprofiel = peilperprofiel(cur, peilcriterium, debug) # per profielid het hydroobjectid en het peil
+    peilvanprofiel = peilperprofiel(cur, peilcriterium, debug) # per profielid het hydroobject_id en het peil
     #q = '''select "c"."pro_pro_id", "b"."iws_volgnr", X("a"."GEOMETRY"), Y("a"."GEOMETRY"),
     #         "b"."iws_hoogte", a."OGC_FID"
     #        from "profielpunten" as "a"
@@ -387,7 +387,7 @@ def maaktabellen(cur):
     """"Maak de tabellen met verrijkte platgeslagen profielen tbv presentatie
         presentatie: klik op de kaart nabij een hydroobject en een profiel (selecteer dichtstbijzijnde,
                     een hydroobject kan meer gemeten profielen hebben!!
-        tabel hyob_voorkeurpeil geeft op grond van het objectid van het hydroobject het gekozen peil (kan natuurlijk
+        tabel hyob_voorkeurpeil geeft op grond van het id van het hydroobject het gekozen peil (kan natuurlijk
             ook als view, maar dit zal sneller zijn, geen  idee of het van belang is)
         tabel profielfiguren is een platte tabel met alle info voor figuren met gemeten en theoretische profielen
             met infor over fit, overdiepte enz enz.
@@ -400,7 +400,7 @@ def maaktabellen(cur):
     altertable(cur, "profielpunten", "afstand", "float")
 
     cur.execute('drop table if exists hyob_voorkeurpeil')
-    cur.execute('create table hyob_voorkeurpeil (objectid integer primary key, voorkeurpeil float)')
+    cur.execute('create table hyob_voorkeurpeil (id integer primary key, voorkeurpeil float)')
     cur.execute('drop table if exists profielfiguren')
     cur.execute('drop index if exists profielfiguren0')
     cur.execute('drop index if exists profielfiguren1')
