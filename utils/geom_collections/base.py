@@ -2,9 +2,7 @@
 from shapely.geometry import shape
 from qgis.core import QgsSpatialIndex, QgsFeature, QgsGeometry, QgsRectangle
 
-
 from collections import OrderedDict
-
 
 # use fiona collection for 'normal' use
 
