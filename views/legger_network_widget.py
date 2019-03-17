@@ -3,11 +3,11 @@ import os
 
 from PyQt4.QtCore import QMetaObject, QSize, Qt, pyqtSignal
 from PyQt4.QtGui import (QApplication, QDockWidget, QHBoxLayout, QPushButton, QSizePolicy, QSpacerItem, QTabWidget,
-                         QVBoxLayout, QWidget, QComboBox)
+                         QVBoxLayout, QWidget, QComboBox, QPlainTextEdit)
 from legger.qt_models.area_tree import AreaTreeItem, AreaTreeModel, area_class
 from legger.qt_models.legger_tree import LeggerTreeModel, LeggerTreeItem
 from legger.qt_models.profile import ProfileModel
-from legger.sql_models.legger import GeselecteerdeProfielen, HydroObject, Varianten
+from legger.sql_models.legger import GeselecteerdeProfielen, HydroObject, Varianten, BegroeiingsVariant
 from legger.sql_models.legger_database import LeggerDatabase
 from legger.utils.network_utils import LeggerMapVisualisation
 from legger.views.input_widget import NewWindow
@@ -17,7 +17,7 @@ from qgis.networkanalysis import QgsLineVectorLayerDirector
 from sqlalchemy.orm import joinedload
 from sqlalchemy import or_, and_
 
-from .network_table_widgets import LeggerTreeWidget, PlotItemTable, StartpointTreeWidget
+from .network_table_widgets import LeggerTreeWidget, VariantenTable, StartpointTreeWidget
 from legger.utils.new_network import NewNetwork
 from legger.utils.legger_map_manager import LeggerMapManager
 
@@ -74,6 +74,16 @@ class LeggerWidget(QDockWidget):
         self.category_combo.insertItems(0, ['4', '3', '2', '1'])
         self.category_combo.setCurrentIndex(0)
         self.category_filter = 4
+
+        strategies = ['alle', 'opgegeven']
+        strategies.extend([v.naam for v in self.session.query(BegroeiingsVariant)])
+        self.begroeiings_combo.insertItems(
+            0, strategies)
+
+        self.begroeiings_strategy_combo.insertItems(0, [
+            'dit hydrovak', 'benedenstr. altijd', 'benedenstr. of meer'
+        ])
+        self.begroeiings_strategy_combo.setCurrentIndex(0)
 
         # create line layer and add to map
         self.layer_manager = LeggerMapManager(self.iface, self.path_legger_db)
@@ -405,8 +415,11 @@ class LeggerWidget(QDockWidget):
                             )
 
                         self.session.add(selected)
-
+                        print(selected)
                         # todo: score
+
+                    else:
+                        log.warn('no variant found for hydrovak %s', node.hydrovak.get('hydro_id'))
 
                     for young in node.younger():
                         if (young.hydrovak.get('variant_min_depth') is None or
@@ -631,7 +644,7 @@ class LeggerWidget(QDockWidget):
         self.plot_widget.setSizePolicy(sizePolicy)
         self.plot_widget.setMinimumSize(QSize(250, 150))
 
-        self.graph_vlayout.addWidget(self.plot_widget)
+        self.graph_vlayout.addWidget(self.plot_widget, 2)
 
         # Sideview Graph
         self.sideview_widget = LeggerSideViewPlotWidget(
@@ -647,19 +660,33 @@ class LeggerWidget(QDockWidget):
 
         self.graph_vlayout.addWidget(self.sideview_widget)
 
-        self.contentLayout.addLayout(self.graph_vlayout)
+        self.contentLayout.addLayout(self.graph_vlayout, 2)
 
-        # table
-        self.plot_item_table = PlotItemTable(self, variant_model=self.variant_model)
+        self.rightVstack = QVBoxLayout(self)
         sizePolicy = QSizePolicy(QSizePolicy.Fixed, QSizePolicy.Expanding)
         sizePolicy.setHorizontalStretch(0)
         sizePolicy.setVerticalStretch(0)
-        sizePolicy.setHeightForWidth(
-            self.plot_item_table.sizePolicy().hasHeightForWidth())
-        self.plot_item_table.setSizePolicy(sizePolicy)
-        self.plot_item_table.setMinimumSize(QSize(250, 0))
+        # sizePolicy.setHeightForWidth(
+        #     self.rightVstack.sizePolicy().hasHeightForWidth())
+        self.rightVstack.minimumSize()
+        #self.rightVstack.minimumSize(QSize(300, 0))
 
-        self.contentLayout.addWidget(self.plot_item_table)
+        self.begroeiings_combo = QComboBox(self)
+        self.rightVstack.addWidget(self.begroeiings_combo)
+        self.begroeiings_strategy_combo = QComboBox(self)
+        self.rightVstack.addWidget(self.begroeiings_strategy_combo)
+
+        # variantentable
+        self.plot_item_table = VariantenTable(self, variant_model=self.variant_model)
+
+        self.rightVstack.addWidget(self.plot_item_table)
+
+        self.selected_variant_remark = QPlainTextEdit(self)
+        self.selected_variant_remark.setFixedHeight(100)
+
+        self.rightVstack.addWidget(self.selected_variant_remark)
+
+        self.contentLayout.addLayout(self.rightVstack, 0)
 
         self.main_vlayout.addLayout(self.contentLayout)
 

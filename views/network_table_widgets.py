@@ -21,14 +21,14 @@ except AttributeError:
         return QApplication.translate(context, text, disambig)
 
 
-class PlotItemTable(QTableView):
+class VariantenTable(QTableView):
     """Table with varianten"""
     # hoverExitRow = pyqtSignal(int)
     hoverExitAllRows = pyqtSignal()  # exit the whole widget
     # hoverEnterRow = pyqtSignal(int)
 
     def __init__(self, parent=None, variant_model=None):
-        super(PlotItemTable, self).__init__(parent)
+        super(VariantenTable, self).__init__(parent)
 
         self._last_hovered_row = None
 
@@ -47,7 +47,7 @@ class PlotItemTable(QTableView):
         """
         self.setMouseTracking(False)
         self.viewport().removeEventFilter(self)
-        super(PlotItemTable, self).destroy(event)
+        super(VariantenTable, self).destroy(event)
         event.accept()
 
     def eventFilter(self, widget, event):
@@ -97,7 +97,7 @@ class PlotItemTable(QTableView):
                 item.color.value = list(item.color.value)[:3] + [200]
 
     def setModel(self, model):
-        super(PlotItemTable, self).setModel(model)
+        super(VariantenTable, self).setModel(model)
 
         self.resizeColumnsToContents()
         self.model().set_column_sizes_on_view(self)
