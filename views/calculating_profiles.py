@@ -274,21 +274,20 @@ class ProfileCalculationWidget(QWidget):  # , FORM_CLASS):
 
         for bv in session.query(BegroeiingsVariant).all():
 
-            if True:
-            #try:
+            try:
                 profiles = create_theoretical_profiles(self.polder_datasource, bv)
                 self.feedbackmessage = "Profielen zijn berekend."
-            #except:
+            except:
                 self.feedbackmessage = "Fout, profielen konden niet worden berekend."
-            #finally:
+            finally:
                 self.feedbacktext.setText(self.feedbackmessage)
 
-            #try:
+            try:
                 write_theoretical_profile_results_to_db(session, profiles, self.polder_datasource, bv)
                 self.feedbackmessage = self.feedbackmessage + ("\nProfielen opgeslagen in legger db.")
-            #except:
+            except:
                 self.feedbackmessage = self.feedbackmessage + ("\nFout, profielen niet opgeslagen in legger database.")
-            #finally:
+            finally:
                 self.feedbacktext.setText(self.feedbackmessage)
 
     def execute_step3(self):
