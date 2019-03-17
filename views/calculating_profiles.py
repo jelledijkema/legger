@@ -263,7 +263,7 @@ class ProfileCalculationWidget(QWidget):  # , FORM_CLASS):
         session.commit()
 
         get_or_create(session, BegroeiingsVariant, naam='standaard',
-                                defaults={'friction': Kb})
+                                defaults={'friction': Kb, 'is_default': True})
 
         get_or_create(session, BegroeiingsVariant, naam='deels begroeid',
                                 defaults={'friction': 0.75 * Kb})
