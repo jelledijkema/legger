@@ -81,21 +81,25 @@ class ProfileModel(BaseModel):
                                column_width=20,
                                column_name='')
         color = ColorField(show=True,
-                           column_width=30,
+                           column_width=20,
                            column_name='',
                            default_value=(230, 143, 172, 160))
         name = ValueField(show=False,
                           column_width=130,
                           column_name='name')
         depth = ValueField(show=True,
-                           column_width=60,
+                           column_width=50,
                            column_name='diepte')
         begroeiingsvariant = ValueField(show=True,
                                         column_width=80,
                                         column_name='begroei.')
         score = ValueField(show=True,
-                           column_width=60,
+                           column_width=50,
                            column_name='score')
+
+        over_depth = ValueField(show=True,
+                           column_width=50,
+                           column_name='over d')
 
         hover = ValueField(show=False,
                            default_value=False)

@@ -16,7 +16,7 @@ HORIZONTAL_HEADERS = (
     {'field': 'hover', 'field_type': CHECKBOX_FIELD, 'show': False, 'column_width': 50},
     {'field': 'distance', 'header': 'afstand', 'show': False, 'column_width': 50},
     {'field': 'category', 'header': 'cat', 'column_width': 40},
-    {'field': 'begroeiingsvariant', 'header': 'beg', 'column_width': 40},
+    {'field': 'begroeiingsvariant_id', 'header': 'beg', 'column_width': 40},
     {'field': 'flow', 'header': 'debiet', 'show': False, 'column_width': 50},
     {'field': 'target_level', 'show': False, 'column_width': 50},
     {'field': 'depth', 'header': 'diepte', 'show': False, 'column_width': 50},
@@ -28,9 +28,9 @@ HORIZONTAL_HEADERS = (
     {'field': 'selected_width', 'header': 'prof b', 'column_width': 60},
     {'field': 'over_depth', 'header': 'over d', 'column_width': 60},
     {'field': 'over_width', 'header': 'over b', 'column_width': 60},
-    {'field': 'selected_begroeiingsvariant', 'header': 'beg', 'column_width': 40},
+    {'field': 'selected_begroeiingsvariant_id', 'header': 'beg', 'column_width': 40},
     {'field': 'score', 'show': True, 'column_width': 50},
-    {'field': 'selected_variant_id', 'show': False, 'column_width': 100},
+    {'field': 'selected_variant_id', 'show': True, 'column_width': 100},
 
 )
 
