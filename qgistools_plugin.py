@@ -1,7 +1,7 @@
 import logging
 import os.path
 
-from PyQt4.QtCore import (QSettings, QTranslator, qVersion, QCoreApplication,
+from PyQt4.QtCore import (QSettings, QTranslator, qVersion, QCoreApplication, pyqtSignal,
                           QObject)
 from PyQt4.QtGui import QAction, QIcon
 # Import the code of the tools
@@ -18,6 +18,7 @@ log = logging.getLogger(__name__)
 
 class Legger(QObject):
     """Main Plugin Class which register toolbar, menu and tools """
+    polderDatasourceChanged = pyqtSignal(object)
 
     def __init__(self, iface):
         """Constructor.
@@ -55,6 +56,15 @@ class Legger(QObject):
         # self.db_path_result_sqlite = self.ts_datasource.rows[0].spatialite_cache_filepath().replace('\\', '/')
         # db_path_model_sqlite = ts_datasource.model_spatialite_filepath
         # result_ds = ts_datasource.rows[0].datasource()
+
+    @property
+    def polder_datasource(self):
+        return self._polder_datasource
+
+    @polder_datasource.setter
+    def polder_datasource(self, value):
+        self._polder_datasource = value
+        self.polderDatasourceChanged.emit(value)
 
     # noinspection PyMethodMayBeStatic
     def tr(self, message):
@@ -151,13 +161,13 @@ class Legger(QObject):
         self.read_database = DatabaseSelection(self.iface, self)
         self.load_profiles = ProfileCalculations(self.iface, self)
         self.network_tool = LeggerNetworkTool(self.iface, self)
-        self.set_begroeiingsveriant = SetBegroeiingsvariant(self.iface, self)
+        self.set_begroeiingsvariant = SetBegroeiingsvariant(self.iface, self)
 
         self.tools = []
         self.tools.append(self.read_database)
         self.tools.append(self.load_profiles)
         self.tools.append(self.network_tool)
-        self.tools.append(self.set_begroeiingsveriant)
+        self.tools.append(self.set_begroeiingsvariant)
 
         try:
             import remote_debugger_settings
