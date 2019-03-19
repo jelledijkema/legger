@@ -79,7 +79,7 @@ class NewNetwork(object):
 
     def __init__(self, line_layer, full_line_layer, director,
                  distance_properter,
-                 virtual_tree_layer, endpoint_layer,
+                 virtual_tree_layer=None, endpoint_layer=None,
                  id_field="feat_id"):
         """
         line_layer (QgsVectorLayer): input vector layer, with as geometry straight lines without in between vertexes
