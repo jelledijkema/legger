@@ -12,6 +12,8 @@ from PyQt4.QtGui import QAction, QIcon, QMenu
 
 from legger.utils.user_message import messagebar_message
 from legger.views.calculating_profiles import ProfileCalculationWidget
+from legger.sql_models.legger import BegroeiingsVariant
+from legger.sql_models.legger_database import LeggerDatabase
 
 log = logging.getLogger(__name__)
 
@@ -41,31 +43,45 @@ class SetBegroeiingsvariant(QObject):
         self.icon_path = ':/plugins/legger/media/calculator-icon.png'
         self.menu_text = u'Zet begroeiingsvariant voor selectie'
 
+        # add listereners
+        self.root_tool.polderDatasourceChanged.connect(self.set_variant_items)
+
         self.is_active = False
         self.dialog = None
+
+    def set_variant_items(self, polder_datasource):
+
+        def callback_factory(variant_id):
+            return lambda: self.attach_variant(variant_id=variant_id)
+
+        self.remove_variant_items()
+        db = LeggerDatabase(
+            {'db_path': polder_datasource},
+            'spatialite'
+        )
+        db.create_and_check_fields()
+        self.session = db.get_session()
+        for variant in self.session.query(BegroeiingsVariant):
+            action = QAction(variant.naam, self.iface.mainWindow())
+            self.popupMenu.addAction(action)
+            action.triggered.connect(callback_factory(variant.id))
+
+    def remove_variant_items(self):
+
+        for action in self.popupMenu.actions():
+            # action.triggered.connect(lambda variant_id=variant.id: self.attach_variant(variant_id))
+            self.popupMenu.removeAction(action)
 
     def get_action(self):
 
         self.action_base = QAction(u"zet begroeiing", self.iface.mainWindow())
-        self.action1 = QAction(u"Sterk begroeiid", self.iface.mainWindow())
-        self.action2 = QAction(u"Matig begroeiid", self.iface.mainWindow())
-        self.action3 = QAction(u"Normaal", self.iface.mainWindow())
-
         self.popupMenu = QMenu(self.iface.mainWindow())
-        self.popupMenu.addAction(self.action1)
-        self.popupMenu.addAction(self.action2)
-        self.popupMenu.addAction(self.action3)
-
-        self.action1.triggered.connect(self.attach_variant)
-        self.action2.triggered.connect(self.attach_variant)
-        self.action3.triggered.connect(self.attach_variant)
-
+        self.set_variant_items(self.root_tool.polder_datasource)
         self.action_base.setMenu(self.popupMenu)
-
         # self.iface.addToolBarIcon(self.action_base)
         return self.action_base
 
-    def attach_variant(self):
+    def attach_variant(self, variant_id, *args, **kwargs):
         a = 1
         for layer in self.iface.legendInterface().selectedLayers():
             if any([a.name() == 'begroeiingsvariant_id' for a in layer.pendingFields()]):
@@ -77,12 +93,19 @@ class SetBegroeiingsvariant(QObject):
                 layer.startEditing()
                 count = 0
                 for feature in features:
-                    feature['begroeiingsvariant_id'] = 1
+                    feature['begroeiingsvariant_id'] = variant_id
                     count += 1
+                    layer.updateFeature(feature)
 
                 layer.commitChanges()
+
                 messagebar_message('Gelukt', '{0} features op begroeiingsvariant gezet.'.format(count),
                                    QgsMessageBar.INFO, 15)
+
+                if self.iface.mapCanvas().isCachingEnabled():
+                    layer.setCacheImage(None)
+                else:
+                    self.iface.mapCanvas().refresh()
 
             else:
                 pass
@@ -92,11 +115,7 @@ class SetBegroeiingsvariant(QObject):
 
     def on_unload(self):
         """Cleanup necessary items here when dialog is closed"""
-
-        pass
-        # disconnects
-        # if self.dialog:
-        #     self.dialog.close()
+        self.root_tool.polderDatasourceChanged.disconnect(self.set_variant_items)
 
     def on_close_dialog(self):
         """Cleanup necessary items here when dialog is closed"""
@@ -105,41 +124,3 @@ class SetBegroeiingsvariant(QObject):
 
         self.dialog = None
         self.is_active = False
-
-    def run(self):
-        """Run method that loads and starts the plugin"""
-
-        try:
-            tdi_plugin = plugins['ThreeDiToolbox']
-        except:
-            raise ImportError("For Leggertool the ThreeDiToolbox plugin must be installed, "
-                              "version xxx or higher")
-
-        try:
-            ts_datasource = tdi_plugin.ts_datasource
-        except:
-            ts_datasource = "Kies eerst 3Di output (model, simulatie (nc), sqlite1)"
-
-        if not self.is_active:
-
-            self.is_active = True
-
-            if self.dialog is None:
-                # Create the dialog (after translation) and keep reference
-                self.dialog = ProfileCalculationWidget(
-                    parent=None,
-                    iface=self.iface,
-                    polder_datasource=self.root_tool.polder_datasource,
-                    ts_datasource=ts_datasource,
-                    parent_class=self)
-
-            # connect to provide cleanup on closing of dockwidget
-            self.dialog.closingDialog.connect(self.on_close_dialog)
-
-            # show the widget
-            self.dialog.show()
-        else:
-            self.dialog.setWindowState(
-                self.dialog.windowState() & ~Qt.WindowMinimized |
-                Qt.WindowActive)
-            self.dialog.raise_()
