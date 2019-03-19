@@ -4,6 +4,7 @@ from PyQt4.QtCore import Qt
 from PyQt4.QtGui import QBrush
 
 CHECKBOX_FIELD = 1
+INDICATION_HOVER = 2
 
 
 class BaseTreeItem(object):
@@ -144,7 +145,12 @@ class BaseTreeModel(QtCore.QAbstractItemModel):
 
         item = index.internalPointer()
         if role == QtCore.Qt.DisplayRole:
-            if self.headers[index.column()].get('field_type') != CHECKBOX_FIELD:
+            if self.headers[index.column()].get('field_type') == INDICATION_HOVER:
+                if item.data(index.column()):
+                    return '*'
+                else:
+                    return None
+            elif self.headers[index.column()].get('field_type') != CHECKBOX_FIELD:
                 return item.data(index.column())
         elif role == Qt.TextAlignmentRole:
             return Qt.AlignVCenter
@@ -157,6 +163,9 @@ class BaseTreeModel(QtCore.QAbstractItemModel):
             return QBrush(Qt.transparent)
         # elif role == QtCore.Qt.DecorationRole and index.column() == 0:
         #     return item.icon()
+        elif role == Qt.ToolTipRole:
+            if self.headers[index.column()].get('field_type') == INDICATION_HOVER:
+                return item.data(index.column())
         elif role == QtCore.Qt.UserRole:
             if item:
                 return item
