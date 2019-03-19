@@ -99,7 +99,7 @@ class LeggerPlotWidget(pg.PlotWidget):
 
     def data_changed_variant(self, index, to_index=None):
         """
-         change graphs based on changes in locations
+         add width logic to hover variant table
          :param index: index of changed field
          """
         model = self.variant_model
@@ -158,22 +158,18 @@ class LeggerPlotWidget(pg.PlotWidget):
         if field in ['ep', 'sp']:
 
             if self.legger_model.ep is not None:
-
                 up = self.legger_model.ep.up(end=self.legger_model.sp)
-
                 ids = []
                 for line in reversed(up):
                     ids.append(line.hydrovak.get('hydro_id'))
 
-                profs = []
                 if len(ids):
                     hydro_objects = self.session.query(HydroObject).filter(HydroObject.id.in_(ids)).all()
 
                     self.reference_level = up[0].hydrovak.get('target_level', 0.0)
                     self.clear_measured_plots()
-
+                    # add measured profiles over full track
                     for obj in hydro_objects:
-
                         for profile in obj.figuren.filter_by(type_prof='m').all():
                             prof = {
                                 'name': profile.profid,
@@ -187,7 +183,6 @@ class LeggerPlotWidget(pg.PlotWidget):
                             # keep reference
                             self.measured_plots.append(prof)
                             self.addItem(prof['plot'])
-
             else:
                 self.clear_measured_plots()
 
@@ -196,6 +191,7 @@ class LeggerPlotWidget(pg.PlotWidget):
 
             if item.hydrovak.get('hover'):
 
+                # add measured profiles
                 self.reference_level = item.hydrovak.get('target_level', 0.0)
                 for profile in self.session.query(ProfielFiguren).filter(
                         HydroObject.id == ProfielFiguren.hydro_id,
@@ -208,28 +204,40 @@ class LeggerPlotWidget(pg.PlotWidget):
                         'width': 2,
                         'points': [(p[0], p[1] - profile.peil)
                                    for p in loads(profile.coord).exterior.coords]
-                    }
+                    }  # add extra step with zip and xy, because loop over coords sometimes provide only empty numbers
 
                     prof['plot'] = self.get_measured_plot(prof, 255)
-
                     # keep reference
                     self.hover_measured_plots.append(prof)
                     self.addItem(prof['plot'])
 
-                # selected profile
-                depth = item.hydrovak.get('selected_depth')
-                if depth is not None and depth != NULL:
+                # add shape based on width and estimated depth in case no measured profile in this hydrovak
+                if len(self.hover_measured_plots) == 0:
+                    width = item.hydrovak.get('width')
+                    depth = item.hydrovak.get('depth')
+                    if width is not None and depth is not None:
+                        prof = {
+                            'name': 'extends',
+                            'color': settings.HOVER_COLOR,
+                            'style': Qt.DotLine,
+                            'width': 2,
+                            'points': [(-width/2, 0), (-width/2, -depth), (width/2, -depth), (width/2, 0), (-width/2, 0)]
+                        }
+
+                        prof['plot'] = self.get_measured_plot(prof, 255, 0)
+                        # keep reference
+                        self.hover_measured_plots.append(prof)
+                        self.addItem(prof['plot'])
+
+                # show selected legger profile
+                selected_variant_id = item.hydrovak.get('selected_variant_id')
+                if selected_variant_id is not None and selected_variant_id != NULL:
                     profile_variant = self.session.query(Varianten).filter(
-                        Varianten.hydro_id == item.hydrovak.get('hydro_id'),
-                        Varianten.diepte < depth + precision,
-                        Varianten.diepte > depth - precision
+                        Varianten.id == selected_variant_id
                     )
 
                     if profile_variant.count() > 0:
                         profile = profile_variant.first()
-                        ref_peil = profile.hydro.streefpeil
-
-                        # todo: iets met een patroon
                         prof = {
                             'name': profile.id,
                             'color': settings.HOVER_COLOR,
@@ -253,14 +261,13 @@ class LeggerPlotWidget(pg.PlotWidget):
 
                 if self.hover_selected_plot is not None:
                     self.removeItem(self.hover_selected_plot['plot'])
-
                 self.hover_measured_plots = []
 
         elif field == 'selected':
             item = self.legger_model.data(index, role=Qt.UserRole)
 
             if item.hydrovak.get('selected'):
-
+                # add measured profiles
                 for profile in self.session.query(ProfielFiguren).filter(
                         HydroObject.id == ProfielFiguren.hydro_id,
                         HydroObject.id == item.hydrovak.get('hydro_id'),
@@ -286,9 +293,6 @@ class LeggerPlotWidget(pg.PlotWidget):
                 for prof in self.selected_measured_plots:
                     if 'plot' in prof:
                         self.removeItem(prof['plot'])
-
-                # if self.hover_selected_plot is not None:
-                #     self.removeItem(self.hover_selected_plot['plot'])
 
                 self.selected_measured_plots = []
 
