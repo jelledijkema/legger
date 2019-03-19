@@ -15,20 +15,22 @@ HORIZONTAL_HEADERS = (
      'single_selection': True},
     {'field': 'hover', 'field_type': CHECKBOX_FIELD, 'show': False, 'column_width': 50},
     {'field': 'distance', 'header': 'afstand', 'show': False, 'column_width': 50},
-    {'field': 'category', 'header': 'cat', 'column_width': 30},
-    {'field': 'flow', 'header': 'debiet', 'column_width': 50},
+    {'field': 'category', 'header': 'cat', 'column_width': 40},
+    {'field': 'begroeiingsvariant', 'header': 'beg', 'column_width': 40},
+    {'field': 'flow', 'header': 'debiet', 'show': False, 'column_width': 50},
     {'field': 'target_level', 'show': False, 'column_width': 50},
-    {'field': 'depth', 'header': 'diepte', 'column_width': 50},
-    {'field': 'width', 'header': 'breedte', 'column_width': 50},
+    {'field': 'depth', 'header': 'diepte', 'show': False, 'column_width': 50},
+    {'field': 'width', 'header': 'breedte', 'show': False, 'column_width': 50},
     {'field': 'variant_min_depth', 'show': False, 'column_width': 60},
     {'field': 'variant_max_depth', 'show': False, 'column_width': 60},
+    {'field': 'selected_depth_tmp', 'header': 'sel d', 'column_width': 60},
     {'field': 'selected_depth', 'header': 'prof d', 'column_width': 60},
-    {'field': 'selected_depth_tmp', 'header': 'sel', 'column_width': 50},
     {'field': 'selected_width', 'header': 'prof b', 'column_width': 60},
     {'field': 'over_depth', 'header': 'over d', 'column_width': 60},
     {'field': 'over_width', 'header': 'over b', 'column_width': 60},
-    {'field': 'score', 'show': False, 'column_width': 50},
-    {'field': 'selected_variant_id', 'show': True, 'column_width': 50},
+    {'field': 'selected_begroeiingsvariant', 'header': 'beg', 'column_width': 40},
+    {'field': 'score', 'show': True, 'column_width': 50},
+    {'field': 'selected_variant_id', 'show': False, 'column_width': 100},
 
 )
 
@@ -74,7 +76,9 @@ class hydrovak_class(object):
             'variant_max_depth': 'max_diepte',
             'selected_depth': 'geselecteerd_diepte',
             'selected_width': 'geselecteerd_breedte',
-            'selected_variant_id': 'variant'
+            'selected_variant_id': 'geselecteerde_variant',
+            'begroeiingsvariant_id': 'begroeiingsvariant_id',
+            'selected_begroeiingsvariant_id': 'geselecteerde_begroeiingsvariant',
         }
 
     def __repr__(self):
