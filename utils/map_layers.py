@@ -57,16 +57,18 @@ class LayerManager():
 
         styled_layers = OrderedDict([
             ('basisgegevens', [
-                ('hv debiet', 'hydroobject', 'debiet', 'debiet', 'geometry', 'min_max_line'),
-                ('categorie', 'hydroobject', 'streefpeil', 'min_max_line', 'geometry', 'min_max_line'),
+                ('debiet', 'hydroobject', 'debiet', 'debiet', 'geometry', 'min_max_line'),
+                ('categorie', 'hydroobject', 'categorieoppwaterlichaam', 'category', 'geometry', 'min_max_line'),
                 #('du debiet', 'duikersifonhevel', 'debiet', 'debiet', 'geometry', 'min_max_line'),
             ]),
             ('afgeleid', [
             ]),
             ('tbv begroeiingsgraad', [
-                ('begroeiingsvariant', 'selected_begroeiingsvariant_view', 'begroeiingsnaam', 'min_max_line', 'geometry', None),
-                ('sterk min profiel', 'ruimte_view', 'ruim', 'min_max_line', 'geometry', None),
-                ('ruimte', 'ruimte_view', 'over_width', 'min_max_line', 'geometry', None),
+                ('begroeiingsadvies', 'begroeiingsadvies4', 'advies_id', 'begroeiingsvariant', 'geometry', None),
+                ('begroeiingsvariant', 'begroeiingsadvies4', 'aangew_bv_id', 'begroeiingsvariant',
+                 'geometry', None),
+                #('sterk min profiel', 'ruimte_view', 'ruim', 'min_max_line', 'geometry', None),
+                #('ruimte', 'ruimte_view', 'over_width', 'min_max_line', 'geometry', None),
             ]),
             ('gekozen legger', [
                 ('diepte', 'hydroobjects_selected_legger', 'geselecteerde_diepte', 'min_max_line', 'geometry', None),
