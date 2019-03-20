@@ -355,7 +355,10 @@ class LeggerWidget(QDockWidget):
                 self.initial_loop_tree(root.childs[0])
 
             canvas = self.iface.mapCanvas()
-            canvas.setExtent(self.vl_tree_layer.extent())
+            extent = self.vl_tree_layer.extent()
+            if extent:
+                extent.scale(1.2)
+                canvas.setExtent(extent)
         elif self.area_model.columns[index.column()].get('field') == 'hover':
             ids = [feat.id() for feat in self.vl_startpoint_hover_layer.getFeatures()]
             self.vl_startpoint_hover_layer.dataProvider().deleteFeatures(ids)
