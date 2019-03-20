@@ -6,9 +6,9 @@ name=legger
 qgisMinimumVersion=2.18
 description=Leggertool, tool for getting 'legger' profiles based on dicharged and
     situational data
-version=0.1
-author= todo
-email= todo
+version=1.2
+author= Jelle Dijkema and Bastiaan Roos
+email= bastiaan.roos@roosgeo.nl
 
 about=...
 
