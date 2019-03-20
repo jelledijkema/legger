@@ -62,6 +62,22 @@ class PolderSelectionWidget(QWidget):#, FORM_CLASS):
         self.close()
         event.accept()
 
+    def explain_leggerdatabase(self):
+        self.msg_upper_row = QtGui.QMessageBox(self)
+        self.msg_upper_row.setIcon(QtGui.QMessageBox.Information)
+        self.msg_upper_row.setText("<b>Het selecteren van een leggerdatabase<b>")
+        self.msg_upper_row.setInformativeText("Voor de toewijzing van leggerprofielen wordt een aparte 'leggerdatabase' "
+                                              "gemaakt. Deze database is een aparte .sqlite bestand waar data uit "
+                                              "DAMO en de Hydrologendatabase (HDB) gecombineerd wordt als randvoorwaarden "
+                                              "voor de leggerprofielen, zoals breedte en talud per hydro-object.\n"
+                                              "Wanneer een nieuwe leggerdatabase gemaakt moet worden, selecteer dan bij "
+                                              "voorkeur de DAMO en HDB die ook voor de opbouw van het 3di model zijn "
+                                              "gebruikt.\n"
+                                              "Is er al een 'leggerdatabase' aangemaakt, sla deze stap dan over en zorg "
+                                              "dat dit bestand (met als extentie .sqlite) in de tweede stap geselecteerd "
+                                              "wordt. Let wel op: opnieuw uitgevoerde stappen en leggerkeuzes zullen "
+                                              "bestaande data overschrijven.")
+        self.box_explanation.addWidget(self.msg_upper_row)
 
     def select_DAMO(self):
         """
@@ -186,6 +202,8 @@ class PolderSelectionWidget(QWidget):#, FORM_CLASS):
         self.verticalLayout = QtGui.QVBoxLayout(self)
         self.verticalLayout.setObjectName(_fromUtf8("verticalLayout"))
 
+        self.explanation_row = QtGui.QVBoxLayout()
+        self.explanation_row.setObjectName(_fromUtf8("Uitleg row"))
         self.maak_leggerdatabase_row = QtGui.QVBoxLayout()
         self.maak_leggerdatabase_row.setObjectName(_fromUtf8("Maak leggerdatabase row"))
         self.kies_leggerdatabase_row = QtGui.QVBoxLayout()
@@ -204,6 +222,10 @@ class PolderSelectionWidget(QWidget):#, FORM_CLASS):
         self.load_HDB_dump_button.setObjectName(_fromUtf8("Load HDB"))
         self.load_HDB_dump_button.clicked.connect(self.select_HDB)
         self.load_HDB_dump_button.setMinimumWidth(190)
+
+        self.explanation_button = QtGui.QPushButton(self)
+        self.explanation_button.setObjectName(_fromUtf8("Explain"))
+        self.explanation_button.clicked.connect(self.explain_leggerdatabase)
 
         # make database routine
         self.create_leggerdatabase_button = QtGui.QPushButton(self)
@@ -233,6 +255,10 @@ class PolderSelectionWidget(QWidget):#, FORM_CLASS):
         self.var_text_leggerdatabase.setText("leeg")
 
         # Assembling
+        # explanation button pop-up row
+        self.box_explanation = QtGui.QVBoxLayout()
+        self.box_explanation.addWidget(self.explanation_button)
+
         # Create buttons with functions to select damo and hdb and database creation and add it to rows
         self.box_leggerdatabase_create = QtGui.QVBoxLayout()
         self.hbox_DAMO = QtGui.QHBoxLayout()
@@ -245,28 +271,35 @@ class PolderSelectionWidget(QWidget):#, FORM_CLASS):
         self.hbox_HDB.addWidget(self.load_HDB_dump_button)
         self.box_leggerdatabase_create.addLayout(self.hbox_HDB)
 
+        self.box_leggerdatabase_create.addWidget(self.create_leggerdatabase_button)
+
         self.box_leggerdatabase_input = QtGui.QVBoxLayout()
         self.hbox_LDB = QtGui.QHBoxLayout()
         self.hbox_LDB.addWidget(self.var_text_leggerdatabase)
         self.hbox_LDB.addWidget(self.load_leggerdatabase_button)
         self.box_leggerdatabase_input.addLayout(self.hbox_LDB)
-        self.box_leggerdatabase_input.addWidget(self.create_leggerdatabase_button)
 
-        # Create groupbox and add HBoxes to it
+
+        # Create groupbox and add H or VBoxes to it
+        self.groupBox_explanation = QtGui.QGroupBox(self)
+        self.groupBox_explanation.setTitle("Uitleg")
+        self.groupBox_explanation.setLayout(self.box_explanation)
+
         self.groupBox_leggerdatabase_create = QtGui.QGroupBox(self)
         self.groupBox_leggerdatabase_create.setTitle("GDB bestanden voor aanmaken leggerdatabase")
         self.groupBox_leggerdatabase_create.setLayout(self.box_leggerdatabase_create)
 
         self.groupBox_leggerdatabase_input = QtGui.QGroupBox(self)
-        self.groupBox_leggerdatabase_input.setTitle("Leggerdatabase")
+        self.groupBox_leggerdatabase_input.setTitle("Leggerdatabase kiezen als deze al bestaat")
         self.groupBox_leggerdatabase_input.setLayout(self.box_leggerdatabase_input)
 
         # Add groupbox to row
+        self.explanation_row.addWidget(self.groupBox_explanation)
         self.maak_leggerdatabase_row.addWidget(self.groupBox_leggerdatabase_create)
-
         self.kies_leggerdatabase_row.addWidget(self.groupBox_leggerdatabase_input)
 
         # Add row to ui
+        self.verticalLayout.addLayout(self.explanation_row)
         self.verticalLayout.addLayout(self.maak_leggerdatabase_row)
         self.verticalLayout.addLayout(self.kies_leggerdatabase_row)
         self.verticalLayout.addLayout(self.bottom_row)
@@ -276,6 +309,7 @@ class PolderSelectionWidget(QWidget):#, FORM_CLASS):
 
     def retranslateUi(self, Dialog):
         Dialog.setWindowTitle(_translate("Dialog", "Selecteer en/of maak de leggerdatabase van de polder", None))
+        self.explanation_button.setText(_translate("Dialog", "Klik hier voor meer uitleg", None))
         self.load_DAMO_dump_button.setText(_translate("Dialog", "Selecteer DAMO gdb", None))
         self.load_HDB_dump_button.setText(_translate("Dialog", "Selecteer HDB gdb", None))
         self.create_leggerdatabase_button.setText(_translate("Dialog", "Aanmaken database", None))
