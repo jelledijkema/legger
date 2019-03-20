@@ -12,7 +12,7 @@ QGIS_APP = get_qgis_app()
 
 from random import shuffle
 from qgis.networkanalysis import (QgsLineVectorLayerDirector)
-from legger.utils.new_network import Network, AttributeProperter
+from legger.utils.new_network import NewNetwork, AttributeProperter
 from PyQt4.QtCore import QVariant
 
 
@@ -39,7 +39,7 @@ class TestTheoreticalNetwork(unittest.TestCase):
         """
         line_layer, director, distance_properter = self.get_line_layer_and_director(self.one_simple_line_network)
 
-        network = Network(line_layer, line_layer, director, distance_properter, id_field='id')
+        network = NewNetwork(line_layer, line_layer, director, distance_properter, id_field='id')
         vertex_nrs = network.get_start_vertex_nrs()
         point = network.graph.vertex(vertex_nrs[0]).point()
         arc_nrs = [network.graph.arc(arc_nr).property(2)
@@ -61,7 +61,7 @@ class TestTheoreticalNetwork(unittest.TestCase):
 
         line_layer, director, distance_properter = self.get_line_layer_and_director(layer_data)
 
-        network = Network(line_layer, line_layer, director, distance_properter, id_field='id')
+        network = NewNetwork(line_layer, line_layer, director, distance_properter, id_field='id')
         vertex_nrs = network.get_start_vertex_nrs()
         arc_nrs = [network.graph.arc(arc_nr).property(2)
                    for arc_nr in network.get_arc_nrs_of_vertex_nrs(vertex_nrs)]
@@ -83,7 +83,7 @@ class TestTheoreticalNetwork(unittest.TestCase):
 
         line_layer, director, distance_properter = self.get_line_layer_and_director(layer_data)
 
-        network = Network(line_layer, line_layer, director, distance_properter, id_field='id')
+        network = NewNetwork(line_layer, line_layer, director, distance_properter, id_field='id')
         vertex_nrs = network.get_start_vertex_nrs()
         point = network.graph.vertex(vertex_nrs[0]).point()
         arc_nrs = [network.graph.arc(arc_nr).property(2)
@@ -107,7 +107,7 @@ class TestTheoreticalNetwork(unittest.TestCase):
 
         line_layer, director, distance_properter = self.get_line_layer_and_director(layer_data)
 
-        network = Network(line_layer, line_layer, director, distance_properter, id_field='id')
+        network = NewNetwork(line_layer, line_layer, director, distance_properter, id_field='id')
         vertex_nrs = network.get_start_vertex_nrs()
         point = network.graph.vertex(vertex_nrs[0]).point()
         arc_nrs = [network.graph.arc(arc_nr).property(2)
@@ -127,7 +127,7 @@ class TestTheoreticalNetwork(unittest.TestCase):
             shuffle(layer_data)
             line_layer, director, distance_properter = self.get_line_layer_and_director(layer_data)
 
-            network = Network(line_layer, line_layer, director, distance_properter, id_field='id')
+            network = NewNetwork(line_layer, line_layer, director, distance_properter, id_field='id')
             vertex_nrs = network.get_start_vertex_nrs()
             point = network.graph.vertex(vertex_nrs[0]).point()
             arc_nrs = [network.graph.arc(arc_nr).property(2)
@@ -148,7 +148,7 @@ class TestTheoreticalNetwork(unittest.TestCase):
         """
         line_layer, director, distance_properter = self.get_line_layer_and_director(self.one_simple_line_network)
 
-        network = Network(line_layer, line_layer, director, distance_properter, id_field='id')
+        network = NewNetwork(line_layer, line_layer, director, distance_properter, id_field='id')
         arc_dict, start_arcs = network.build_tree()
 
         self.assertEqual(1, len(start_arcs))
@@ -171,7 +171,7 @@ class TestTheoreticalNetwork(unittest.TestCase):
 
         line_layer, director, distance_properter = self.get_line_layer_and_director(layer_data)
 
-        network = Network(line_layer, line_layer, director, distance_properter, id_field='id')
+        network = NewNetwork(line_layer, line_layer, director, distance_properter, id_field='id')
         arc_dict, start_arcs = network.build_tree()
 
         self.assertEqual(2, len(start_arcs))
@@ -199,7 +199,7 @@ class TestTheoreticalNetwork(unittest.TestCase):
 
         line_layer, director, distance_properter = self.get_line_layer_and_director(layer_data)
 
-        network = Network(line_layer, line_layer, director, distance_properter, id_field='id')
+        network = NewNetwork(line_layer, line_layer, director, distance_properter, id_field='id')
         arc_dict, start_arcs = network.build_tree()
 
         self.assertEqual(1, len(start_arcs))

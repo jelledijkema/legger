@@ -79,7 +79,7 @@ class NewNetwork(object):
 
     def __init__(self, line_layer, full_line_layer, director,
                  distance_properter,
-                 virtual_tree_layer, endpoint_layer,
+                 virtual_tree_layer=None, endpoint_layer=None,
                  id_field="feat_id"):
         """
         line_layer (QgsVectorLayer): input vector layer, with as geometry straight lines without in between vertexes
@@ -123,7 +123,6 @@ class NewNetwork(object):
         self.arc_tree = None  # dictionary with tree data in format {[arc_nr]: {**arc_data}}
         self.start_arcs = None  # list of dicts with arc_nr, point (x, y), list childs, parent
 
-
     def get_structure_bidirectional_group(self, arc_dict, group_vertexes):
         """
 
@@ -138,6 +137,7 @@ class NewNetwork(object):
 
         idea - for all situations, use shortest distance
         """
+
         # todo: make this function...
 
         def get_all_bidirectional_arcs(vertexes):
@@ -182,7 +182,8 @@ class NewNetwork(object):
         returns (tuple): tuple with dictionary of arc_tree en list of start arc_nrs
         """
         arc_tree = {}
-        start_arcs = []
+        start_arcs = {}
+        in_between_arcs = {}
 
         # create dicts with lines (arcs), required information and mark vertexes in bi-directional islands
         for arc_nr in range(0, self.graph.arcCount()):
@@ -222,7 +223,7 @@ class NewNetwork(object):
             arc['downstream_arc'] = next(
                 iter(sorted(out_vertex.inArc(), key=lambda nr: arc_tree[nr]['flow'], reverse=True)), None)
             if arc['downstream_arc'] is None:
-                start_arcs.append({
+                start_arcs[arc_nr] = {
                     'arc_nr': arc_nr,
                     'point': out_vertex.point(),
                     'children': [],
@@ -231,8 +232,20 @@ class NewNetwork(object):
                     'distance': None,
                     'cum_weight': None,
                     'min_category_in_path': None
-
-                })
+                }
+            elif (arc_tree[arc['downstream_arc']].get('target_level') is not None and
+                  arc.get('target_level') is not None and
+                  arc_tree[arc['downstream_arc']].get('target_level') != arc.get('target_level')):
+                in_between_arcs[arc_nr] = {
+                    'arc_nr': arc_nr,
+                    'point': out_vertex.point(),
+                    'children': [],
+                    'parent': None,
+                    # attributes to be filled later
+                    'distance': None,
+                    'cum_weight': None,
+                    'min_category_in_path': None
+                }
 
         # set upstream arcs. Set only the one, who has the current arc as downstream arc (so joining
         # streams are forced into a tree structure with no alternative paths to same point
@@ -256,7 +269,15 @@ class NewNetwork(object):
             return arc_cum_weight, arc_min_category
 
         # get cum_weight and sort upstream_arcs
-        for start_arc in start_arcs:
+        for start_arc in start_arcs.values():
+            start_arc['cum_weight'], start_arc['min_category_in_path'] = get_cum_weight_min_category(
+                arc_tree[start_arc['arc_nr']])
+            start_arc['target_level'] = arc_tree[start_arc['arc_nr']]['target_level']
+            # todo: set distance correct
+            start_arc['distance'] = start_arc['cum_weight']
+
+        # get cum_weight and sort upstream_arcs
+        for start_arc in in_between_arcs.values():
             start_arc['cum_weight'], start_arc['min_category_in_path'] = get_cum_weight_min_category(
                 arc_tree[start_arc['arc_nr']])
             start_arc['target_level'] = arc_tree[start_arc['arc_nr']]['target_level']
@@ -266,7 +287,31 @@ class NewNetwork(object):
         for arc in arc_tree.values():
             arc['upstream_arcs'].sort(key=lambda nr: arc_tree[nr]['cum_weight'], reverse=True)
 
+        # link arcs to start and inbetween arcs to get area structure
+        def loop(area_start_arc, arc_nr):
+            arc = arc_tree[arc_nr]
+            arc['area_start_arc'] = area_start_arc
+            for upstream_arc in arc['upstream_arcs']:
+                loop(area_start_arc, upstream_arc)
+
+        for start_arc in start_arcs.keys():
+            loop(start_arc, start_arc)
+        for in_between_arc in start_arcs.keys():
+            loop(in_between_arc, in_between_arc)
+
+        for inbetween_arc_nr, in_between_item in in_between_arcs.items():
+            arc = arc_tree[inbetween_arc_nr]
+            downstream_area_arc_nr = arc_tree[arc['downstream_arc']]['area_start_arc']
+            if downstream_area_arc_nr in start_arcs:
+                start_arcs[downstream_area_arc_nr]['children'].append(in_between_item)
+            elif downstream_area_arc_nr in in_between_arcs:
+                start_arcs[downstream_area_arc_nr]['children'].append(in_between_item)
+            else:
+                # this should not happen!
+                pass
+
         # sort start arcs
+        start_arcs = start_arcs.values()
         start_arcs.sort(key=lambda arc_d: arc_d['cum_weight'], reverse=True)
 
         # store tree and start points
