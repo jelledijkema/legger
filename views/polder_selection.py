@@ -174,7 +174,6 @@ class PolderSelectionWidget(QWidget):#, FORM_CLASS):
         if not database:
             return
 
-        self.root_tool.polder_datasource = database
         self.var_text_leggerdatabase.setText(database)
 
         settings.setValue('last_used_legger_spatialite_path',
@@ -195,6 +194,9 @@ class PolderSelectionWidget(QWidget):#, FORM_CLASS):
         )
 
         legger_class.full_import_ogr2ogr()
+
+        # set root_tool as last, because this triggers other actions
+        self.root_tool.polder_datasource = database
 
     def setup_ui(self):
         self.setMinimumWidth(700)
