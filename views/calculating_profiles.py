@@ -11,7 +11,7 @@ import os
 import urllib2
 
 from PyQt4.QtCore import pyqtSignal, QSettings, QModelIndex, QThread
-from PyQt4.QtGui import QWidget, QFileDialog, QComboBox
+from PyQt4.QtGui import QWidget, QFileDialog, QComboBox, QMessageBox
 from PyQt4 import QtCore, QtGui
 
 from legger.utils.read_tdi_results import (
@@ -166,11 +166,31 @@ class ProfileCalculationWidget(QWidget):  # , FORM_CLASS):
 
         self.close()
 
+    def explain_step1(self):
+        """
+        Uitleg van stap 1
+        """
+        # detailed information on UPPER ROW groupbox
+        self.msg_upper_row= QtGui.QMessageBox(self)
+        self.msg_upper_row.setIcon(QtGui.QMessageBox.Information)
+        self.msg_upper_row.setText("<b>Het selecteren van een tijdstap voor de leggerdatabase<b>")
+        self.msg_upper_row.setInformativeText("In het netCDF bestand waar de 3di resultaten zijn opgeslagen is per "
+                                              "'flowline' voor elke tijdstap informatie beschikbaar. Dit betekent dat "
+                                              "eerst een tijdstap gekozen moet worden om de resultaten van deze tijdstap "
+                                              "op te kunnen halen.\n"
+                                              "In het geval van de hydraulische toets, wat gebruikt wordt voor de legger, "
+                                              "zijn we geinteresseerd in de debieten over de 'flowlines' waarbij "
+                                              "de neerslag som een stationair evenwicht heeft berijkt.\n\n"
+                                              "Tip: In de BWN studie rekenen we een som door van 1 dag droog, 5 "
+                                              "dagen regen en weer 2 dagen droog. Voor het meest stationaire moment "
+                                              "selecteer de tijdstap tussen ongeveer 2/3 en 3/4 van de grootste tijdstap")
+
+        self.box_step1.addWidget(self.msg_upper_row)
+
     def execute_step1(self):
         """
-        First step in pre-processing:
-        - update legger database according to schema
-        - get channel and culvert discharge from 3di model and write these to the legger database
+       Eerste stap in klaarzetten van de data:
+        - update legger database met data vanuit de netcdf (koppeling debieten van gekozen tijdstap)
         returns: None
         """
         # first update legger spatialite according to schema, using sqlAlchemy
@@ -245,6 +265,27 @@ class ProfileCalculationWidget(QWidget):  # , FORM_CLASS):
         finally:
             self.feedbacktext.setText(self.feedbackmessage)
 
+    def explain_step2(self):
+        """
+        Uitleg van stap 1
+        """
+        # detailed information on UPPER ROW groupbox
+        self.msg_middle_row= QtGui.QMessageBox(self)
+        self.msg_middle_row.setIcon(QtGui.QMessageBox.Information)
+        self.msg_middle_row.setText("<b>Het berekenen van de varianten voor de leggerdatabase<b>")
+        self.msg_middle_row.setInformativeText("Alle randvoorwaarden zijn nu bekend:\n"
+                                               "breedte, diepte, Q, talud.\n"
+                                               "Met de gekozen norm voor verhang wordt met iteraties berekend "
+                                               "welke mogelijke leggerprofielen er mogelijk zijn. Dit betekent dat "
+                                               "per hydro-object idealiter een hele lijst van 'mogelijke profielen' "
+                                               "wordt berekend. Dat betekent dat er vanuit hydraulisch oogpunt dus "
+                                               "ruimte is voor keuze.\n"
+                                               "Let op: als een bestaande 'leggerdatabase' is ingelezen, dan kan het "
+                                               "zo zijn dat door deze actie uit te voeren bestaande varianten worden "
+                                               "overschreven met nieuwe (omdat randvoorwaarde verhang nu anders is.")
+
+        self.box_step2.addWidget(self.msg_middle_row)
+
     def execute_step2(self):
 
         db = LeggerDatabase(
@@ -258,8 +299,8 @@ class ProfileCalculationWidget(QWidget):  # , FORM_CLASS):
         session = db.get_session()
 
         # delete existing variants
-        session.execute("Delete from varianten")
-        session.execute("Delete from begroeiingsvariant")
+        #session.execute("Verwijder van varianten")
+        #session.execute("Verwijder begroeiingsvariant")
         session.commit()
 
         get_or_create(session, BegroeiingsVariant, naam='standaard',
@@ -317,7 +358,7 @@ class ProfileCalculationWidget(QWidget):  # , FORM_CLASS):
         self.exit_row = QtGui.QHBoxLayout()
         self.exit_row.setObjectName(_fromUtf8("Exit row"))
 
-        # Selected file name and location in information groupbox
+        # Selected file name and location in INFORMATION ROW groupbox
         self.polder_filename = QtGui.QLineEdit(self)
         self.polder_filename.setText(self.polder_datasource)
         self.polder_filename.setObjectName(_fromUtf8("polder legger filename"))
@@ -334,7 +375,7 @@ class ProfileCalculationWidget(QWidget):  # , FORM_CLASS):
         self.connection_filename.setText(self.path_result_db)
         self.connection_filename.setObjectName(_fromUtf8("connection filename"))
 
-        # Assembling information groubox
+        # Assembling INFORMATION ROW groubox
         self.box_info = QtGui.QVBoxLayout()
         self.box_info.addWidget(self.polder_filename)  # intro text toevoegen aan box.
         self.box_info.addWidget(self.model_filename)
@@ -346,18 +387,23 @@ class ProfileCalculationWidget(QWidget):  # , FORM_CLASS):
         self.groupBox_info.setLayout(self.box_info)  # box toevoegen aan groupbox
         self.information_row.addWidget(self.groupBox_info)
 
-        # timestep selection:
+        # timestep selection for UPPER ROW groupbox:
         self.timestep_combo_box = QComboBox(self)
 
         # Assembling step 1 row
         self.step1_button = QtGui.QPushButton(self)
-        self.step1_button.setObjectName(_fromUtf8("Step1"))
+        self.step1_button.setObjectName(_fromUtf8("stap1"))
         self.step1_button.clicked.connect(self.execute_step1)
+        self.step1_explanation_button = QtGui.QPushButton(self)
+        self.step1_explanation_button.setObjectName(_fromUtf8("uitleg_stap1"))
+        self.step1_explanation_button.clicked.connect(self.explain_step1)
+
         self.groupBox_step1 = QtGui.QGroupBox(self)
-        self.groupBox_step1.setTitle("Step1:")
+        self.groupBox_step1.setTitle("stap 1: Kies een tijdstap")
         self.box_step1 = QtGui.QVBoxLayout()
         self.box_step1.addWidget(self.timestep_combo_box)
         self.box_step1.addWidget(self.step1_button)
+        self.box_step1.addWidget(self.step1_explanation_button)
         self.groupBox_step1.setLayout(self.box_step1)  # box toevoegen aan groupbox
         self.upper_row.addWidget(self.groupBox_step1)
 
@@ -366,19 +412,24 @@ class ProfileCalculationWidget(QWidget):  # , FORM_CLASS):
 
         # Assembling step 2 row
         self.step2_button = QtGui.QPushButton(self)
-        self.step2_button.setObjectName(_fromUtf8("Step2"))
+        self.step2_button.setObjectName(_fromUtf8("stap2"))
         self.step2_button.clicked.connect(self.execute_step2)
+        self.step2_explanation_button = QtGui.QPushButton(self)
+        self.step2_explanation_button.setObjectName(_fromUtf8("uitleg_stap2"))
+        self.step2_explanation_button.clicked.connect(self.explain_step2)
+
         self.groupBox_step2 = QtGui.QGroupBox(self)
-        self.groupBox_step2.setTitle("Step2:")
+        self.groupBox_step2.setTitle("stap2: bereken de varianten")
         self.box_step2 = QtGui.QVBoxLayout()
         self.box_step2.addWidget(self.surge_combo_box)
         self.box_step2.addWidget(self.step2_button)
+        self.box_step2.addWidget(self.step2_explanation_button)
         self.groupBox_step2.setLayout(self.box_step2)  # box toevoegen aan groupbox
         self.middle_row.addWidget(self.groupBox_step2)
 
         # Assembling step 3 row
         self.step3_button = QtGui.QPushButton(self)
-        self.step3_button.setObjectName(_fromUtf8("Step3"))
+        self.step3_button.setObjectName(_fromUtf8("Stap 3"))
         self.step3_button.clicked.connect(self.execute_step3)
         self.groupBox_step3 = QtGui.QGroupBox(self)
         self.groupBox_step3.setTitle("Step3:")
@@ -420,9 +471,11 @@ class ProfileCalculationWidget(QWidget):  # , FORM_CLASS):
     def retranslateUi(self, Dialog):
         Dialog.setWindowTitle(_translate("Dialog", "Bereken de profielvarianten van de polder",
                                          None))  # todo: maak een merge met de poldernaam.
-        self.save_button.setText(_translate("Dialog", "Save Database and Close", None))
-        self.step1_button.setText(_translate("Dialog", "Connect polder database to 3Di output", None))
-        self.step2_button.setText(_translate("Dialog", "Calculate all the hydraulic suitable variants", None))
+        self.save_button.setText(_translate("Dialog", "Opslaan en sluiten", None))
+        self.step1_explanation_button.setText(_translate("Dialog", "Uitleg stap 1", None))
+        self.step1_button.setText(_translate("Dialog", "Verbindt resultaten van netCDF aan de hydro-objecten", None))
+        self.step2_explanation_button.setText(_translate("Dialog", "Uitleg stap 2", None))
+        self.step2_button.setText(_translate("Dialog", "Bereken alle mogelijke leggerprofielen", None))
         self.step3_button.setText(
-            _translate("Dialog", "Calculate the fit % of the calculated profiles within measured profiles", None))
+            _translate("Dialog", "Bereken de fit van de berekende profielen", None))
         self.cancel_button.setText(_translate("Dialog", "Cancel", None))
