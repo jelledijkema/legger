@@ -1,6 +1,7 @@
 import logging
 import os.path
 from collections import OrderedDict
+import tempfile
 
 from qgis.core import (QgsDataSourceURI, QgsMapLayerRegistry, QgsProject, QgsVectorLayer)
 
@@ -91,6 +92,8 @@ class LayerManager():
 
         legend = self.iface.legendInterface()
 
+        tmp_dir = tempfile.gettempdir()
+
         for group, layers in styled_layers.items():
             qgroup = maplayer_group.insertGroup(100, group)
             qgroup.setExpanded(False)
@@ -114,12 +117,7 @@ class LayerManager():
                     # replace by column name
                     style = style.replace('<<variable>>', layer[2])
 
-                    new_style_path = os.path.join(
-                        os.path.dirname(os.path.realpath(__file__)),
-                        os.path.pardir,
-                        'layer_styles',
-                        'generated',
-                        'cr_' + layer[3] + '_' + layer[2] + '.qml')
+                    new_style_path = os.path.join(tmp_dir, 'cr_' + layer[3] + '_' + layer[2] + '.qml')
 
                     new_style_file = file(new_style_path, 'w')
                     new_style_file.write(style)
