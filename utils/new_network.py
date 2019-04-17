@@ -420,13 +420,14 @@ class NewNetwork(object):
                     # first insert dummy split
                     split_hydrovak = hydrovak_class(
                         {'hydro_id': 'tak {0}'.format(i),
-                         'line_feature': upstream_hydrovak['feature'],  # todo: correct??
+                         'tak': True,
+                         #'line_feature': upstream_hydrovak['feature'],  # todo: correct??
                          'distance': round(distance)
                          },
                         feature=feature)
                     split_item = LeggerTreeItem(split_hydrovak, parent_tree_item)
-                    tree_item.insertChild(i - 1, split_item)
-                    new_tree_item = LeggerTreeItem(hydrovak, split_item)
+                    tree_item.insertChild(i - 2, split_item)
+                    new_tree_item = LeggerTreeItem(upstream_hydrovak, split_item)
                     split_item.appendChild(new_tree_item)
                     new_parent_tree_item = split_item
 

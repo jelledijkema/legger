@@ -60,7 +60,7 @@ class LayerManager():
             ('basisgegevens', [
                 ('debiet', 'hydroobject', 'debiet', 'debiet', 'geometry', 'min_max_line'),
                 ('categorie', 'hydroobject', 'categorieoppwaterlichaam', 'category', 'geometry', 'min_max_line'),
-                #('du debiet', 'duikersifonhevel', 'debiet', 'debiet', 'geometry', 'min_max_line'),
+                # ('du debiet', 'duikersifonhevel', 'debiet', 'debiet', 'geometry', 'min_max_line'),
             ]),
             ('afgeleid', [
             ]),
@@ -68,12 +68,23 @@ class LayerManager():
                 ('begroeiingsadvies', 'begroeiingsadvies4', 'advies_id', 'begroeiingsvariant', 'geometry', None),
                 ('begroeiingsvariant', 'begroeiingsadvies4', 'aangew_bv_id', 'begroeiingsvariant',
                  'geometry', None),
-                #('sterk min profiel', 'ruimte_view', 'ruim', 'min_max_line', 'geometry', None),
-                #('ruimte', 'ruimte_view', 'over_width', 'min_max_line', 'geometry', None),
+                # ('sterk min profiel', 'ruimte_view', 'ruim', 'min_max_line', 'geometry', None),
+                # ('ruimte', 'ruimte_view', 'over_width', 'min_max_line', 'geometry', None),
             ]),
             ('gekozen legger', [
-                ('diepte', 'hydroobjects_selected_legger', 'geselecteerde_diepte', 'min_max_line', 'geometry', None),
+                ('voortgang', 'hydroobjects_selected_legger', '', 'voortgang', 'geometry', None),
+                ('gekozen diepte [m]', 'hydroobjects_selected_legger', '', 'gekozen_diepte', 'geometry', None),
+                ('overdiepte [m]', 'hydroobjects_selected_legger', '', 'overdiepte', 'geometry', None),
+                ('gekozen bodembreedte [m]', 'hydroobjects_selected_legger', '', 'gekozen_bodembreedte', 'geometry',
+                 None),
+                ('gekozen waterbreedte [m]', 'hydroobjects_selected_legger', '', 'gekozen_waterbreedte', 'geometry',
+                 None),
+                ('gekozen overbreedte totaal [m]', 'hydroobjects_selected_legger', '', 'overbreedte_totaal', 'geometry',
+                 None),
             ]),
+            ('achtergrond', [
+                ('watervlakken', 'waterdeel', '', 'waterdeel', 'geometry', None),
+            ])
         ])
 
         maplayer_group, new = self.get_or_create_maplayers_root()
@@ -123,4 +134,4 @@ class LayerManager():
                     new_style_file.write(style)
                     new_style_file.close()
 
-                    self.add_layer_to_group(qgroup, vector_layer, new_style_path, visible=False)
+                    self.add_layer_to_group(qgroup, vector_layer, new_style_path, visible=False, position=100)
