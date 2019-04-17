@@ -123,6 +123,7 @@ def create_legger_views(session):
                 v.talud as geselecteerd_talud,
                 v.verhang_bos_bijkerk as verhang,
                 v.opmerkingen as profiel_opmerking,
+                v.begroeiingsvariant_id as geselecteerde_begroeiingsvariant,
                 p.t_fit as fit_score,
                 p.t_afst as offset,
                 p.t_overdiepte as overdiepte,
