@@ -321,7 +321,7 @@ class ProfileCalculationWidget(QWidget):  # , FORM_CLASS):
                 self.feedbacktext.setText(self.feedbackmessage)
 
             try:
-                write_theoretical_profile_results_to_db(session, profiles, self.polder_datasource, bv)
+                write_theoretical_profile_results_to_db(session, profiles, bv)
                 self.feedbackmessage = self.feedbackmessage + ("\nProfielen opgeslagen in legger db.")
             except:
                 self.feedbackmessage = self.feedbackmessage + ("\nFout, profielen niet opgeslagen in legger database.")

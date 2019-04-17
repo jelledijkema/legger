@@ -381,22 +381,27 @@ class LeggerWidget(QDockWidget):
             self.vl_selected_layer.dataProvider().deleteFeatures(ids)
 
             if node.hydrovak.get('selected'):
-                features = []
+                if node.hydrovak.get('tak'):
+                    self.legger_model.setDataItemKey(node.younger()[1], 'selected', True)
+                else:
+                    features = []
 
-                feat = QgsFeature()
-                feat.setGeometry(node.hydrovak.get('feature').geometry())
+                    feat = QgsFeature()
+                    feat.setGeometry(node.hydrovak.get('feature').geometry())
 
-                feat.setAttributes([
-                    node.hydrovak.get('feature')['id']])
+                    feat.setAttributes([
+                        node.hydrovak.get('feature')['id']])
 
-                features.append(feat)
-                self.vl_selected_layer.dataProvider().addFeatures(features)
+                    features.append(feat)
+                    self.vl_selected_layer.dataProvider().addFeatures(features)
 
             self.vl_selected_layer.commitChanges()
             self.vl_selected_layer.updateExtents()
             self.vl_selected_layer.triggerRepaint()
 
-            if node.hydrovak.get('selected'):
+            if node.hydrovak.get('tak'):
+                pass
+            elif node.hydrovak.get('selected'):
                 self.on_select_edit_hydrovak(self.legger_model.data(index, role=Qt.UserRole))
                 self.show_manual_input_button.setDisabled(False)
             elif (self.legger_model.selected is None or
@@ -409,21 +414,25 @@ class LeggerWidget(QDockWidget):
             ids = [feat.id() for feat in self.vl_track_layer.getFeatures()]
             self.vl_track_layer.dataProvider().deleteFeatures(ids)
 
-            #
-            if self.legger_model.sp and self.legger_model.ep:
+            if node.hydrovak.get('tak'):
+                if self.legger_model.columns[index.column()].get('field') == 'ep':
+                    self.legger_model.setDataItemKey(node.younger()[1], 'ep', True)
+                if self.legger_model.columns[index.column()].get('field') == 'sp':
+                    self.legger_model.setDataItemKey(node.younger()[1], 'sp', True)
+            elif self.legger_model.sp and self.legger_model.ep:
                 features = []
 
                 def loop_rec(node):
                     if node.hydrovak.get('tak'):
                         node = node.older()
+                    else:
+                        feat = QgsFeature()
+                        feat.setGeometry(node.hydrovak.get('feature').geometry())
 
-                    feat = QgsFeature()
-                    feat.setGeometry(node.hydrovak.get('feature').geometry())
+                        feat.setAttributes([
+                            node.hydrovak.get('feature')['id']])
 
-                    feat.setAttributes([
-                        node.hydrovak.get('feature')['id']])
-
-                    features.append(feat)
+                        features.append(feat)
 
                     if node != self.legger_model.sp:
                         loop_rec(node.older())

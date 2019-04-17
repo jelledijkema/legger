@@ -15,6 +15,7 @@ HORIZONTAL_HEADERS = (
      'single_selection': True},
     {'field': 'hover', 'field_type': CHECKBOX_FIELD, 'show': False, 'column_width': 50},
     {'field': 'distance', 'header': 'afstand', 'show': False, 'column_width': 50},
+    {'field': 'length', 'header': 'Lengte', 'show': False, 'column_width': 50},
     {'field': 'category', 'header': 'cat', 'column_width': 40},
     {'field': 'begroeiingsvariant_id', 'header': 'beg', 'column_width': 40},
     {'field': 'flow', 'header': 'debiet', 'show': False, 'column_width': 50},

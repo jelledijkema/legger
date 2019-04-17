@@ -477,7 +477,7 @@ def create_theoretical_profiles(legger_db_filepath, bv):
     return profile_variants
 
 
-def write_theoretical_profile_results_to_db(session, profile_results, path_legger_db, bv):
+def write_theoretical_profile_results_to_db(session, profile_results, bv):
     log.info("Writing output to db...\n")
 
     for i, rows in profile_results.iterrows():
