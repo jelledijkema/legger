@@ -1,9 +1,15 @@
+"""
+    Interface for adding profiles
+"""
+
 import datetime
 from PyQt4 import QtCore, QtGui
 
 import pyqtgraph as pg
 from legger.sql_models.legger import Varianten
 from legger.utils.theoretical_profiles import calc_bos_bijkerk
+from legger.sql_models.legger import BegroeiingsVariant
+from legger.sql_models.legger_database import LeggerDatabase
 
 try:
     _fromUtf8 = QtCore.QString.fromUtf8
@@ -13,6 +19,8 @@ except AttributeError:
 
 try:
     _encoding = QtGui.QApplication.UnicodeUTF8
+
+
     def _translate(context, text, disambig):
         return QtGui.QApplication.translate(context, text, disambig, _encoding)
 except AttributeError:
@@ -22,7 +30,6 @@ except AttributeError:
 
 class LeggerPlotWidget(pg.PlotWidget):
     def __init__(self, parent=None, name=""):
-
         super(LeggerPlotWidget, self).__init__(parent)
         self.name = name
         self.showGrid(True, True, 0.5)
@@ -30,10 +37,9 @@ class LeggerPlotWidget(pg.PlotWidget):
         self.setLabel("left", "hoogte", "m tov waterlijn")
 
         self.series = {}
-        self.hydro_object = None #todo: verwijzing naar hydro object in kwestie
+        self.hydro_object = None  # todo: verwijzing naar hydro object in kwestie
 
-
-    def set_data(self,ditch_width,waterdepth,ditch_slope,ditch_bottomwidth):
+    def set_data(self, ditch_width, waterdepth, ditch_slope, ditch_bottomwidth):
         self.ditch_width = ditch_width
         self.waterdepth = waterdepth
         self.ditch_slope = ditch_slope
@@ -49,7 +55,7 @@ class LeggerPlotWidget(pg.PlotWidget):
             -0.5 * self.ditch_bottomwidth,
             0.5 * self.ditch_bottomwidth,
             0.5 * self.ditch_width
-            ]
+        ]
 
         y = [
             0,
@@ -58,8 +64,7 @@ class LeggerPlotWidget(pg.PlotWidget):
             0
         ]
 
-
-        #Todo: verbinding met bestaand gemeten profiel
+        # Todo: verbinding met bestaand gemeten profiel
         plot_item = pg.PlotDataItem(
             x=x,
             y=y,
@@ -81,6 +86,20 @@ class NewWindow(QtGui.QWidget):
 
         self.setup_ui()
 
+        self.variants = self.session.query(BegroeiingsVariant).order_by('-friction')
+
+        self.begroeiings_combo.insertItems(
+            0, [v.naam for v in self.variants]
+        )
+        default_index = [i for i, v in enumerate(self.variants) if v.is_default]
+        if len(default_index) == 0:
+            default_index = 0
+        else:
+            default_index = default_index[0]
+
+        self.begroeiings_combo.setCurrentIndex(default_index)
+        # self.selected_variant = self.variants[default_index]
+
         self.ditch_width = None
         self.waterdepth = None
         self.ditch_slope = None
@@ -93,30 +112,33 @@ class NewWindow(QtGui.QWidget):
             self.ditch_width = float(self.input_ditch_width.value())
             self.waterdepth = float(self.input_waterdepth.value())
             self.ditch_slope = float(self.input_ditch_slope.value())
+            begroeiings_variant = self.variants[self.begroeiings_combo.currentIndex()]
 
             self.output_info.setText('')
             self.comments.setText(str(''))
 
-            test1 = 1/(self.ditch_width*self.waterdepth*self.ditch_slope) # een check of er 0 waarden zijn.
+            test1 = 1 / (self.ditch_width * self.waterdepth * self.ditch_slope)  # een check of er 0 waarden zijn.
 
-            self.ditch_bottomwidth = self.ditch_width-(self.ditch_slope*self.waterdepth)*2
+            self.ditch_bottomwidth = self.ditch_width - (self.ditch_slope * self.waterdepth) * 2
 
             self.plot_widget.set_data(self.ditch_width,
                                       self.waterdepth,
                                       self.ditch_slope,
                                       self.ditch_bottomwidth)
 
-            if  self.ditch_bottomwidth <= 0:
+            if self.ditch_bottomwidth <= 0:
                 verhang_bericht = "Verhang kan nu niet berekend worden."
                 bodembreedte_bericht = "Bodembreedte is negatief of 0"
             else:
                 placeholder_norm_flow = self.legger_item.hydrovak.get('flow', 0)
                 self.verhang = calc_bos_bijkerk(placeholder_norm_flow,
-                                                       self.ditch_bottomwidth,
-                                                       self.waterdepth,
-                                                       self.ditch_slope)
-                verhang_bericht = str(self.verhang)+" is het verhang\n"
-                verhang_bericht = verhang_bericht + "\n"+ str(self.ditch_bottomwidth)+" is de bodembreedte"
+                                                self.ditch_bottomwidth,
+                                                self.waterdepth,
+                                                self.ditch_slope,
+                                                friction_bos_bijkerk=begroeiings_variant.friction
+                                                )
+                verhang_bericht = str(self.verhang) + " cm/ km is het verhang\n"
+                verhang_bericht = verhang_bericht + "\n" + str(self.ditch_bottomwidth) + "m is de bodembreedte"
                 bodembreedte_bericht = ""
 
         except ZeroDivisionError:
@@ -131,7 +153,6 @@ class NewWindow(QtGui.QWidget):
             self.output_info.setText(verhang_bericht)
             self.comments.setText(str(bodembreedte_bericht))
 
-
     def cancel_application(self):
         self.close()
 
@@ -140,7 +161,7 @@ class NewWindow(QtGui.QWidget):
         if self.ditch_width is not None and self.waterdepth is not None and self.ditch_slope is not None:
 
             found = False
-            id_value=''
+            id_value = ''
             i = 0
             while not found:
                 id_value = "{hydro_id}_{depth}".format(
@@ -156,6 +177,8 @@ class NewWindow(QtGui.QWidget):
                 else:
                     i += 1
 
+            begroeiings_variant = self.variants[self.begroeiings_combo.currentIndex()]
+
             variant = Varianten(
                 id=id_value,
                 diepte=self.waterdepth,
@@ -164,6 +187,7 @@ class NewWindow(QtGui.QWidget):
                 talud=self.ditch_slope,
                 verhang_bos_bijkerk=self.verhang,
                 opmerkingen='handmatig aangemaakt',
+                begroeiingsvariant=begroeiings_variant,
                 hydro_id=self.legger_item.hydrovak.get('hydro_id')
             )
 
@@ -176,7 +200,6 @@ class NewWindow(QtGui.QWidget):
         self.close()
 
     def setup_ui(self):
-        self.setWindowIcon(QtGui.QIcon('C:\Users\Jelle\Pictures\cat.png'))
 
         # Scherm bestaat uit een paar hoofdonderdelen:
         # VerticalLayout als hoofd layout, bestaande uit 3 rijen:
@@ -187,7 +210,6 @@ class NewWindow(QtGui.QWidget):
         #       - en rechterkolom bestaande uit een Vertical Layout met uitvoer textbox
         #   - Middelste rij met grafische weergave van de dwarsdoorsnede als Figuur
         #   - Onderste rij is ook en Horizontal Layout met 2 knoppen naast elkaar: Opslaan en Annuleren
-
 
         # Hoofd layout definieren
         self.verticalLayout = QtGui.QVBoxLayout(self)
@@ -213,7 +235,7 @@ class NewWindow(QtGui.QWidget):
                                 "Om het scherm te verlaten kan op 'Annuleren' gedrukt worden.")
         self.intro_text.setObjectName(_fromUtf8("introductie_text"))
 
-        self.left_column.addWidget(self.intro_text) # introtext toevoegen aan linkerkolom
+        self.left_column.addWidget(self.intro_text)  # introtext toevoegen aan linkerkolom
 
         # Middelste kolom in bovenste rij
         self.middle_column = QtGui.QVBoxLayout()
@@ -222,7 +244,7 @@ class NewWindow(QtGui.QWidget):
         # Invoer van parameters
         # Titel
         self.input_label = QtGui.QLabel(self.tr("Invoer van parameters:"))
-        self.middle_column.addWidget(self.input_label) # label toevoegen aan middenkolom
+        self.middle_column.addWidget(self.input_label)  # label toevoegen aan middenkolom
 
         # Spinbox waterbreedte
         self.input_ditch_width = QtGui.QDoubleSpinBox(self)
@@ -237,9 +259,9 @@ class NewWindow(QtGui.QWidget):
         self.vbox_ditch_width.addWidget(self.input_ditch_width)
         self.groupBox_ditch_width.setLayout(self.vbox_ditch_width)
 
-        self.middle_column.addWidget(self.groupBox_ditch_width) # waterbreedte spinner toevoegen
+        self.middle_column.addWidget(self.groupBox_ditch_width)  # waterbreedte spinner toevoegen
 
-        #Spinbox waterdiepte
+        # Spinbox waterdiepte
         self.input_waterdepth = QtGui.QDoubleSpinBox(self)
         self.input_waterdepth.setSuffix(" m")
         self.input_waterdepth.setSingleStep(0.1)
@@ -252,13 +274,13 @@ class NewWindow(QtGui.QWidget):
         self.vbox_waterdepth.addWidget(self.input_waterdepth)
         self.groupBox_waterdepth.setLayout(self.vbox_waterdepth)
 
-        self.middle_column.addWidget(self.groupBox_waterdepth) # waterdiepte spinner toevoegen aan midden kolom
+        self.middle_column.addWidget(self.groupBox_waterdepth)  # waterdiepte spinner toevoegen aan midden kolom
 
-        #Spinbox talud
+        # Spinbox talud
         self.input_ditch_slope = QtGui.QDoubleSpinBox(self)
         self.input_ditch_slope.setSuffix(" m breedte / m hoogteverschil")
         self.input_ditch_slope.setSingleStep(0.1)
-        self.input_ditch_slope.setValue(1) # initieel 1:1
+        self.input_ditch_slope.setValue(1)  # initieel 1:1
         self.input_ditch_slope.setObjectName(_fromUtf8("Invoer_talud"))
 
         self.groupBox_ditch_slope = QtGui.QGroupBox(self)
@@ -269,13 +291,23 @@ class NewWindow(QtGui.QWidget):
 
         self.groupBox_ditch_slope.setLayout(self.vbox_ditch_slope)
 
-        self.middle_column.addWidget(self.groupBox_ditch_slope) # talud spinner toevoegen aan midden kolom
+        self.middle_column.addWidget(self.groupBox_ditch_slope)  # talud spinner toevoegen aan midden kolom
+
+        # begroeiings selection
+        self.begroeiings_combo = QtGui.QComboBox(self)
+        self.groupBox_begroeiing = QtGui.QGroupBox(self)
+        self.groupBox_begroeiing.setTitle("Begroeiingsgraad")
+        self.vbox_begroeiing = QtGui.QVBoxLayout()
+        self.vbox_begroeiing.addWidget(self.begroeiings_combo)
+        self.groupBox_begroeiing.setLayout(self.vbox_begroeiing)
+
+        self.middle_column.addWidget(self.groupBox_begroeiing)
 
         # Bereken
         self.calc_button = QtGui.QPushButton()
         self.calc_button.setObjectName(_fromUtf8("Bereken_knop"))
         self.calc_button.clicked.connect(self.calculate)
-        self.middle_column.addWidget(self.calc_button) # bereken knop toevoegen aan midden kolom
+        self.middle_column.addWidget(self.calc_button)  # bereken knop toevoegen aan midden kolom
 
         # Verticale Spacer om alles naar boven te drukken.
         spacerItem_middle_column = QtGui.QSpacerItem(10, 40, QtGui.QSizePolicy.Minimum, QtGui.QSizePolicy.Expanding)
@@ -296,11 +328,9 @@ class NewWindow(QtGui.QWidget):
         self.right_column.addWidget(self.comments)
 
         # Verticale kolommen toevoegen aan de bovenste rij (horizontale lay-out)
-        self.upper_row.addLayout(self.left_column) # kolom met introtext en invoer parameters toevoegen
+        self.upper_row.addLayout(self.left_column)  # kolom met introtext en invoer parameters toevoegen
         self.upper_row.addLayout(self.middle_column)
-        self.upper_row.addLayout(self.right_column) # kolom met output toevoegen
-
-
+        self.upper_row.addLayout(self.right_column)  # kolom met output toevoegen
 
         # Horizontale bovenste rij toevoegen aan bovenkant verticale HOOFD layout.
         self.verticalLayout.addLayout(self.upper_row)
@@ -313,10 +343,9 @@ class NewWindow(QtGui.QWidget):
         # Figuurvlak toevoegen in het MIDDEN van de HOOFD lay-out.
         self.verticalLayout.addWidget(self.plot_widget)
 
-
         # OPSLAAN / ANNULEREN KNOPPEN
         # Vlak maken voor de knoppen
-        self.bottom_row = QtGui.QHBoxLayout() # knoppen komen naast elkaar dus een horizontal layout.
+        self.bottom_row = QtGui.QHBoxLayout()  # knoppen komen naast elkaar dus een horizontal layout.
         self.bottom_row.setObjectName(_fromUtf8("Bottom_row"))
 
         # Sluiten knop
@@ -342,9 +371,7 @@ class NewWindow(QtGui.QWidget):
 
         self.calc_button.setText(_translate("Dialog", "Berekenen", None))
         self.save_button.setText(_translate("Dialog", "Opslaan en sluiten", None))
-        self.cancel_button.setText(_translate("Dialog", "Annuleer en sluiten", None))
-
-
+        self.cancel_button.setText(_translate("Dialog", "Annuleer", None))
 
 
 if __name__ == '__main__':
@@ -352,4 +379,3 @@ if __name__ == '__main__':
     gui = NewWindow()
     gui.show()
     app.exec_()
-

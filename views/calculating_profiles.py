@@ -7,22 +7,19 @@
 from __future__ import division
 
 import logging
-import os
-import urllib2
 
-from PyQt4.QtCore import pyqtSignal, QSettings, QModelIndex, QThread
-from PyQt4.QtGui import QWidget, QFileDialog, QComboBox, QMessageBox
 from PyQt4 import QtCore, QtGui
-
-from legger.utils.read_tdi_results import (
-    read_tdi_results, write_tdi_results_to_db, read_tdi_culvert_results, get_timestamps,
-    write_tdi_culvert_results_to_db)
-from legger.utils.theoretical_profiles import create_theoretical_profiles, write_theoretical_profile_results_to_db, Kb
-from legger.sql_models.legger_views import create_legger_views
-from pyspatialite import dbapi2 as dbapi
+from PyQt4.QtCore import pyqtSignal
+from PyQt4.QtGui import QComboBox, QWidget
+from legger.sql_models.legger import BegroeiingsVariant, HydroObject, get_or_create
 from legger.sql_models.legger_database import LeggerDatabase
-from legger.sql_models.legger import HydroObject, BegroeiingsVariant, get_or_create
+from legger.sql_models.legger_views import create_legger_views
 from legger.utils.profile_match_a import doe_profinprof, maaktabellen
+from legger.utils.read_tdi_results import (get_timestamps, read_tdi_culvert_results, read_tdi_results,
+                                           write_tdi_culvert_results_to_db, write_tdi_results_to_db)
+from legger.utils.snap_points import snap_points
+from legger.utils.theoretical_profiles import Kb, create_theoretical_profiles, write_theoretical_profile_results_to_db
+from pyspatialite import dbapi2 as dbapi
 
 log = logging.getLogger(__name__)
 
@@ -112,14 +109,13 @@ class ProfileCalculationWidget(QWidget):  # , FORM_CLASS):
         self.last_surge_text = "kies opstuwingsnorm"
 
         # fill surge combobox
-        surge_choices = [self.last_surge_text] + ['%s' % s for s in [2.0,2.5,3.0,3.5,4.0,4.5,5.0]]
-        self.surge_combo_box.insertItems(0,surge_choices)
+        surge_choices = [self.last_surge_text] + ['%s' % s for s in [2.0, 2.5, 3.0, 3.5, 4.0, 4.5, 5.0]]
+        self.surge_combo_box.insertItems(0, surge_choices)
         self.surge_combo_box.setCurrentIndex(0)
 
         # set surge combobox listeners
         self.surge_combo_box.currentIndexChanged.connect(
             self.surge_selection_change)
-
 
     def timestep_selection_change(self, nr):
         """Proces new selected timestep in combobox
@@ -171,7 +167,7 @@ class ProfileCalculationWidget(QWidget):  # , FORM_CLASS):
         Uitleg van stap 1
         """
         # detailed information on UPPER ROW groupbox
-        self.msg_upper_row= QtGui.QMessageBox(self)
+        self.msg_upper_row = QtGui.QMessageBox(self)
         self.msg_upper_row.setIcon(QtGui.QMessageBox.Information)
         self.msg_upper_row.setText("<b>Het selecteren van een tijdstap voor de leggerdatabase<b>")
         self.msg_upper_row.setInformativeText("In het netCDF bestand waar de 3di resultaten zijn opgeslagen is per "
@@ -205,10 +201,11 @@ class ProfileCalculationWidget(QWidget):  # , FORM_CLASS):
         session = db.get_session()
         session.query(HydroObject)
 
-        timestamp = 'laatst' if self.timestep == 0 else '{0} op {1:.0f} s'.format(self.timestep + 1, self.timestamps[self.timestep])
+        timestamp = 'laatst' if self.timestep == 0 else '{0} op {1:.0f} s'.format(self.timestep + 1,
+                                                                                  self.timestamps[self.timestep])
         self.feedbackmessage = 'Neem tijdstap {0}'.format(timestamp)
 
-        #try:
+        # try:
         if True:
             # read 3di channel results
             result = read_tdi_results(
@@ -270,7 +267,7 @@ class ProfileCalculationWidget(QWidget):  # , FORM_CLASS):
         Uitleg van stap 1
         """
         # detailed information on UPPER ROW groupbox
-        self.msg_middle_row= QtGui.QMessageBox(self)
+        self.msg_middle_row = QtGui.QMessageBox(self)
         self.msg_middle_row.setIcon(QtGui.QMessageBox.Information)
         self.msg_middle_row.setText("<b>Het berekenen van de varianten voor de leggerdatabase<b>")
         self.msg_middle_row.setInformativeText("Alle randvoorwaarden zijn nu bekend:\n"
@@ -299,18 +296,18 @@ class ProfileCalculationWidget(QWidget):  # , FORM_CLASS):
         session = db.get_session()
 
         # delete existing variants
-        #session.execute("Verwijder van varianten")
-        #session.execute("Verwijder begroeiingsvariant")
+        # session.execute("Verwijder van varianten")
+        # session.execute("Verwijder begroeiingsvariant")
         session.commit()
 
         get_or_create(session, BegroeiingsVariant, naam='standaard',
-                                defaults={'friction': Kb, 'is_default': True})
+                      defaults={'friction': Kb, 'is_default': True})
 
         get_or_create(session, BegroeiingsVariant, naam='deels begroeid',
-                                defaults={'friction': 0.75 * Kb})
+                      defaults={'friction': 0.75 * Kb})
 
         get_or_create(session, BegroeiingsVariant, naam='sterk begroeid',
-                                defaults={'friction': 0.5 * Kb})
+                      defaults={'friction': 0.5 * Kb})
         session.commit()
 
         for bv in session.query(BegroeiingsVariant).all():
@@ -340,6 +337,15 @@ class ProfileCalculationWidget(QWidget):  # , FORM_CLASS):
         con_legger.commit()
 
         self.feedbacktext.setText("De fit % zijn berekend.")
+
+    def execute_snap_points(self):
+        con_legger = dbapi.connect(self.polder_datasource)
+        snap_points(con_legger.cursor())
+
+        self.feedbacktext.setText("De punten zijn gesnapt.")
+
+    def execute_pre_fill(self):
+        self.feedbacktext.setText("Waarschuwing: nog niet geimplementeerd")
 
     def setup_ui(self):
         self.verticalLayout = QtGui.QVBoxLayout(self)
@@ -438,6 +444,28 @@ class ProfileCalculationWidget(QWidget):  # , FORM_CLASS):
         self.groupBox_step3.setLayout(self.box_step3)  # box toevoegen aan groupbox
         self.bottom_row.addWidget(self.groupBox_step3)
 
+        # Assembling step 4 row
+        self.snap_points_button = QtGui.QPushButton(self)
+        self.snap_points_button.setObjectName(_fromUtf8("Snap points"))
+        self.snap_points_button.clicked.connect(self.execute_snap_points)
+        self.groupBox_snap_points = QtGui.QGroupBox(self)
+        self.groupBox_snap_points.setTitle("Stap 4:")
+        self.box_snap_points = QtGui.QHBoxLayout()
+        self.box_snap_points.addWidget(self.snap_points_button)
+        self.groupBox_snap_points.setLayout(self.box_snap_points)  # box toevoegen aan groupbox
+        self.bottom_row.addWidget(self.groupBox_snap_points)
+
+        # Assembling step 5 row
+        self.pre_fill_button = QtGui.QPushButton(self)
+        self.pre_fill_button.setObjectName(_fromUtf8("Snap points"))
+        self.pre_fill_button.clicked.connect(self.execute_pre_fill)
+        self.groupBox_pre_fill = QtGui.QGroupBox(self)
+        self.groupBox_pre_fill.setTitle("Stap 5:")
+        self.box_pre_fill = QtGui.QHBoxLayout()
+        self.box_pre_fill.addWidget(self.pre_fill_button)
+        self.groupBox_pre_fill.setLayout(self.box_pre_fill)  # box toevoegen aan groupbox
+        self.bottom_row.addWidget(self.groupBox_pre_fill)
+
         # Assembling feedback row
         self.feedbacktext = QtGui.QTextEdit(self)
         self.feedbackmessage = "Nog geen berekening uitgevoerd"
@@ -453,7 +481,7 @@ class ProfileCalculationWidget(QWidget):  # , FORM_CLASS):
         self.exit_row.addWidget(self.cancel_button)
 
         self.save_button = QtGui.QPushButton(self)
-        self.save_button.setObjectName(_fromUtf8("Save Database and Close"))
+        self.save_button.setObjectName(_fromUtf8("Close"))
         self.save_button.clicked.connect(self.save_spatialite)
         self.exit_row.addWidget(self.save_button)
 
@@ -478,4 +506,10 @@ class ProfileCalculationWidget(QWidget):  # , FORM_CLASS):
         self.step2_button.setText(_translate("Dialog", "Bereken alle mogelijke leggerprofielen", None))
         self.step3_button.setText(
             _translate("Dialog", "Bereken de fit van de berekende profielen", None))
+        self.snap_points_button.setText(
+            _translate("Dialog", "Snap eindpunten van lijnen", None))
+
+        self.pre_fill_button.setText(
+            _translate("Dialog", "Vul profielen in waar duidelijk", None))
+
         self.cancel_button.setText(_translate("Dialog", "Cancel", None))

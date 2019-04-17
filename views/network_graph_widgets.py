@@ -217,7 +217,7 @@ class LeggerPlotWidget(pg.PlotWidget):
                     depth = item.hydrovak.get('depth')
                     if width is not None and depth is not None:
                         prof = {
-                            'name': 'extends',
+                            'name': 'extents',
                             'color': settings.HOVER_COLOR,
                             'style': Qt.DotLine,
                             'width': 2,
@@ -243,7 +243,7 @@ class LeggerPlotWidget(pg.PlotWidget):
                             'color': settings.HOVER_COLOR,
                             'width': 3,
                             'points': [
-                                (-0.5 * profile.waterbreedte, 0l),
+                                (-0.5 * profile.waterbreedte, 0),
                                 (-0.5 * profile.bodembreedte, -1 * profile.diepte),
                                 (0.5 * profile.bodembreedte, -1 * profile.diepte),
                                 (0.5 * profile.waterbreedte, 0),
@@ -287,6 +287,25 @@ class LeggerPlotWidget(pg.PlotWidget):
                     # keep reference
                     self.selected_measured_plots.append(prof)
                     self.addItem(prof['plot'])
+
+                # add shape based on width and estimated depth in case no measured profile in this hydrovak
+                if len(self.selected_measured_plots) == 0:
+                    width = item.hydrovak.get('width')
+                    depth = item.hydrovak.get('depth')
+                    if width is not None and depth is not None:
+                        prof = {
+                            'name': 'extents',
+                            'color': settings.SELECT_COLOR,
+                            'style': Qt.DashLine,
+                            'width': 2,
+                            'points': [(-width / 2, 0), (-width / 2, -depth), (width / 2, -depth), (width / 2, 0),
+                                       (-width / 2, 0)]
+                        }
+
+                        prof['plot'] = self.get_measured_plot(prof, 255, 0)
+                        # keep reference
+                        self.selected_measured_plots.append(prof)
+                        self.addItem(prof['plot'])
 
             else:
                 # clear list
