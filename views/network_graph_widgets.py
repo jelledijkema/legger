@@ -221,7 +221,8 @@ class LeggerPlotWidget(pg.PlotWidget):
                             'color': settings.HOVER_COLOR,
                             'style': Qt.DotLine,
                             'width': 2,
-                            'points': [(-width/2, 0), (-width/2, -depth), (width/2, -depth), (width/2, 0), (-width/2, 0)]
+                            'points': [(-width / 2, 0), (-width / 2, -depth), (width / 2, -depth), (width / 2, 0),
+                                       (-width / 2, 0)]
                         }
 
                         prof['plot'] = self.get_measured_plot(prof, 255, 0)
@@ -268,11 +269,11 @@ class LeggerPlotWidget(pg.PlotWidget):
 
             if item.hydrovak.get('selected'):
                 # add measured profiles
+                self.reference_level = item.hydrovak.get('target_level', 0.0)
                 for profile in self.session.query(ProfielFiguren).filter(
                         HydroObject.id == ProfielFiguren.hydro_id,
                         HydroObject.id == item.hydrovak.get('hydro_id'),
                         ProfielFiguren.type_prof == 'm').all():
-                    self.reference_level = item.hydrovak.get('target_level', 0.0)
                     prof = {
                         'name': profile.profid,
                         'color': settings.SELECT_COLOR,
@@ -343,7 +344,7 @@ class LeggerSideViewPlotWidget(pg.PlotWidget):
         self.target_level_plot = pg.PlotDataItem(
             x=[],
             y=[],
-            #connect='finite',
+            # connect='finite',
             pen=pg.mkPen(color=[30, 144, 255, 150], width=2))
 
         self.depth_plot = pg.PlotDataItem(
@@ -353,7 +354,7 @@ class LeggerSideViewPlotWidget(pg.PlotWidget):
 
         self.depth_plot_interpolated = pg.PlotDataItem(
             x=[], y=[],
-            #connect='finite',
+            # connect='finite',
             pen=pg.mkPen(color=[0, 100, 255, 150], width=2))
 
         self.water_fill = pg.FillBetweenItem(self.target_level_plot, self.depth_plot_interpolated,
@@ -503,9 +504,10 @@ class LeggerSideViewPlotWidget(pg.PlotWidget):
 
         model = self.legger_model
         field = model.column(index.column())['field']
+        item = self.legger_model.data(index, role=Qt.UserRole)
 
         if field == 'hover':
-            if self.legger_model.hover is None:
+            if self.legger_model.hover is None or item.hydrovak.get('tak'):
                 self.hover_start.setValue(0)
                 self.hover_end.setValue(0)
             else:
@@ -514,17 +516,14 @@ class LeggerSideViewPlotWidget(pg.PlotWidget):
                     self.hover_start.setValue(0)
                     self.hover_end.setValue(0)
                 else:
-                    if self.legger_model.hover.older().hydrovak is None:
-                        dist = 0
-                    else:
-                        dist = self.legger_model.hover.older().hydrovak.get('distance')
-
-                    self.hover_start.setValue(dist)
+                    self.hover_start.setValue(self.legger_model.hover.hydrovak.get('distance'))
                     self.hover_end.setValue(
-                        self.legger_model.hover.hydrovak.get('distance'))
+                        self.legger_model.hover.hydrovak.get('distance') + self.legger_model.hover.hydrovak.get(
+                            'length'))
 
         elif field == 'selected':
-            if self.legger_model.selected is None:
+
+            if self.legger_model.selected is None or item.hydrovak.get('tak'):
                 self.selected_start.setValue(0)
                 self.selected_end.setValue(0)
             else:
@@ -533,18 +532,14 @@ class LeggerSideViewPlotWidget(pg.PlotWidget):
                     self.selected_start.setValue(0)
                     self.selected_end.setValue(0)
                 else:
-                    if self.legger_model.selected.older().hydrovak is None:
-                        dist = 0
-                    else:
-                        dist = self.legger_model.selected.older().hydrovak.get('distance')
-
-                    self.selected_start.setValue(dist)
-                    self.selected_end.setValue(
-                        self.legger_model.selected.hydrovak.get('distance'))
-
+                    self.selected_start.setValue(self.legger_model.selected.hydrovak.get('distance'))
+                    self.selected_end.setValue(self.legger_model.selected.hydrovak.get('distance') +
+                                               self.legger_model.selected.hydrovak.get('length'))
 
         elif field in ['sp', 'ep']:
-            if self.legger_model.data(index, role=Qt.CheckStateRole) and self.legger_model.ep is not None:
+            if item.hydrovak.get('tak'):
+                self.clear_graph()
+            elif self.legger_model.data(index, role=Qt.CheckStateRole) and self.legger_model.ep is not None:
                 data = self._get_data()
                 self.draw_base_lines(data)
                 self.draw_selected_lines(data)
@@ -569,10 +564,13 @@ class LeggerSideViewPlotWidget(pg.PlotWidget):
             dist = 0
 
         for line in reversed(up):
+            if line.hydrovak.get('tak'):
+                continue
+
             out.append({
                 'id': line.hydrovak.get('feat_id'),
-                'b_distance': dist,
-                'e_distance': line.hydrovak.get('distance'),
+                'b_distance': line.hydrovak.get('distance'),
+                'e_distance': line.hydrovak.get('distance') + line.hydrovak.get('length'),
                 'depth': line.hydrovak.get('depth'),
                 'target_level': line.hydrovak.get('target_level'),
                 'variant_min_depth': line.hydrovak.get('variant_min_depth'),
@@ -580,6 +578,5 @@ class LeggerSideViewPlotWidget(pg.PlotWidget):
                 'selected_depth': line.hydrovak.get('selected_depth'),
                 'selected_depth_tmp': line.hydrovak.get('selected_depth_tmp'),
             })
-            dist = line.hydrovak.get('distance')
 
         return out

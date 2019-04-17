@@ -400,7 +400,7 @@ class NewNetwork(object):
                                                       hydrovak['new_variant_min_depth'], max),
                     'new_variant_max_depth': get_stat(upstream_hydrovak['variant_max_depth'],
                                                       hydrovak['new_variant_max_depth'], min),
-                    'distance': distance
+                    'distance': distance + hydrovak['length']
                 })
 
                 feature = add_line(upstream_hydrovak)
