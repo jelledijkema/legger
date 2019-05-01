@@ -109,13 +109,9 @@ class ProfileCalculationWidget(QWidget):  # , FORM_CLASS):
         self.last_surge_text = "kies opstuwingsnorm"
 
         # fill surge combobox
-        surge_choices = [self.last_surge_text] + ['%s' % s for s in [2.0, 2.5, 3.0, 3.5, 4.0, 4.5, 5.0]]
+        surge_choices = [self.last_surge_text] + ['%s' % s for s in [1.5, 2.0, 2.5, 3.0, 3.5, 4.0, 4.5, 5.0]]
         self.surge_combo_box.insertItems(0, surge_choices)
-        self.surge_combo_box.setCurrentIndex(0)
-
-        # set surge combobox listeners
-        self.surge_combo_box.currentIndexChanged.connect(
-            self.surge_selection_change)
+        self.surge_combo_box.setCurrentIndex(3)
 
     def timestep_selection_change(self, nr):
         """Proces new selected timestep in combobox
@@ -128,18 +124,6 @@ class ProfileCalculationWidget(QWidget):  # , FORM_CLASS):
             self.timestep = -1
         else:
             self.timestep = nr - 1
-
-    def surge_selection_change(self, nr):
-        """Proces new selected timestep in combobox
-
-        :param nr:
-        :return:
-        """
-        text = self.surge_combo_box.currentText()
-        if text == self.last_surge_text:
-            self.surge_selection = 3.0
-        else:
-            self.surge_selection = text
 
     def closeEvent(self, event):
         """
@@ -310,10 +294,12 @@ class ProfileCalculationWidget(QWidget):  # , FORM_CLASS):
                       defaults={'friction': 0.5 * Kb})
         session.commit()
 
+        opstuw_norm = float(self.surge_combo_box.currentText())
+
         for bv in session.query(BegroeiingsVariant).all():
 
             try:
-                profiles = create_theoretical_profiles(self.polder_datasource, bv)
+                profiles = create_theoretical_profiles(self.polder_datasource, opstuw_norm, bv)
                 self.feedbackmessage = "Profielen zijn berekend."
             except:
                 self.feedbackmessage = "Fout, profielen konden niet worden berekend."
@@ -321,7 +307,7 @@ class ProfileCalculationWidget(QWidget):  # , FORM_CLASS):
                 self.feedbacktext.setText(self.feedbackmessage)
 
             try:
-                write_theoretical_profile_results_to_db(session, profiles, bv)
+                write_theoretical_profile_results_to_db(session, profiles, opstuw_norm, bv)
                 self.feedbackmessage = self.feedbackmessage + ("\nProfielen opgeslagen in legger db.")
             except:
                 self.feedbackmessage = self.feedbackmessage + ("\nFout, profielen niet opgeslagen in legger database.")
