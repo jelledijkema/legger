@@ -3,36 +3,10 @@ from legger.qt_models.legger_tree import LeggerTreeItem, hydrovak_class, transfo
 from qgis.core import NULL, QgsFeature, QgsFeatureRequest, QgsGeometry, QgsPoint
 from qgis.networkanalysis import QgsArcProperter, QgsDistanceArcProperter, QgsGraphBuilder
 
+from .formats import make_type
+
 DISTANCE_PROPERTER_NR = 0
 FEAT_ID_PROPERTER_NR = 1
-
-
-def make_type(value, typ, default_value=None, round_digits=None, factor=1):
-    """transform value (also Qt NULL values) to specified type or default value if None.
-    Can also round value or multiply value
-
-    value (any type): input value to transform to other type
-    typ (python type): python type object like int, str or float
-    default_value (any): default value returned when value is None or NULL
-    round_digits (int): Number of digits to round value on.
-    factor (float or int): Multiplication factor
-
-    return (any): transformed value
-    """
-    if value is None or value == NULL:
-        return default_value
-    try:
-        output = typ(value)
-        if typ in (float, int,):
-            if round is not None:
-                return round(factor * output, round_digits)
-            else:
-                return factor * output
-        else:
-            return output
-
-    except TypeError:
-        return default_value
 
 
 def merge_dicts(x, y):
@@ -68,14 +42,12 @@ class AttributeProperter(QgsArcProperter):
 
 
 class NewNetwork(object):
-    """Network class for providing network required for Legger tool"""
+    """Network class for providing network functions and direrequired for Legger tool"""
 
     # todo:
-    #     - support bidirectional islands
+    #     - better support bidirectional islands (if needed and exmaples popup in tests/ usage)
     #     - move virtual_layer and endpoint_layer outside this class
     #     - set endpoints on 90% or 10 meter before endpoint of hydrovak
-    #     - add startpoint within tree (change target_levels)
-    #     - calc distance from start and set correct distance at start points
 
     def __init__(self, line_layer, full_line_layer, director,
                  distance_properter,
@@ -85,7 +57,8 @@ class NewNetwork(object):
         line_layer (QgsVectorLayer): input vector layer, with as geometry straight lines without in between vertexes
         full_line_layer (QgsVectorLayer): input vector layer, with original geometry (with in between vertexes)
         director (QgsLineVectorLayerDirector):
-        distance_properter (Qgs Properter type): properter to get distance. used for shortest path at bidirectional islandes
+        distance_properter (Qgs Properter type): properter to get distance. used for shortest path at bidirectional
+                islands
         virtual_tree_layer (QgsVectorLayer): layer used to visualize active tree
         endpoint_layer (QgsVectorLayer): layer used ot visualize endpoints of tree
         id_field (str): field used by features to identification field
@@ -124,7 +97,8 @@ class NewNetwork(object):
         self.start_arcs = None  # list of dicts with arc_nr, point (x, y), list childs, parent
 
     def get_structure_bidirectional_group(self, arc_dict, group_vertexes):
-        """
+        """ Function not used.
+        Some old fragments and documentation to handle this 'bidirectional islands'
 
         :return:
 
@@ -177,7 +151,8 @@ class NewNetwork(object):
 
     def build_tree(self):
         """
-        function that creates tree structure of network. Sets self.arc_tree and self.start_arcs
+        function that analyses tree and creates tree structure of network.
+        Sets self.arc_tree and self.start_arcs
 
         returns (tuple): tuple with dictionary of arc_tree en list of start arc_nrs
         """
@@ -215,8 +190,9 @@ class NewNetwork(object):
                 feature=line_feature,
             )
 
-        # set downstream arc. When multiple, select one with highest flow.
-        # also identify start arcs
+        # for each arc, set downstream arc. When multiple, select one with highest flow.
+        # also identify start arcs and inbetween arcs (areas are group of arcs with same targetlevel). Inbetween arcs
+        # are arcs after a target_level change
         for arc_nr, arc in arc_tree.items():
             out_vertex = self.graph.vertex(arc['out_vertex'])
             # link arc with highest flow
@@ -247,7 +223,7 @@ class NewNetwork(object):
                     'min_category_in_path': None
                 }
 
-        # set upstream arcs. Set only the one, who has the current arc as downstream arc (so joining
+        # for all arcs, set upstream arcs. Set only the one, who has the current arc as downstream arc (so joining
         # streams are forced into a tree structure with no alternative paths to same point
         for arc_nr, arc in arc_tree.items():
             arc['upstream_arcs'] = [

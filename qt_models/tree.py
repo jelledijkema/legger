@@ -1,3 +1,5 @@
+""" Base classes for QtTreeModel implementation """
+
 from PyQt4 import QtCore
 
 from PyQt4.QtCore import Qt
@@ -13,7 +15,6 @@ class BaseTreeItem(object):
     it's parents and/or children
     """
 
-    # todo: see if there is a solution without headers
     def __init__(self, data_item, parent, headers=None):
 
         if headers is None:

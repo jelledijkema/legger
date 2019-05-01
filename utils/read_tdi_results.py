@@ -227,19 +227,8 @@ def read_tdi_results(path_model_db, path_result_db,
                 d1, p1, v1 = geom_channel.closestSegmentWithContext(vertexes[0])
                 d2, p2, v2 = geom_channel.closestSegmentWithContext(vertexes[-1])
 
-            if (d1 > 50 or d2> 50):
-                a = 2
-
-            # v1 = v1 -1 if v1 > 0 else 0
-            # v2 = v2 - 1 if v2 > 0 else 0
-
             dist1 = geom_channel.distanceToVertex(v1) - math.sqrt(geom_channel.sqrDistToVertexAt(p1, v1))
             dist2 = geom_channel.distanceToVertex(v2) - math.sqrt(geom_channel.sqrDistToVertexAt(p2, v2))
-            # dist1 = dist1 * line.length()
-            # dist2 = dist2 * line.length()
-            # with shapely:
-            # dist1 = geom_channel.project(line.startpoint())
-            # dist2 = geom_channel.project(line.endpoint())
 
             dist_startpoint = min(dist1, dist2)
             dist_endpoint = max(dist1, dist2)
