@@ -160,7 +160,7 @@ class LeggerPlotWidget(pg.PlotWidget):
         if field in ['ep', 'sp']:
 
             if self.legger_model.ep is not None:
-                up = self.legger_model.ep.up(end=self.legger_model.sp)
+                up = self.legger_model.ep.up(end=self.legger_model.sp, include_point=True)
                 ids = []
                 for line in reversed(up):
                     if line.hydrovak is not None:
@@ -178,7 +178,7 @@ class LeggerPlotWidget(pg.PlotWidget):
                                 'name': profile.profid,
                                 'color': (100, 100, 100),
                                 'points': [(p[0], p[1] - profile.peil)
-                                           for p in loads(profile.coord).exterior.coords]
+                                           for p in loads(profile.coord).exterior.coords[:]]
                             }
 
                             prof['plot'] = self.get_measured_plot(prof, self.def_measured_opacity)
@@ -200,13 +200,14 @@ class LeggerPlotWidget(pg.PlotWidget):
                         HydroObject.id == ProfielFiguren.hydro_id,
                         HydroObject.id == item.hydrovak.get('hydro_id'),
                         ProfielFiguren.type_prof == 'm').all():
+                    # exterior.coords[:] --> without [:] the wrong numbers are returned
                     prof = {
                         'name': profile.profid,
                         'color': settings.HOVER_COLOR,
                         'style': Qt.DotLine,
                         'width': 2,
                         'points': [(p[0], p[1] - profile.peil)
-                                   for p in loads(profile.coord).exterior.coords]
+                                   for p in loads(profile.coord).exterior.coords[:]]
                     }  # add extra step with zip and xy, because loop over coords sometimes provide only empty numbers
 
                     prof['plot'] = self.get_measured_plot(prof, 255)
@@ -283,7 +284,7 @@ class LeggerPlotWidget(pg.PlotWidget):
                         'style': Qt.DashLine,
                         'width': 2,
                         'points': [(p[0], p[1] - profile.peil)
-                                   for p in loads(profile.coord).exterior.coords]
+                                   for p in loads(profile.coord).exterior.coords[:]]
                     }
 
                     prof['plot'] = self.get_measured_plot(prof, 255)
@@ -543,10 +544,12 @@ class LeggerSideViewPlotWidget(pg.PlotWidget):
                 self.clear_graph()
 
         elif field in ['selected_depth', 'selected_depth_tmp']:
-            self.draw_selected_lines(self._get_data())
+            pass
+            # self.draw_selected_lines(self._get_data())
 
         elif field in ['variant_min_depth', 'variant_max_depth']:
-            self.draw_base_lines(self._get_data())
+            pass
+            # self.draw_base_lines(self._get_data())
 
     def _get_data(self):
         if self.legger_model.ep is None:

@@ -190,9 +190,9 @@ class BaseTreeModel(QtCore.QAbstractItemModel):
         # todo: add check on Qt Role
         changed = item.setData(index.column(), value, role)
         if changed:
-            # todo: check if this can be done more efficient with a single emit
             if self.headers[index.column()].get('single_selection') and value in [True, Qt.Checked]:
                 self.set_column_value(index.column(), Qt.Unchecked, skip=index)
+            # hook to implement custom logic
             self.data_change_post_process(index, index)
 
             if signal:

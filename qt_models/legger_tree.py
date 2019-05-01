@@ -183,7 +183,7 @@ class LeggerTreeItem(BaseTreeItem):
         """access to hydrovak class object"""
         return self.data_item
 
-    def up(self, end=None):
+    def up(self, end=None, include_point=False):
         """
         get list of path of hydrovakken downstream hydrovak (following the mainstream) till end hydrovak or
         till there are no downstream hydrovakken anymore
