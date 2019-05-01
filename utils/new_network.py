@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
-from legger.qt_models.legger_tree import LeggerTreeItem, hydrovak_class, transform_none
-from qgis.core import NULL, QgsFeature, QgsFeatureRequest, QgsGeometry, QgsPoint
+from legger.qt_models.legger_tree import LeggerTreeItem, hydrovak_class
+from qgis.core import QgsFeature, QgsFeatureRequest, QgsGeometry, QgsPoint
 from qgis.networkanalysis import QgsArcProperter, QgsDistanceArcProperter, QgsGraphBuilder
 
 from .formats import make_type
@@ -249,46 +249,59 @@ class NewNetwork(object):
             start_arc['cum_weight'], start_arc['min_category_in_path'] = get_cum_weight_min_category(
                 arc_tree[start_arc['arc_nr']])
             start_arc['target_level'] = arc_tree[start_arc['arc_nr']]['target_level']
+            start_arc['weight'] = start_arc['cum_weight']
             # todo: set distance correct
-            start_arc['distance'] = start_arc['cum_weight']
+            # start_arc['distance'] = start_arc['distance']
 
         # get cum_weight and sort upstream_arcs
         for start_arc in in_between_arcs.values():
             start_arc['cum_weight'], start_arc['min_category_in_path'] = get_cum_weight_min_category(
                 arc_tree[start_arc['arc_nr']])
             start_arc['target_level'] = arc_tree[start_arc['arc_nr']]['target_level']
+            start_arc['weight'] = start_arc['cum_weight']
             # todo: set distance correct
-            start_arc['distance'] = start_arc['cum_weight']
+            # start_arc['distance'] = start_arc['distance']
 
         for arc in arc_tree.values():
             arc['upstream_arcs'].sort(key=lambda nr: arc_tree[nr]['cum_weight'], reverse=True)
 
         # link arcs to start and inbetween arcs to get area structure
-        def loop(area_start_arc, arc_nr):
+        def loop(start_arc, arc_nr):
             arc = arc_tree[arc_nr]
-            arc['area_start_arc'] = area_start_arc
+            arc['area_start_arc'] = start_arc
+            if arc_nr in in_between_arcs:
+                start_arc = arc_nr
             for upstream_arc in arc['upstream_arcs']:
-                loop(area_start_arc, upstream_arc)
+                loop(start_arc, upstream_arc)
 
         for start_arc in start_arcs.keys():
             loop(start_arc, start_arc)
-        for in_between_arc in start_arcs.keys():
-            loop(in_between_arc, in_between_arc)
+        # for in_between_arc in start_arcs.keys():
+        #     loop(in_between_arc, in_between_arc)
 
+        # make start arc tree structure to link upstream areas to start arcs
         for inbetween_arc_nr, in_between_item in in_between_arcs.items():
             arc = arc_tree[inbetween_arc_nr]
             downstream_area_arc_nr = arc_tree[arc['downstream_arc']]['area_start_arc']
             if downstream_area_arc_nr in start_arcs:
                 start_arcs[downstream_area_arc_nr]['children'].append(in_between_item)
             elif downstream_area_arc_nr in in_between_arcs:
-                start_arcs[downstream_area_arc_nr]['children'].append(in_between_item)
+                in_between_arcs[downstream_area_arc_nr]['children'].append(in_between_item)
             else:
                 # this should not happen!
                 pass
 
-        # sort start arcs
+        # sort area start arcs and nested (inbetween) area arcs
         start_arcs = start_arcs.values()
         start_arcs.sort(key=lambda arc_d: arc_d['cum_weight'], reverse=True)
+
+        def sort_arc_list_on_weight(area_arc):
+            area_arc['children'].sort(key=lambda arc_d: arc_d['cum_weight'], reverse=True)
+            for arc_child in area_arc['children']:
+                sort_arc_list_on_weight(arc_child)
+
+        for start_arc in start_arcs:
+            sort_arc_list_on_weight(start_arc)
 
         # store tree and start points
         self.arc_tree = arc_tree
@@ -397,7 +410,7 @@ class NewNetwork(object):
                     split_hydrovak = hydrovak_class(
                         {'hydro_id': 'tak {0}'.format(i),
                          'tak': True,
-                         #'line_feature': upstream_hydrovak['feature'],  # todo: correct??
+                         # 'line_feature': upstream_hydrovak['feature'],  # todo: correct??
                          'distance': round(distance)
                          },
                         feature=feature)
