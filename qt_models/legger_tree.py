@@ -1,22 +1,29 @@
-from PyQt4 import QtCore
+"""
+    specific implementation of QgsTreeModel for hydrovakken, used for the hydrovakken tree.
+    to change visible data in tree, modify the HORIZONTAL_HEADERS config
+"""
 
 from PyQt4.QtCore import Qt
 from PyQt4.QtGui import QBrush, QColor, QIcon
 from legger import settings
+from legger.utils.formats import transform_none
 from tree import BaseTreeItem, BaseTreeModel, CHECKBOX_FIELD, INDICATION_HOVER
-from qgis.core import NULL
+from legger.utils.formats import transform_none
 
+# field and display config of 'hydrovakken'
 HORIZONTAL_HEADERS = (
-    {'field': 'hydro_id', 'column_width': 150},
-    # {'field': 'feat_id', 'column_width': 25},
-    {'field': 'sp', 'field_type': CHECKBOX_FIELD, 'column_width': 25, 'single_selection': True},
-    {'field': 'ep', 'field_type': CHECKBOX_FIELD, 'column_width': 25, 'single_selection': True},
-    {'field': 'selected', 'field_type': CHECKBOX_FIELD, 'show': False, 'column_width': 50,
-     'single_selection': True},
-    {'field': 'hover', 'field_type': CHECKBOX_FIELD, 'show': False, 'column_width': 50},
+    {'field': 'code', 'column_width': 180, 'show': True},
+    {'field': 'hydro_id', 'column_width': 100, 'show': False},
+    {'field': 'sp', 'field_type': CHECKBOX_FIELD, 'column_width': 22, 'single_selection': True,
+     'default': False},
+    {'field': 'ep', 'field_type': CHECKBOX_FIELD, 'column_width': 22, 'single_selection': True,
+     'default': False},
+    {'field': 'selected', 'field_type': CHECKBOX_FIELD, 'show': False, 'single_selection': True,
+     'default': False},
+    {'field': 'hover', 'field_type': CHECKBOX_FIELD, 'show': False, 'column_width': 50, 'default': Qt.Unchecked},
     {'field': 'distance', 'header': 'afstand', 'show': False, 'column_width': 50},
     {'field': 'length', 'header': 'Lengte', 'show': False, 'column_width': 50},
-    {'field': 'category', 'header': 'cat', 'column_width': 40},
+    {'field': 'category', 'header': 'cat', 'column_width': 30},
     {'field': 'begroeiingsvariant_id', 'header': 'beg', 'column_width': 40},
     {'field': 'flow', 'header': 'debiet', 'show': False, 'column_width': 50},
     {'field': 'target_level', 'show': False, 'column_width': 50},
@@ -36,31 +43,19 @@ HORIZONTAL_HEADERS = (
 )
 
 
-def transform_none(value):
-    """ Transform Qt NULL value to python None
-
-    value (any): input value
-    return (any): value or None when value is NULL
-    """
-    if value == NULL:
-        return None
-    else:
-        return value
-
-
 class hydrovak_class(object):
     """
-    a trivial custom data object
+    a trivial custom data object for 'hydrovakken'
+    gets information from feature or own data dict (extra fields)
     """
 
-    def __init__(self, data_dict, feature, startpoint_feature=None, endpoint_feature=None):
+    def __init__(self, data_dict, feature):
         """
 
-        data_dict (dict):
+        data_dict (dict): initial data
+        feature (QgsFeature): QGis feature of hydrovak
         """
         self.feature = feature
-        self.startpoint_feature = startpoint_feature  # todo: weg?
-        self.endpoint_feature = endpoint_feature  # todo: weg?
 
         self.feature_keys = [field.name() for field in feature.fields()]
         self.data_dict = data_dict
@@ -70,7 +65,8 @@ class hydrovak_class(object):
             'flow': 'debiet',
             'target_level': 'streefpeil',
             'hydro_id': 'id',
-            'length': 'lengte',  # line_feature.geometry().length(),
+            'code': 'code',
+            'length': 'lengte',
             'depth': 'diepte',
             'width': 'breedte',
             'variant_min_depth': 'min_diepte',
@@ -83,8 +79,13 @@ class hydrovak_class(object):
             'selected_remarks': 'selectie_opmerkingen',
         }
 
+        # set default values
+        for field in HORIZONTAL_HEADERS:
+            if 'default' in field and self[field['field']] is None:
+                self[field['field']] = field['default']
+
     def __repr__(self):
-        return "hydrovak - %s" % (self.get('hydro_id'))
+        return "hydrovak - %s" % (self.get('code'))
 
     def __getitem__(self, key, default_value=None):
         return self.get(key, default_value)
@@ -108,13 +109,20 @@ class hydrovak_class(object):
                         return Qt.Checked
                     else:
                         return Qt.Unchecked
-                    return None
             return self.get(HORIZONTAL_HEADERS[column_nr]['field'])
         else:
             return None
 
-    def setData(self, column, value, role):
-        """ set function used by QtModel"""
+    def setData(self, column, value, role=Qt.DisplayRole):
+        """
+        set function used by QtModel
+
+        column (int): column number (item number in list HORIZONTAL_HEADERS)
+        value (any): value to set on item
+        role (int): not used QtRole (implemented to be equal to Qt implementation)
+
+        return (bool): data changed
+        """
         if HORIZONTAL_HEADERS[column].get('field_type') == CHECKBOX_FIELD:
             if type(value) == bool:
                 value = value
@@ -133,10 +141,6 @@ class hydrovak_class(object):
     def get(self, key, default_value=None):
         if key == 'feature':
             return self.feature
-        elif key == 'startpoint':
-            return self.startpoint_feature
-        elif key == 'endpoint':
-            return self.endpoint_feature
         elif key == 'icon':
             if not self.data_dict.get('end_arc_type'):
                 return QIcon()
@@ -154,10 +158,6 @@ class hydrovak_class(object):
     def set(self, key, value):
         if key == 'feature':
             self.feature = value
-        elif key == 'startpoint':
-            self.startpoint_feature = value
-        elif key == 'endpoint':
-            self.endpoint_feature = value
         elif key == 'icon':
             pass
         elif key in self.field_mapping and self.field_mapping[key] in self.feature_keys:
@@ -169,7 +169,8 @@ class hydrovak_class(object):
 
 class LeggerTreeItem(BaseTreeItem):
     """
-    TreeItem implementation for 'legger' (each item is a 'hydrovak')
+    TreeItem implementation for 'legger' (each item is a 'hydrovak').
+    implements the parent and child relations
     """
 
     def __init__(self, data_item, parent, headers=HORIZONTAL_HEADERS):
@@ -182,11 +183,13 @@ class LeggerTreeItem(BaseTreeItem):
         """access to hydrovak class object"""
         return self.data_item
 
-    def up(self, end=None):
-        """get list of path of hydrovakken downstream hydrovak (following the mainstream) till end hydrovak or
+    def up(self, end=None, include_point=False):
+        """
+        get list of path of hydrovakken downstream hydrovak (following the mainstream) till end hydrovak or
         till there are no downstream hydrovakken anymore
-        end (LeggerTreeItem): node where to stop
 
+        end (LeggerTreeItem): node where to stop
+        returns (list): list of TreeItems
         """
 
         up_list = []
@@ -224,7 +227,7 @@ class LeggerTreeItem(BaseTreeItem):
 class LeggerTreeModel(BaseTreeModel):
     """
     TreeModel implementation for legger (hydrovakken). Specific function are added
-    to work with the flattend tree structure (main branch stays on same level.
+    to work with the flattend tree structure (main branch stays on same level).
     """
 
     def __init__(self, parent=None, root_item=None,
@@ -233,7 +236,7 @@ class LeggerTreeModel(BaseTreeModel):
         super(LeggerTreeModel, self).__init__(
             parent, root_item, item_class, headers)
 
-        # shortcuts to items (only one active at a time
+        # shortcuts to items (only one active at a time)
         self.ep = None
         self.sp = None
         self.hover = None
@@ -251,7 +254,7 @@ class LeggerTreeModel(BaseTreeModel):
             return None
 
         item = index.internalPointer()
-        if role == QtCore.Qt.DisplayRole:
+        if role == Qt.DisplayRole:
             if self.headers[index.column()].get('field_type') == INDICATION_HOVER:
                 if item.data(index.column()):
                     return '*'
@@ -273,14 +276,14 @@ class LeggerTreeModel(BaseTreeModel):
                 return item.data(index.column(), qvalue=True)
             else:
                 return None
-        elif role == QtCore.Qt.DecorationRole and index.column() == 0:
+        elif role == Qt.DecorationRole and index.column() == 0:
             return item.icon()
         elif role == Qt.ToolTipRole:
             if self.headers[index.column()].get('field_type') == INDICATION_HOVER:
                 return item.data(index.column())
-        elif role == QtCore.Qt.DecorationRole and HORIZONTAL_HEADERS[index.column()]['field'] == 'add':
+        elif role == Qt.DecorationRole and HORIZONTAL_HEADERS[index.column()]['field'] == 'add':
             return QIcon(':/plugins/legger/media/plus.png')
-        elif role == QtCore.Qt.UserRole:
+        elif role == Qt.UserRole:
             if item:
                 return item
         return None
@@ -337,8 +340,6 @@ class LeggerTreeModel(BaseTreeModel):
         def search(node):
             """
             recursive function checking parents
-            :param index:
-            :return:
             """
             if node is None or node.hydrovak is None:
                 return None
@@ -360,6 +361,7 @@ class LeggerTreeModel(BaseTreeModel):
 
     def get_open_endleaf(self, tree_widget=None):
         """
+        get endpoint following all 'open' branches
 
         tree_widget (QTreeWidget): tree widget to be searched. Overwrites the widget set with the function .setTreeWidget
         return (ModelItem): Model item
@@ -382,6 +384,67 @@ class LeggerTreeModel(BaseTreeModel):
         result = loop(self.rootItem.child(0))
         return result
 
+    def find_endpoint_traject_without_legger_profile(self, sp):
+        """
+        find traject from startpoint with missing selected_variant_id
+        used for find next endpoint button
+
+        sp (LeggerTreeItem): startpoint for search
+        returns Tuple(bool, LeggerTreeItem):
+        """
+
+        def loop(node):
+            """ recursive function to find endpoint of traject with missing selected_variant_id"""
+
+            end_point = node
+            if node.parent().childCount() - 1 == node.row():
+                childs = node.childs
+            else:
+                childs = [node.parent().child(node.row() + 1)] + node.childs
+
+            for child in childs:
+                none_values, end_point = loop(child)
+                if none_values:
+                    return True, end_point
+
+            if node.hydrovak.get('selected_variant_id') is None and node.hydrovak.get('variant_min_depth') is not None:
+                return True, end_point
+
+            return False, end_point
+
+        return loop(sp)
+
+    def open_till_endpoint(self, endpoint, close_other=False, tree_widget=None):
+        """
+
+        endpoint (LeggerTreeItem): endpoint to open to
+        close_other (bool): close other branches
+        tree_widget (QTreeWidget): tree widget to be searched. Overwrites the widget set with the function .setTreeWidget
+        return: -
+        """
+
+        tw = tree_widget if tree_widget is not None else self.tree_widget
+        if tw is None:
+            raise KeyError("missing 'treewidget' as argument or set on class")
+
+        if close_other:
+            pass
+
+        def loop(node):
+            if transform_none(node) is None or transform_none(node.parent()) is None:
+                return
+
+            parent = node.parent()
+            if node.row() == 0:
+                index = self.createIndex(parent.row(), 0, parent)
+                tw.setExpanded(index, True)
+            else:
+                parent = parent.child(node.row() - 1)
+
+            loop(parent)
+
+        loop(endpoint)
+
     def data_change_post_process(self, index, to_index):
         """
         stores direct links to hovered and selected rows and to
@@ -400,6 +463,7 @@ class LeggerTreeModel(BaseTreeModel):
             elif index.internalPointer() == self.hover:
                 self.hover = None
 
+            # update color background of all cells in row
             for colnr in range(0, len(HORIZONTAL_HEADERS)):
                 self.tree_widget.update(self.index(index.row(), colnr, index.parent()))
 
@@ -416,26 +480,28 @@ class LeggerTreeModel(BaseTreeModel):
                 self.tree_widget.update(self.index(index.row(), colnr, index.parent()))
 
         elif col['field'] == 'sp':
+            # if no endpoint selected, also select endpoint
             value = self.data(index, role=Qt.CheckStateRole)
             if value:
                 index_ep = self.find_younger(start_index=index, key='ep', value=True)
                 if index_ep is None:
                     leaf_endpoint = self.get_open_endleaf()
                     self.setDataItemKey(
-                        leaf_endpoint, 'ep', True, role=Qt.CheckStateRole)
+                        leaf_endpoint, 'ep', Qt.Checked, role=Qt.CheckStateRole)
                 else:
                     self.ep = index_ep.internalPointer()
                     self.sp = index.internalPointer()
             else:
-                self.ep = None
+                self.sp = None
 
         elif col['field'] == 'ep':
+            # if no startpoint selected, also select startpoint
             value = self.data(index, role=Qt.CheckStateRole)
             if value:
                 index_sp = self.find_older(start_index=index, key='sp', value=True)
                 if index_sp is None:
                     self.setDataItemKey(
-                        self.rootItem.child(0), 'sp', True, role=Qt.CheckStateRole)
+                        self.rootItem.child(0), 'sp', Qt.Checked, role=Qt.CheckStateRole)
                 else:
                     self.ep = index.internalPointer()
                     self.sp = index_sp.internalPointer()

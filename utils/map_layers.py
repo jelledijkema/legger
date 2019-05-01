@@ -65,6 +65,7 @@ class LayerManager():
             ('afgeleid', [
             ]),
             ('tbv begroeiingsgraad', [
+                ('aanwijzen', 'hydroobject', 'begroeiingsvariant_id', 'begroeiingsvariant', 'geometry', None),
                 ('begroeiingsadvies', 'begroeiingsadvies4', 'advies_id', 'begroeiingsvariant', 'geometry', None),
                 ('begroeiingsvariant', 'begroeiingsadvies4', 'aangew_bv_id', 'begroeiingsvariant',
                  'geometry', None),
@@ -81,6 +82,8 @@ class LayerManager():
                  None),
                 ('gekozen overbreedte totaal [m]', 'hydroobjects_selected_legger', '', 'overbreedte_totaal', 'geometry',
                  None),
+                ('gekozen begroeiingsvariant', 'hydroobjects_selected_legger', 'geselecteerde_begroeiingsvariant',
+                 'begroeiingsvariant', 'geometry', None),
             ]),
             ('achtergrond', [
                 ('watervlakken', 'waterdeel', '', 'waterdeel', 'geometry', None),

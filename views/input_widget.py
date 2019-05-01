@@ -137,9 +137,9 @@ class NewWindow(QtGui.QWidget):
                                                 self.ditch_slope,
                                                 friction_bos_bijkerk=begroeiings_variant.friction
                                                 )
-                verhang_bericht = str(self.verhang) + " cm/ km is het verhang\n"
-                verhang_bericht = verhang_bericht + "\n" + str(self.ditch_bottomwidth) + "m is de bodembreedte"
-                bodembreedte_bericht = ""
+                bodembreedte_bericht = ("{.2f} cm/ km is het verhang\n"
+                                        "{.2f} m is de bodembreedte"
+                                        ).format(self.verhang, self.ditch_bottomwidth)
 
         except ZeroDivisionError:
             verhang_bericht = "Delen door 0!"

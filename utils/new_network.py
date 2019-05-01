@@ -1,38 +1,12 @@
 # -*- coding: utf-8 -*-
-from legger.qt_models.legger_tree import LeggerTreeItem, hydrovak_class, transform_none
-from qgis.core import NULL, QgsFeature, QgsFeatureRequest, QgsGeometry, QgsPoint
+from legger.qt_models.legger_tree import LeggerTreeItem, hydrovak_class
+from qgis.core import QgsFeature, QgsFeatureRequest, QgsGeometry, QgsPoint
 from qgis.networkanalysis import QgsArcProperter, QgsDistanceArcProperter, QgsGraphBuilder
+
+from .formats import make_type
 
 DISTANCE_PROPERTER_NR = 0
 FEAT_ID_PROPERTER_NR = 1
-
-
-def make_type(value, typ, default_value=None, round_digits=None, factor=1):
-    """transform value (also Qt NULL values) to specified type or default value if None.
-    Can also round value or multiply value
-
-    value (any type): input value to transform to other type
-    typ (python type): python type object like int, str or float
-    default_value (any): default value returned when value is None or NULL
-    round_digits (int): Number of digits to round value on.
-    factor (float or int): Multiplication factor
-
-    return (any): transformed value
-    """
-    if value is None or value == NULL:
-        return default_value
-    try:
-        output = typ(value)
-        if typ in (float, int,):
-            if round is not None:
-                return round(factor * output, round_digits)
-            else:
-                return factor * output
-        else:
-            return output
-
-    except TypeError:
-        return default_value
 
 
 def merge_dicts(x, y):
@@ -68,14 +42,12 @@ class AttributeProperter(QgsArcProperter):
 
 
 class NewNetwork(object):
-    """Network class for providing network required for Legger tool"""
+    """Network class for providing network functions and direrequired for Legger tool"""
 
     # todo:
-    #     - support bidirectional islands
+    #     - better support bidirectional islands (if needed and exmaples popup in tests/ usage)
     #     - move virtual_layer and endpoint_layer outside this class
     #     - set endpoints on 90% or 10 meter before endpoint of hydrovak
-    #     - add startpoint within tree (change target_levels)
-    #     - calc distance from start and set correct distance at start points
 
     def __init__(self, line_layer, full_line_layer, director,
                  distance_properter,
@@ -85,7 +57,8 @@ class NewNetwork(object):
         line_layer (QgsVectorLayer): input vector layer, with as geometry straight lines without in between vertexes
         full_line_layer (QgsVectorLayer): input vector layer, with original geometry (with in between vertexes)
         director (QgsLineVectorLayerDirector):
-        distance_properter (Qgs Properter type): properter to get distance. used for shortest path at bidirectional islandes
+        distance_properter (Qgs Properter type): properter to get distance. used for shortest path at bidirectional
+                islands
         virtual_tree_layer (QgsVectorLayer): layer used to visualize active tree
         endpoint_layer (QgsVectorLayer): layer used ot visualize endpoints of tree
         id_field (str): field used by features to identification field
@@ -124,7 +97,8 @@ class NewNetwork(object):
         self.start_arcs = None  # list of dicts with arc_nr, point (x, y), list childs, parent
 
     def get_structure_bidirectional_group(self, arc_dict, group_vertexes):
-        """
+        """ Function not used.
+        Some old fragments and documentation to handle this 'bidirectional islands'
 
         :return:
 
@@ -177,7 +151,8 @@ class NewNetwork(object):
 
     def build_tree(self):
         """
-        function that creates tree structure of network. Sets self.arc_tree and self.start_arcs
+        function that analyses tree and creates tree structure of network.
+        Sets self.arc_tree and self.start_arcs
 
         returns (tuple): tuple with dictionary of arc_tree en list of start arc_nrs
         """
@@ -215,8 +190,9 @@ class NewNetwork(object):
                 feature=line_feature,
             )
 
-        # set downstream arc. When multiple, select one with highest flow.
-        # also identify start arcs
+        # for each arc, set downstream arc. When multiple, select one with highest flow.
+        # also identify start arcs and inbetween arcs (areas are group of arcs with same targetlevel). Inbetween arcs
+        # are arcs after a target_level change
         for arc_nr, arc in arc_tree.items():
             out_vertex = self.graph.vertex(arc['out_vertex'])
             # link arc with highest flow
@@ -247,7 +223,7 @@ class NewNetwork(object):
                     'min_category_in_path': None
                 }
 
-        # set upstream arcs. Set only the one, who has the current arc as downstream arc (so joining
+        # for all arcs, set upstream arcs. Set only the one, who has the current arc as downstream arc (so joining
         # streams are forced into a tree structure with no alternative paths to same point
         for arc_nr, arc in arc_tree.items():
             arc['upstream_arcs'] = [
@@ -273,46 +249,59 @@ class NewNetwork(object):
             start_arc['cum_weight'], start_arc['min_category_in_path'] = get_cum_weight_min_category(
                 arc_tree[start_arc['arc_nr']])
             start_arc['target_level'] = arc_tree[start_arc['arc_nr']]['target_level']
+            start_arc['weight'] = start_arc['cum_weight']
             # todo: set distance correct
-            start_arc['distance'] = start_arc['cum_weight']
+            # start_arc['distance'] = start_arc['distance']
 
         # get cum_weight and sort upstream_arcs
         for start_arc in in_between_arcs.values():
             start_arc['cum_weight'], start_arc['min_category_in_path'] = get_cum_weight_min_category(
                 arc_tree[start_arc['arc_nr']])
             start_arc['target_level'] = arc_tree[start_arc['arc_nr']]['target_level']
+            start_arc['weight'] = start_arc['cum_weight']
             # todo: set distance correct
-            start_arc['distance'] = start_arc['cum_weight']
+            # start_arc['distance'] = start_arc['distance']
 
         for arc in arc_tree.values():
             arc['upstream_arcs'].sort(key=lambda nr: arc_tree[nr]['cum_weight'], reverse=True)
 
         # link arcs to start and inbetween arcs to get area structure
-        def loop(area_start_arc, arc_nr):
+        def loop(start_arc, arc_nr):
             arc = arc_tree[arc_nr]
-            arc['area_start_arc'] = area_start_arc
+            arc['area_start_arc'] = start_arc
+            if arc_nr in in_between_arcs:
+                start_arc = arc_nr
             for upstream_arc in arc['upstream_arcs']:
-                loop(area_start_arc, upstream_arc)
+                loop(start_arc, upstream_arc)
 
         for start_arc in start_arcs.keys():
             loop(start_arc, start_arc)
-        for in_between_arc in start_arcs.keys():
-            loop(in_between_arc, in_between_arc)
+        # for in_between_arc in start_arcs.keys():
+        #     loop(in_between_arc, in_between_arc)
 
+        # make start arc tree structure to link upstream areas to start arcs
         for inbetween_arc_nr, in_between_item in in_between_arcs.items():
             arc = arc_tree[inbetween_arc_nr]
             downstream_area_arc_nr = arc_tree[arc['downstream_arc']]['area_start_arc']
             if downstream_area_arc_nr in start_arcs:
                 start_arcs[downstream_area_arc_nr]['children'].append(in_between_item)
             elif downstream_area_arc_nr in in_between_arcs:
-                start_arcs[downstream_area_arc_nr]['children'].append(in_between_item)
+                in_between_arcs[downstream_area_arc_nr]['children'].append(in_between_item)
             else:
                 # this should not happen!
                 pass
 
-        # sort start arcs
+        # sort area start arcs and nested (inbetween) area arcs
         start_arcs = start_arcs.values()
         start_arcs.sort(key=lambda arc_d: arc_d['cum_weight'], reverse=True)
+
+        def sort_arc_list_on_weight(area_arc):
+            area_arc['children'].sort(key=lambda arc_d: arc_d['cum_weight'], reverse=True)
+            for arc_child in area_arc['children']:
+                sort_arc_list_on_weight(arc_child)
+
+        for start_arc in start_arcs:
+            sort_arc_list_on_weight(start_arc)
 
         # store tree and start points
         self.arc_tree = arc_tree
@@ -421,7 +410,7 @@ class NewNetwork(object):
                     split_hydrovak = hydrovak_class(
                         {'hydro_id': 'tak {0}'.format(i),
                          'tak': True,
-                         #'line_feature': upstream_hydrovak['feature'],  # todo: correct??
+                         # 'line_feature': upstream_hydrovak['feature'],  # todo: correct??
                          'distance': round(distance)
                          },
                         feature=feature)
