@@ -384,6 +384,67 @@ class LeggerTreeModel(BaseTreeModel):
         result = loop(self.rootItem.child(0))
         return result
 
+    def find_endpoint_traject_without_legger_profile(self, sp):
+        """
+        find traject from startpoint with missing selected_variant_id
+        used for find next endpoint button
+
+        sp (LeggerTreeItem): startpoint for search
+        returns Tuple(bool, LeggerTreeItem):
+        """
+
+        def loop(node):
+            """ recursive function to find endpoint of traject with missing selected_variant_id"""
+
+            end_point = node
+            if node.parent().childCount() - 1 == node.row():
+                childs = node.childs
+            else:
+                childs = [node.parent().child(node.row() + 1)] + node.childs
+
+            for child in childs:
+                none_values, end_point = loop(child)
+                if none_values:
+                    return True, end_point
+
+            if node.hydrovak.get('selected_variant_id') is None and node.hydrovak.get('variant_min_depth') is not None:
+                return True, end_point
+
+            return False, end_point
+
+        return loop(sp)
+
+    def open_till_endpoint(self, endpoint, close_other=False, tree_widget=None):
+        """
+
+        endpoint (LeggerTreeItem): endpoint to open to
+        close_other (bool): close other branches
+        tree_widget (QTreeWidget): tree widget to be searched. Overwrites the widget set with the function .setTreeWidget
+        return: -
+        """
+
+        tw = tree_widget if tree_widget is not None else self.tree_widget
+        if tw is None:
+            raise KeyError("missing 'treewidget' as argument or set on class")
+
+        if close_other:
+            pass
+
+        def loop(node):
+            if transform_none(node) is None or transform_none(node.parent()) is None:
+                return
+
+            parent = node.parent()
+            if node.row() == 0:
+                index = self.createIndex(parent.row(), 0, parent)
+                tw.setExpanded(index, True)
+            else:
+                parent = parent.child(node.row() - 1)
+
+            loop(parent)
+
+        loop(endpoint)
+
     def data_change_post_process(self, index, to_index):
         """
         stores direct links to hovered and selected rows and to
