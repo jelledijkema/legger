@@ -2,6 +2,8 @@
 
 import logging
 
+from collections import OrderedDict
+
 import pyqtgraph as pg
 from PyQt4.QtCore import Qt
 from PyQt4.QtGui import QBrush, QColor
@@ -161,7 +163,8 @@ class LeggerPlotWidget(pg.PlotWidget):
                 up = self.legger_model.ep.up(end=self.legger_model.sp)
                 ids = []
                 for line in reversed(up):
-                    ids.append(line.hydrovak.get('hydro_id'))
+                    if line.hydrovak is not None:
+                        ids.append(line.hydrovak.get('hydro_id'))
 
                 if len(ids):
                     hydro_objects = self.session.query(HydroObject).filter(HydroObject.id.in_(ids)).all()
@@ -326,7 +329,7 @@ class LeggerSideViewPlotWidget(pg.PlotWidget):
         self.legger_model = None
         self.variant_model = None
         self.series = {}
-        self.hydrovak_ids = []
+        self.line_data = {}
 
         # store arguments
         self.name = name
@@ -337,7 +340,7 @@ class LeggerSideViewPlotWidget(pg.PlotWidget):
 
         # set other
         self.showGrid(True, True, 0.5)
-        self.setLabel("bottom", "breedte", "m")
+        self.setLabel("bottom", "lengte", "m")
         self.setLabel("left", "hoogte", "m tov waterlijn")
         self.disableAutoRange()
 
@@ -441,13 +444,11 @@ class LeggerSideViewPlotWidget(pg.PlotWidget):
         max_depth = []
         target_level = []
 
-        for item in data:
+        for item in data.values():
             if self.relative_depth:
                 ref_level = 0
             else:
                 ref_level = item['target_level']
-
-            self.hydrovak_ids.append(item['id'])
 
             d = ref_level - item['depth'] if item['depth'] is not None else np.nan
             mind = ref_level - item['variant_min_depth'] if item['variant_min_depth'] is not None else np.nan
@@ -473,15 +474,13 @@ class LeggerSideViewPlotWidget(pg.PlotWidget):
 
         self.target_level_plot.setData(x=dist, y=target_level)
 
-        self.autoRange()
-
     def draw_selected_lines(self, data):
 
         dist = []
         depth = []
         tmp_depth = []
 
-        for item in data:
+        for item in data.values():
             if self.relative_depth:
                 ref_level = 0
             else:
@@ -501,40 +500,36 @@ class LeggerSideViewPlotWidget(pg.PlotWidget):
         self.tmp_selected_depth_plot.setData(x=dist, y=tmp_depth)
 
     def data_changed_legger(self, index):
+        """ draw start and endlines of selected or hovered hydrovaks (green en red vertical lines) """
 
         model = self.legger_model
         field = model.column(index.column())['field']
         item = self.legger_model.data(index, role=Qt.UserRole)
 
         if field == 'hover':
-            if self.legger_model.hover is None or item.hydrovak.get('tak'):
+            if not item.hydrovak['hover'] or item.hydrovak['hydro_id'] not in self.line_data:
                 self.hover_start.setValue(0)
                 self.hover_end.setValue(0)
             else:
                 self.disableAutoRange()
-                if self.legger_model.hover.hydrovak.get('feat_id') not in self.hydrovak_ids:
-                    self.hover_start.setValue(0)
-                    self.hover_end.setValue(0)
-                else:
-                    self.hover_start.setValue(self.legger_model.hover.hydrovak.get('distance'))
-                    self.hover_end.setValue(
-                        self.legger_model.hover.hydrovak.get('distance') + self.legger_model.hover.hydrovak.get(
-                            'length'))
+                # show only location in graph when hydrovak is on selected part
+                item_data = self.line_data[item.hydrovak['hydro_id']]
+
+                self.hover_start.setValue(item_data['b_distance'])
+                self.hover_end.setValue(item_data['e_distance'])
 
         elif field == 'selected':
 
-            if self.legger_model.selected is None or item.hydrovak.get('tak'):
+            if not item.hydrovak['selected'] or item.hydrovak['hydro_id'] not in self.line_data:
                 self.selected_start.setValue(0)
                 self.selected_end.setValue(0)
             else:
                 self.disableAutoRange()
-                if self.legger_model.selected.hydrovak.get('feat_id') not in self.hydrovak_ids:
-                    self.selected_start.setValue(0)
-                    self.selected_end.setValue(0)
-                else:
-                    self.selected_start.setValue(self.legger_model.selected.hydrovak.get('distance'))
-                    self.selected_end.setValue(self.legger_model.selected.hydrovak.get('distance') +
-                                               self.legger_model.selected.hydrovak.get('length'))
+                # show only location in graph when hydrovak is on selected part
+                item_data = self.line_data[item.hydrovak['hydro_id']]
+
+                self.selected_start.setValue(item_data['b_distance'])
+                self.selected_end.setValue(item_data['e_distance'])
 
         elif field in ['sp', 'ep']:
             if item.hydrovak.get('tak'):
@@ -543,6 +538,7 @@ class LeggerSideViewPlotWidget(pg.PlotWidget):
                 data = self._get_data()
                 self.draw_base_lines(data)
                 self.draw_selected_lines(data)
+                self.autoRange()
             else:
                 self.clear_graph()
 
@@ -557,7 +553,7 @@ class LeggerSideViewPlotWidget(pg.PlotWidget):
             return []
         up = self.legger_model.ep.up(end=self.legger_model.sp)
         out = []
-        before = up[-1].older()
+        before = up[-1]
         if before.hydrovak:
             dist = before.hydrovak.get('distance')
         else:
@@ -567,16 +563,18 @@ class LeggerSideViewPlotWidget(pg.PlotWidget):
             if line.hydrovak.get('tak'):
                 continue
 
-            out.append({
-                'id': line.hydrovak.get('feat_id'),
-                'b_distance': line.hydrovak.get('distance'),
-                'e_distance': line.hydrovak.get('distance') + line.hydrovak.get('length'),
-                'depth': line.hydrovak.get('depth'),
-                'target_level': line.hydrovak.get('target_level'),
-                'variant_min_depth': line.hydrovak.get('variant_min_depth'),
-                'variant_max_depth': line.hydrovak.get('variant_max_depth'),
-                'selected_depth': line.hydrovak.get('selected_depth'),
-                'selected_depth_tmp': line.hydrovak.get('selected_depth_tmp'),
-            })
+            out.append(
+                {
+                    'id': line.hydrovak.get('hydro_id'),
+                    'b_distance': line.hydrovak.get('distance') - dist,
+                    'e_distance': line.hydrovak.get('distance') + line.hydrovak.get('length') - dist,
+                    'depth': line.hydrovak.get('depth'),
+                    'target_level': line.hydrovak.get('target_level'),
+                    'variant_min_depth': line.hydrovak.get('variant_min_depth'),
+                    'variant_max_depth': line.hydrovak.get('variant_max_depth'),
+                    'selected_depth': line.hydrovak.get('selected_depth'),
+                    'selected_depth_tmp': line.hydrovak.get('selected_depth_tmp'),
+                })
 
-        return out
+        self.line_data = OrderedDict([(l['id'], l) for l in out])
+        return self.line_data
