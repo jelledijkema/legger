@@ -84,7 +84,7 @@
           <prop k="offset_unit" v="MapUnit"/>
           <prop k="use_custom_dash" v="0"/>
           <prop k="width_dd_active" v="1"/>
-          <prop k="width_dd_expression" v="to_real( &quot;geselecteerd_waterbreedte&quot; )"/>
+          <prop k="width_dd_expression" v="CASE WHEN  &quot;geselecteerd_waterbreedte&quot; IS NULL&#xd;&#xa;THEN -1&#xd;&#xa;ELSE to_real( &quot;geselecteerd_waterbreedte&quot; )&#xd;&#xa;END"/>
           <prop k="width_dd_field" v=""/>
           <prop k="width_dd_useexpr" v="1"/>
           <prop k="width_map_unit_scale" v="0,0,0,0,0,0"/>
