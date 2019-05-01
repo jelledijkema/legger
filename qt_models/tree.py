@@ -4,6 +4,7 @@ from PyQt4 import QtCore
 
 from PyQt4.QtCore import Qt
 from PyQt4.QtGui import QBrush
+from legger.utils.formats import transform_none
 
 CHECKBOX_FIELD = 1
 INDICATION_HOVER = 2
@@ -87,10 +88,7 @@ class BaseTreeItem(object):
 
 class BaseTreeModel(QtCore.QAbstractItemModel):
     """
-    a model to display a the 'hydrovakken'. Tree is flattend (with main branch on same level) to prevent
-    to many levels. Including functions for getting upstream and downstream.
-
-    Fields (Columns) are defined in HORIZONTAL_HEADERS on top of this script
+    Base tree model
 
     """
 
@@ -115,6 +113,7 @@ class BaseTreeModel(QtCore.QAbstractItemModel):
     def setTreeWidget(self, widget):
         """
         set reference to tree widget, to make it possible to check visual state
+
         widget (QTreeWidget): Treewidget
         return: None
         """
@@ -193,7 +192,7 @@ class BaseTreeModel(QtCore.QAbstractItemModel):
         if changed:
             # todo: check if this can be done more efficient with a single emit
             if self.headers[index.column()].get('single_selection') and value in [True, Qt.Checked]:
-                self.set_column_value(index.column(), False, skip=index)
+                self.set_column_value(index.column(), Qt.Unchecked, skip=index)
             self.data_change_post_process(index, index)
 
             if signal:
@@ -226,7 +225,7 @@ class BaseTreeModel(QtCore.QAbstractItemModel):
         index = self.createIndex(item.row(), column_nr, item)
         self.setData(index, value, role, signal)
 
-    def set_column_value(self, column, value, skip=None):
+    def set_column_value(self, column, value, skip=None, signal=True):
         """
         set all values in column to this value
 
@@ -247,7 +246,7 @@ class BaseTreeModel(QtCore.QAbstractItemModel):
             for child in node.childs:
                 index = self.createIndex(child.row(), column, child)
                 if index != skip:
-                    changed = self.setData(index, value)
+                    changed = self.setData(index, value, signal=signal)
 
                 if child.childCount() > 0:
                     changed_child = loop_nodes(child)
@@ -273,6 +272,7 @@ class BaseTreeModel(QtCore.QAbstractItemModel):
     def flags(self, index):
         """
         flags of item field (required QAbstractItemModel function)
+
         index (QModelIndex): Index of item and field
         return (Qt flag): flags
         """
@@ -351,6 +351,9 @@ class BaseTreeModel(QtCore.QAbstractItemModel):
             return QtCore.QModelIndex()
 
         parentItem = childItem.parent()
+
+        if transform_none(parentItem) is None:
+            return QtCore.QModelIndex()
 
         if parentItem == self.rootItem:
             return QtCore.QModelIndex()
