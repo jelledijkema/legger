@@ -6,21 +6,24 @@
 from PyQt4.QtCore import Qt
 from PyQt4.QtGui import QBrush, QColor, QIcon
 from legger import settings
+from legger.utils.formats import transform_none
 from tree import BaseTreeItem, BaseTreeModel, CHECKBOX_FIELD, INDICATION_HOVER
-from qgis.core import NULL
+from legger.utils.formats import transform_none
 
 # field and display config of 'hydrovakken'
 HORIZONTAL_HEADERS = (
-    {'field': 'hydro_id', 'column_width': 150},
-    # {'field': 'feat_id', 'column_width': 25},
-    {'field': 'sp', 'field_type': CHECKBOX_FIELD, 'column_width': 25, 'single_selection': True},
-    {'field': 'ep', 'field_type': CHECKBOX_FIELD, 'column_width': 25, 'single_selection': True},
-    {'field': 'selected', 'field_type': CHECKBOX_FIELD, 'show': False, 'column_width': 50,
-     'single_selection': True},
-    {'field': 'hover', 'field_type': CHECKBOX_FIELD, 'show': False, 'column_width': 50},
+    {'field': 'code', 'column_width': 180, 'show': True},
+    {'field': 'hydro_id', 'column_width': 100, 'show': False},
+    {'field': 'sp', 'field_type': CHECKBOX_FIELD, 'column_width': 22, 'single_selection': True,
+     'default': False},
+    {'field': 'ep', 'field_type': CHECKBOX_FIELD, 'column_width': 22, 'single_selection': True,
+     'default': False},
+    {'field': 'selected', 'field_type': CHECKBOX_FIELD, 'show': False, 'single_selection': True,
+     'default': False},
+    {'field': 'hover', 'field_type': CHECKBOX_FIELD, 'show': False, 'column_width': 50, 'default': Qt.Unchecked},
     {'field': 'distance', 'header': 'afstand', 'show': False, 'column_width': 50},
     {'field': 'length', 'header': 'Lengte', 'show': False, 'column_width': 50},
-    {'field': 'category', 'header': 'cat', 'column_width': 40},
+    {'field': 'category', 'header': 'cat', 'column_width': 30},
     {'field': 'begroeiingsvariant_id', 'header': 'beg', 'column_width': 40},
     {'field': 'flow', 'header': 'debiet', 'show': False, 'column_width': 50},
     {'field': 'target_level', 'show': False, 'column_width': 50},
@@ -62,6 +65,7 @@ class hydrovak_class(object):
             'flow': 'debiet',
             'target_level': 'streefpeil',
             'hydro_id': 'id',
+            'code': 'code',
             'length': 'lengte',
             'depth': 'diepte',
             'width': 'breedte',
@@ -75,8 +79,13 @@ class hydrovak_class(object):
             'selected_remarks': 'selectie_opmerkingen',
         }
 
+        # set default values
+        for field in HORIZONTAL_HEADERS:
+            if 'default' in field and self[field['field']] is None:
+                self[field['field']] = field['default']
+
     def __repr__(self):
-        return "hydrovak - %s" % (self.get('hydro_id'))
+        return "hydrovak - %s" % (self.get('code'))
 
     def __getitem__(self, key, default_value=None):
         return self.get(key, default_value)
@@ -417,12 +426,12 @@ class LeggerTreeModel(BaseTreeModel):
                 if index_ep is None:
                     leaf_endpoint = self.get_open_endleaf()
                     self.setDataItemKey(
-                        leaf_endpoint, 'ep', True, role=Qt.CheckStateRole)
+                        leaf_endpoint, 'ep', Qt.Checked, role=Qt.CheckStateRole)
                 else:
                     self.ep = index_ep.internalPointer()
                     self.sp = index.internalPointer()
             else:
-                self.ep = None
+                self.sp = None
 
         elif col['field'] == 'ep':
             # if no startpoint selected, also select startpoint
@@ -431,7 +440,7 @@ class LeggerTreeModel(BaseTreeModel):
                 index_sp = self.find_older(start_index=index, key='sp', value=True)
                 if index_sp is None:
                     self.setDataItemKey(
-                        self.rootItem.child(0), 'sp', True, role=Qt.CheckStateRole)
+                        self.rootItem.child(0), 'sp', Qt.Checked, role=Qt.CheckStateRole)
                 else:
                     self.ep = index.internalPointer()
                     self.sp = index_sp.internalPointer()

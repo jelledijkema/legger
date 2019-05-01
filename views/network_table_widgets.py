@@ -146,10 +146,10 @@ class StartpointTreeWidget(QTreeView):
             item = self.model().data(index, Qt.UserRole)
             if item.area.get('selected'):
                 # deselect
-                self.model().setDataItemKey(item, 'selected', False)
+                self.model().setDataItemKey(item, 'selected', Qt.Unchecked)
             else:
                 # select
-                self.model().setDataItemKey(item, 'selected', True)
+                self.model().setDataItemKey(item, 'selected', Qt.Checked)
 
     def eventFilter(self, widget, event):
         if widget is self.viewport():
@@ -186,7 +186,7 @@ class StartpointTreeWidget(QTreeView):
 
     def hover_exit(self, index):
         item = index.internalPointer()
-        self.model().setDataItemKey(item, 'hover', None)
+        self.model().setDataItemKey(item, 'hover', Qt.Unchecked)
 
     def hover_enter(self, index):
         item = index.internalPointer()
@@ -240,10 +240,10 @@ class LeggerTreeWidget(QTreeView):
             item = self.model().data(index, Qt.UserRole)
             if item.hydrovak.get('selected'):
                 # deselect
-                self.model().setDataItemKey(item, 'selected', False)
+                self.model().setDataItemKey(item, 'selected', Qt.Unchecked)
             else:
                 # select
-                self.model().setDataItemKey(item, 'selected', True)
+                self.model().setDataItemKey(item, 'selected', Qt.Checked)
 
     def eventFilter(self, widget, event):
         if widget is self.viewport():
@@ -280,11 +280,11 @@ class LeggerTreeWidget(QTreeView):
 
     def hover_exit(self, index):
         item = index.internalPointer()
-        self.model().setDataItemKey(item, 'hover', None)
+        self.model().setDataItemKey(item, 'hover', Qt.Unchecked)
 
     def hover_enter(self, index):
         item = index.internalPointer()
-        self.model().setDataItemKey(item, 'hover', True)
+        self.model().setDataItemKey(item, 'hover', Qt.Checked)
 
     def setModel(self, model):
         super(LeggerTreeWidget, self).setModel(model)
