@@ -280,11 +280,11 @@ class LeggerTreeWidget(QTreeView):
 
     def hover_exit(self, index):
         item = index.internalPointer()
-        #self.model().setDataItemKey(item, 'hover', Qt.Unchecked)
+        self.model().setDataItemKey(item, 'hover', Qt.Unchecked)
 
     def hover_enter(self, index):
         item = index.internalPointer()
-        #self.model().setDataItemKey(item, 'hover', Qt.Checked)
+        self.model().setDataItemKey(item, 'hover', Qt.Checked)
 
     def setModel(self, model):
         super(LeggerTreeWidget, self).setModel(model)
