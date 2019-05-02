@@ -13,7 +13,6 @@ from PyQt4.QtCore import pyqtSignal
 from PyQt4.QtGui import QComboBox, QWidget
 from legger.sql_models.legger import BegroeiingsVariant, HydroObject, get_or_create
 from legger.sql_models.legger_database import LeggerDatabase
-from legger.sql_models.legger_views import create_legger_views
 from legger.utils.profile_match_a import doe_profinprof, maaktabellen
 from legger.utils.read_tdi_results import (get_timestamps, read_tdi_culvert_results, read_tdi_results,
                                            write_tdi_culvert_results_to_db, write_tdi_results_to_db)
@@ -109,7 +108,7 @@ class ProfileCalculationWidget(QWidget):  # , FORM_CLASS):
         self.last_surge_text = "kies opstuwingsnorm"
 
         # fill surge combobox
-        surge_choices = [self.last_surge_text] + ['%s' % s for s in [1.5, 2.0, 2.5, 3.0, 3.5, 4.0, 4.5, 5.0]]
+        surge_choices = ['%s' % s for s in [1.5, 2.0, 2.5, 3.0, 3.5, 4.0, 4.5, 5.0]]
         self.surge_combo_box.insertItems(0, surge_choices)
         self.surge_combo_box.setCurrentIndex(3)
 
@@ -185,12 +184,14 @@ class ProfileCalculationWidget(QWidget):  # , FORM_CLASS):
         session = db.get_session()
         session.query(HydroObject)
 
-        timestamp = 'laatst' if self.timestep == 0 else '{0} op {1:.0f} s'.format(self.timestep + 1,
-                                                                                  self.timestamps[self.timestep])
+        timestamp = 'laatst' if self.timestep == 0 else '{0} op {1:.0f} s'.format(
+            self.timestep + 1,
+            self.timestamps[self.timestep])
+
         self.feedbackmessage = 'Neem tijdstap {0}'.format(timestamp)
 
-        # try:
-        if True:
+        result = None
+        try:
             # read 3di channel results
             result = read_tdi_results(
                 self.path_model_db,
@@ -201,26 +202,25 @@ class ProfileCalculationWidget(QWidget):  # , FORM_CLASS):
             )
             self.feedbackmessage += "\nDatabases zijn gekoppeld."
 
-        # except Exception, e:
-        #     self.feedbackmessage += "\nDatabases zijn niet gekoppeld. melding: {0}\n".format(e.message)
-        # finally:
-        #     self.feedbacktext.setText(self.feedbackmessage)
-
-        try:
-            # write 3di channel result to legger spatialite
-            write_tdi_results_to_db(
-                result,
-                self.polder_datasource)
-
-            con_legger = dbapi.connect(self.polder_datasource)
-            create_legger_views(con_legger)
-
-            self.feedbackmessage = self.feedbackmessage + "\n3Di resultaten weggeschreven naar polder database."
-        except:
-            self.feedbackmessage = self.feedbackmessage + "\nFout in wegschrijven 3Di resultaten naar polder database."
+        except Exception, e:
+            self.feedbackmessage += "\nDatabases zijn niet gekoppeld. melding: {0}\n".format(e.message)
         finally:
             self.feedbacktext.setText(self.feedbackmessage)
 
+        if result is not None:
+            try:
+                # write 3di channel result to legger spatialite
+                write_tdi_results_to_db(
+                    result,
+                    self.polder_datasource)
+
+                self.feedbackmessage = self.feedbackmessage + "\n3Di resultaten weggeschreven naar polder database."
+            except:
+                self.feedbackmessage = self.feedbackmessage + "\nFout in wegschrijven 3Di resultaten naar polder database."
+            finally:
+                self.feedbacktext.setText(self.feedbackmessage)
+
+        culv_results = None
         try:
             # read 3di culvert results
             culv_results = read_tdi_culvert_results(
@@ -236,15 +236,15 @@ class ProfileCalculationWidget(QWidget):  # , FORM_CLASS):
         finally:
             self.feedbacktext.setText(self.feedbackmessage)
 
-        try:
-            # write 3di culvert results to legger spatialite
-            write_tdi_culvert_results_to_db(culv_results,
-                                            self.polder_datasource)
-            self.feedbackmessage = self.feedbackmessage + "\n3Di culvert resultaten weggeschreven."
-        except:
-            self.feedbackmessage = self.feedbackmessage + "\nFout, 3Di culvert resultaten niet weggeschreven."
-        finally:
-            self.feedbacktext.setText(self.feedbackmessage)
+        if culv_results is not None:
+            try:
+                # write 3di culvert results to legger spatialite
+                write_tdi_culvert_results_to_db(culv_results, self.polder_datasource)
+                self.feedbackmessage = self.feedbackmessage + "\n3Di culvert resultaten weggeschreven."
+            except:
+                self.feedbackmessage = self.feedbackmessage + "\nFout, 3Di culvert resultaten niet weggeschreven."
+            finally:
+                self.feedbacktext.setText(self.feedbackmessage)
 
     def explain_step2(self):
         """
@@ -278,11 +278,6 @@ class ProfileCalculationWidget(QWidget):  # , FORM_CLASS):
         db.create_and_check_fields()
         # do one query, don't know what the reason was for this...
         session = db.get_session()
-
-        # delete existing variants
-        # session.execute("Verwijder van varianten")
-        # session.execute("Verwijder begroeiingsvariant")
-        session.commit()
 
         get_or_create(session, BegroeiingsVariant, naam='standaard',
                       defaults={'friction': Kb, 'is_default': True})

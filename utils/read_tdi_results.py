@@ -10,10 +10,10 @@ import math
 from qgis.core import QgsGeometry, QgsLineStringV2, QgsPoint
 
 try:
-    from ThreeDiToolbox.datasource.netcdf_groundwater_h5py import NetcdfGroundwaterDataSourceH5py as NetcdfGroundwaterDataSource
+    from ThreeDiToolbox.datasource.netcdf_groundwater_h5py import \
+        NetcdfGroundwaterDataSourceH5py as NetcdfGroundwaterDataSource
 except ImportError:
     from ThreeDiToolbox.datasource.netcdf_groundwater import NetcdfGroundwaterDataSource
-
 
 from legger.utils.geom_collections.lines import LineCollection
 from legger.utils.geometries import LineString
@@ -21,7 +21,6 @@ from legger.utils.geometries import shape
 from legger.sql_models.legger import DuikerSifonHevel, HydroObject
 from legger.sql_models.legger_database import LeggerDatabase
 from pyspatialite import dbapi2 as dbapi
-
 
 log = logging.getLogger(__name__)
 
@@ -142,6 +141,26 @@ def read_tdi_results(path_model_db, path_result_db,
             }
         })
 
+    # if channel does not match, flowlines are used (relevant for culverts, weir.)
+    flowline_col = LineCollection()
+
+    flowline_cursor = con_res.execute(
+        "SELECT "
+        "id, "
+        "ASGEOJSON(TRANSFORM(the_geom, 28992)) as geojson "
+        "FROM flowlines "
+        "WHERE type in ('v2_channel', 'v2_culvert', 'v2_orifice', 'v2_weir');"
+    )
+
+    for flowline in flowline_cursor.fetchall():
+        flowline_col.write({
+            'geometry': json.loads(flowline['geojson']),
+            'properties': {
+                'id': flowline['id'],
+                'q_end': qts[flowline['id'] - 1]
+            }
+        })
+
     hydro_cursor = con_legger.execute(
         'SELECT '
         'id, '
@@ -154,7 +173,7 @@ def read_tdi_results(path_model_db, path_result_db,
     # loop over all hydroobjects and find flowline through link with channel
     for hydroobject in hydro_cursor.fetchall():
 
-        if hydroobject['id'] in [198616, 198362, 659550]:
+        if hydroobject[0] in [157078]:
             a = 1
 
         line = create_geom_line(json.loads(hydroobject['geojson'])['coordinates'])
@@ -182,7 +201,7 @@ def read_tdi_results(path_model_db, path_result_db,
         points_on_line = [
             line.interpolate((float(nr) / 10.0) * length)  # normalized=True
             for nr in range(1, 10)
-            ]
+        ]
 
         # print(', '.join([str(point.x) for point in points_on_line]))
 
@@ -272,6 +291,59 @@ def read_tdi_results(path_model_db, path_result_db,
                     'channel_id': selected['properties']['id'],
                     'flowline_id': selected_fl['id'],
                     'nr_candidates': len(candidates),
+                    'score': score
+                })
+        else:
+
+            flowline_candidates = []
+            for flowline in flowline_col.filter(bbox=bbox):
+                geom_flowline = create_geom_line(flowline['geometry']['coordinates'])
+                distances = [
+                    geom_flowline.distance(point)
+                    for point in points_on_line
+                ]
+                # check how many points are matching
+                nr_matches = sum([1 for distance in distances if distance <= max_link_distance])
+
+                if nr_matches >= match_criteria:
+                    # lower score is better
+                    score = sum([
+                        min(dist, max_link_distance)
+                        for dist in distances
+                    ]) / max_link_distance
+                    flowline_candidates.append((
+                        score,
+                        flowline,
+                        geom_flowline
+                    ))
+
+            if len(flowline_candidates) > 0:
+                score, selected_fl, geom_flowline = sorted(flowline_candidates, key=lambda item: item[0])[0]
+
+                # get orientation of hydroobject vs channel
+                if line.isMultipart():
+                    vertexes = line.asMultiPolyline()
+                    d1, p1, v1 = geom_flowline.closestSegmentWithContext(vertexes[0][0])
+                    d2, p2, v2 = geom_flowline.closestSegmentWithContext(vertexes[-1][-1])
+                else:
+                    vertexes = line.asPolyline()
+                    d1, p1, v1 = geom_flowline.closestSegmentWithContext(vertexes[0])
+                    d2, p2, v2 = geom_flowline.closestSegmentWithContext(vertexes[-1])
+
+                dist1 = geom_flowline.distanceToVertex(v1) - math.sqrt(geom_flowline.sqrDistToVertexAt(p1, v1))
+                dist2 = geom_flowline.distanceToVertex(v2) - math.sqrt(geom_flowline.sqrDistToVertexAt(p2, v2))
+
+                if dist2 < dist1:
+                    factor = -1
+                else:
+                    factor = 1
+
+                hydroobjects.append({
+                    'id': hydroobject['id'],
+                    'qend': selected_fl['properties']['q_end'] * factor,
+                    'channel_id': None,
+                    'flowline_id': selected_fl['properties']['id'],
+                    'nr_candidates': len(flowline_candidates),
                     'score': score
                 })
 

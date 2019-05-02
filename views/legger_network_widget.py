@@ -568,6 +568,8 @@ class LeggerWidget(QDockWidget):
                 if self.legger_model.ep:
                     traject = self.legger_model.ep.up(self.legger_model.selected)
                     traject.reverse()
+                    if len(traject) > 0:
+                        traject.pop(0)
                 else:
                     messagebar_message(
                         'Traject nodig',
@@ -610,6 +612,9 @@ class LeggerWidget(QDockWidget):
                 if self.legger_model.ep:
                     traject = self.legger_model.ep.up(self.legger_model.selected)
                     traject.reverse()
+                    if len(traject) > 0:
+                        traject.pop(0)
+
                 else:
                     messagebar_message(
                         'Traject nodig',

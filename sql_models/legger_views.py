@@ -1,13 +1,13 @@
 def create_legger_views(session):
     session.execute(
         """
-        DROP VIEW IF EXISTS hydroobjects_kenmerken4;
+        DROP VIEW IF EXISTS hydroobjects_kenmerken;
         """
     )
 
     session.execute(
         """
-            CREATE VIEW hydroobjects_kenmerken4 AS 
+            CREATE VIEW hydroobjects_kenmerken AS 
             SELECT 
                 h.id, 
                 code, 
@@ -27,7 +27,7 @@ def create_legger_views(session):
                 geselecteerd_breedte,
                 geselecteerde_variant,
                 geselecteerde_begroeiingsvariant,
-                selectie_opmerkingen,
+                h.opmerkingen,
                 CASE 
                   WHEN h.debiet >= 0 THEN "GEOMETRY"
                   WHEN h.debiet THEN ST_REVERSE("GEOMETRY")
@@ -64,8 +64,7 @@ def create_legger_views(session):
                 v.diepte as geselecteerd_diepte,
                 v.waterbreedte as geselecteerd_breedte,
                 v.id as geselecteerde_variant,
-                v.begroeiingsvariant_id as geselecteerde_begroeiingsvariant,
-                g.opmerkingen as selectie_opmerkingen
+                v.begroeiingsvariant_id as geselecteerde_begroeiingsvariant
                 FROM geselecteerd g, varianten v
                 WHERE g.variant_id = v.id) as sel
                 ON sel.hydro_id = h.id       
@@ -73,7 +72,7 @@ def create_legger_views(session):
 
     session.execute(
         """
-        DELETE FROM views_geometry_columns WHERE view_name = 'hydroobjects_kenmerken3';
+        DELETE FROM views_geometry_columns WHERE view_name = 'hydroobjects_kenmerken';
         """
     )
 
@@ -81,14 +80,14 @@ def create_legger_views(session):
         """
             INSERT INTO views_geometry_columns (view_name, view_geometry, view_rowid, f_table_name, 
               f_geometry_column, read_only)
-            VALUES('hydroobjects_kenmerken4', 'geometry', 'id', 'hydroobject', 'geometry', 1);         
+            VALUES('hydroobjects_kenmerken', 'geometry', 'id', 'hydroobject', 'geometry', 1);         
         """)
 
     session.execute(
         """
             INSERT INTO views_geometry_columns (view_name, view_geometry, view_rowid, f_table_name, 
               f_geometry_column, read_only)
-            VALUES('hydroobjects_kenmerken4', 'line', 'id', 'hydroobject', 'geometry', 1);         
+            VALUES('hydroobjects_kenmerken', 'line', 'id', 'hydroobject', 'geometry', 1);         
         """)
 
     session.commit()
@@ -151,13 +150,13 @@ def create_legger_views(session):
 
     session.execute(
         """
-        DROP VIEW IF EXISTS begroeiingsadvies4;
+        DROP VIEW IF EXISTS begroeiingsadvies;
         """
     )
 
     session.execute(
         """
-        CREATE VIEW begroeiingsadvies4 AS
+        CREATE VIEW begroeiingsadvies AS
           SELECT
             bv.naam as advies_naam,
             a.*
@@ -245,7 +244,7 @@ def create_legger_views(session):
 
     session.execute(
         """
-        DELETE FROM views_geometry_columns WHERE view_name = 'begroeiingsadvies4';
+        DELETE FROM views_geometry_columns WHERE view_name = 'begroeiingsadvies';
         """
     )
 
@@ -253,7 +252,7 @@ def create_legger_views(session):
         """
             INSERT INTO views_geometry_columns (view_name, view_geometry, view_rowid, f_table_name, 
               f_geometry_column, read_only)
-            VALUES('begroeiingsadvies4', 'geometry', 'id', 'hydroobject', 'geometry', 1);         
+            VALUES('begroeiingsadvies', 'geometry', 'id', 'hydroobject', 'geometry', 1);         
         """)
 
 

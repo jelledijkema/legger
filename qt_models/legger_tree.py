@@ -76,7 +76,7 @@ class hydrovak_class(object):
             'selected_variant_id': 'geselecteerde_variant',
             'begroeiingsvariant_id': 'begroeiingsvariant_id',
             'selected_begroeiingsvariant_id': 'geselecteerde_begroeiingsvariant',
-            'selected_remarks': 'selectie_opmerkingen',
+            'selected_remarks': 'opmerkingen',
         }
 
         # set default values

@@ -143,6 +143,7 @@ def calc_profile_max_ditch_width(object_id, normative_flow, length, slope, max_d
     in a new dataframe.
     """
     # todo: question. why both bos and bijkerk and manning?
+    #       manning not used for begroeiingsvariants
     # initial values
     water_depth = minimal_waterdepth
     ditch_bottom_width = max_ditch_width - 2 * slope * water_depth
@@ -218,7 +219,7 @@ def calc_profile_variants(hydro_objects_satisfy, gradient_norm, friction_bos_bij
     # todo: waarom round(.., 1)?
     # First two empty tables:
     # 1st one with hydro objects that shows the amount of table variants pssoible.
-    options_table = DataFrame(data=hydro_objects_satisfy.object_id, columns=['object_id', 'possibilities_count'])
+    # options_table = DataFrame(data=hydro_objects_satisfy.object_id, columns=['object_id', 'possibilities_count'])
 
     # 2nd one a table where variants are saved.
     variants_table = DataFrame(columns=['object_id', 'object_waterdepth_id', 'slope',
@@ -309,7 +310,7 @@ def calc_profile_variants(hydro_objects_satisfy, gradient_norm, friction_bos_bij
             variants_table = variants_table.append(df_temp)
             count = 1
 
-        options_table.possibilities_count[options_table.object_id == options_table.object_id[i]] = count
+        # options_table.possibilities_count[options_table.object_id == options_table.object_id[i]] = count
         # produces a table with the options per hydro object. This is not part of the return, because it is not used.
 
     variants_table = variants_table.reset_index(drop=True)
@@ -401,14 +402,13 @@ def create_theoretical_profiles(legger_db_filepath, gradient_norm, bv):
 
         # Calculate a profile
         profile = calc_profile_max_ditch_width(object_id, normative_flow, length, slope, max_ditch_width,
-                                               gradient_norm, friction_bos_bijkerk=Kb)  # todo: Kb
+                                               gradient_norm, friction_bos_bijkerk=Kb)
 
         # Add the profile to the previous made table where the results are stored
         profile_max_ditch_width = profile_max_ditch_width.append(profile)
 
-        # todo: this function not one indent less?
-        # When all the results are stored in the table, re-index the table.
-        profile_max_ditch_width = profile_max_ditch_width.reset_index(drop=True)
+    # When all the results are stored in the table, re-index the table.
+    profile_max_ditch_width = profile_max_ditch_width.reset_index(drop=True)
 
     log.info("Finished 3: Successfully calculated profiles based on max ditch width\n")
 
@@ -444,7 +444,7 @@ def create_theoretical_profiles(legger_db_filepath, gradient_norm, bv):
 
     hydro_objects_unsatisfy = profile_max_ditch_width[profile_max_ditch_width['gradient_bos_bijkerk'] > gradient_norm]
 
-    profile_variants = calc_profile_variants(hydro_objects_satisfy, bv.friction)
+    profile_variants = calc_profile_variants(hydro_objects_satisfy, gradient_norm, bv.friction)
 
     log.info("Finished 7: variants created\n")
 

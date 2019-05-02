@@ -52,7 +52,7 @@ class LeggerMapManager(object):
 
         layer = get_layer(
             self.path_legger_db,
-            'hydroobjects_kenmerken4',
+            'hydroobjects_kenmerken',
             geometry_col)
 
         # todo: remove this filter when bidirectional islands are supported
