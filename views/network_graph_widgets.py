@@ -545,11 +545,12 @@ class LeggerSideViewPlotWidget(pg.PlotWidget):
 
         elif field in ['selected_depth', 'selected_depth_tmp']:
             pass
+            # switched off, because each individual hydrovak change triggered a repaint (slow)
+            # now triggered in function
             # self.draw_selected_lines(self._get_data())
 
         elif field in ['variant_min_depth', 'variant_max_depth']:
-            pass
-            # self.draw_base_lines(self._get_data())
+            self.draw_base_lines(self._get_data())
 
     def _get_data(self):
         if self.legger_model.ep is None:
@@ -563,6 +564,7 @@ class LeggerSideViewPlotWidget(pg.PlotWidget):
             dist = 0
 
         for line in reversed(up):
+            # skip extra 'tak' nodes
             if line.hydrovak.get('tak'):
                 continue
 

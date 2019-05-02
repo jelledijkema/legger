@@ -245,10 +245,7 @@ class LeggerWidget(QDockWidget):
                     - 'maximum' --> not implemented yet
         :return:
         """
-        # todo: function is very slow. Can be improved?
-
-        # pre_selected
-        # min_pre_selected_parent
+        output_hydrovakken = [node]
         if initial:
             variant_id = node.hydrovak.get('selected_variant_id')
             depth = node.hydrovak.get('selected_depth')
@@ -362,7 +359,7 @@ class LeggerWidget(QDockWidget):
                 loop_childs = [child]
 
         for young in loop_childs:
-            self.loop_tree(
+            hydrovakken = self.loop_tree(
                 young,
                 depth=depth,
                 initial=initial,
@@ -372,6 +369,11 @@ class LeggerWidget(QDockWidget):
                 begroeiings_strategy=begroeiings_strategy,
                 traject_nodes=traject_nodes,
             )
+            if hydrovakken is not None:
+                output_hydrovakken += hydrovakken
+
+        return output_hydrovakken
+
 
     def data_changed_legger_tree(self, index, to_index):
         """
@@ -585,8 +587,12 @@ class LeggerWidget(QDockWidget):
                     traject_nodes=traject
                 )
                 self.session.commit()
+                # trigger repaint of sideview
+                self.sideview_widget.draw_selected_lines(self.sideview_widget._get_data())
             else:
                 item.color.value = list(item.color.value)[:3] + [20]
+                # trigger repaint of sideview
+                self.sideview_widget.draw_selected_lines(self.sideview_widget._get_data())
 
         elif self.variant_model.columns[index.column()].name == 'hover':
             if item.hover.value:
@@ -612,7 +618,7 @@ class LeggerWidget(QDockWidget):
                         15)
                     return
 
-                self.loop_tree(
+                hydrovakken = self.loop_tree(
                     self.legger_model.selected,
                     depth=depth,
                     initial=False,
@@ -624,33 +630,18 @@ class LeggerWidget(QDockWidget):
                     traject_nodes=traject
                 )
 
-                # depth = item.depth.value
-                # ids = []
-                #
-                # # todo: use more accurate way
-                # def loop(node):
-                #     """
-                #     recursive loop over younger items where depth can be applied according to
-                #     available profiles
-                #     """
-                #     for young in node.younger():
-                #         if (young.hydrovak.get('variant_min_depth') is None or
-                #                 young.hydrovak.get('variant_max_depth') is None or
-                #                 (depth >= young.hydrovak.get('variant_min_depth') - precision and
-                #                  depth <= young.hydrovak.get('variant_max_depth') + precision)):
-                #             self.legger_model.setDataItemKey(young, 'selected_depth_tmp', depth)
-                #             ids.append(str(young.hydrovak.get('hydro_id')))
-                #             loop(young)
-                #
-                # self.legger_model.set_column_value('selected_depth_tmp', None)
-                # self.legger_model.setDataItemKey(self.legger_model.selected, 'selected_depth_tmp', depth)
-                # loop(self.legger_model.selected)
-
-                # self.network._virtual_tree_layer.setSubsetString(
-                #     '"hydro_id" in (\'{ids}\')'.format(ids='\',\''.join(ids)))
+                # set map visualisation of selected hydrovakken
+                self.network._virtual_tree_layer.setSubsetString(
+                    '"hydro_id" in (\'{ids}\')'.format(
+                        ids='\',\''.join([str(hydrovak.hydrovak['hydro_id']) for hydrovak in hydrovakken])))
+                # trigger repaint of sideview
+                self.sideview_widget.draw_selected_lines(self.sideview_widget._get_data())
             else:
-                self.network._virtual_tree_layer.setSubsetString('')
                 self.legger_model.set_column_value('selected_depth_tmp', None)
+                # reset map visualisation
+                self.network._virtual_tree_layer.setSubsetString('')
+                # trigger repaint of sideview
+                self.sideview_widget.draw_selected_lines(self.sideview_widget._get_data())
 
     def on_select_edit_hydrovak(self, item):
         """
