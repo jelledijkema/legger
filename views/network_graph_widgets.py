@@ -554,7 +554,7 @@ class LeggerSideViewPlotWidget(pg.PlotWidget):
 
     def _get_data(self):
         if self.legger_model.ep is None:
-            return []
+            return OrderedDict([])
         up = self.legger_model.ep.up(end=self.legger_model.sp)
         out = []
         before = up[-1]

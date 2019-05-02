@@ -1,14 +1,16 @@
 # -*- coding: utf-8 -*-
 from __future__ import division
 
-import datetime
 import logging
 import os
 
 from PyQt4 import QtCore, QtGui
 from PyQt4.QtCore import QSettings, pyqtSignal
 from PyQt4.QtGui import QFileDialog, QWidget
+from legger.sql_models.legger_views import create_legger_views
 from legger.utils.read_data_and_make_leggerdatabase import CreateLeggerSpatialite
+from legger.utils.user_message import messagebar_message
+from pyspatialite import dbapi2 as dbapi
 
 log = logging.getLogger(__name__)
 
@@ -20,6 +22,8 @@ except AttributeError:
 
 try:
     _encoding = QtGui.QApplication.UnicodeUTF8
+
+
     def _translate(context, text, disambig):
         return QtGui.QApplication.translate(context, text, disambig, _encoding)
 except AttributeError:
@@ -27,7 +31,7 @@ except AttributeError:
         return QtGui.QApplication.translate(context, text, disambig)
 
 
-class PolderSelectionWidget(QWidget):#, FORM_CLASS):
+class PolderSelectionWidget(QWidget):  # , FORM_CLASS):
     """Dialog for selecting model (spatialite and result files netCDFs)"""
     closingDialog = pyqtSignal()
 
@@ -51,7 +55,8 @@ class PolderSelectionWidget(QWidget):#, FORM_CLASS):
 
         self.var_text_DAMO.setText("...")
         self.var_text_HDB.setText("...")
-        self.var_text_leggerdatabase.setText(self.root_tool.polder_datasource) # De tekst verwijst naar de tekst in de root_tool totdat deze geupdated wordt.
+        self.var_text_leggerdatabase.setText(
+            self.root_tool.polder_datasource)  # De tekst verwijst naar de tekst in de root_tool totdat deze geupdated wordt.
 
     def closeEvent(self, event):
         """
@@ -66,17 +71,18 @@ class PolderSelectionWidget(QWidget):#, FORM_CLASS):
         self.msg_upper_row = QtGui.QMessageBox(self)
         self.msg_upper_row.setIcon(QtGui.QMessageBox.Information)
         self.msg_upper_row.setText("<b>Het selecteren van een leggerdatabase<b>")
-        self.msg_upper_row.setInformativeText("Voor de toewijzing van leggerprofielen wordt een aparte 'leggerdatabase' "
-                                              "gemaakt. Deze database is een aparte .sqlite bestand waar data uit "
-                                              "DAMO en de Hydrologendatabase (HDB) gecombineerd wordt als randvoorwaarden "
-                                              "voor de leggerprofielen, zoals breedte en talud per hydro-object.\n"
-                                              "Wanneer een nieuwe leggerdatabase gemaakt moet worden, selecteer dan bij "
-                                              "voorkeur de DAMO en HDB die ook voor de opbouw van het 3di model zijn "
-                                              "gebruikt.\n"
-                                              "Is er al een 'leggerdatabase' aangemaakt, sla deze stap dan over en zorg "
-                                              "dat dit bestand (met als extentie .sqlite) in de tweede stap geselecteerd "
-                                              "wordt. Let wel op: opnieuw uitgevoerde stappen en leggerkeuzes zullen "
-                                              "bestaande data overschrijven.")
+        self.msg_upper_row.setInformativeText(
+            "Voor de toewijzing van leggerprofielen wordt een aparte 'leggerdatabase' "
+            "gemaakt. Deze database is een aparte .sqlite bestand waar data uit "
+            "DAMO en de Hydrologendatabase (HDB) gecombineerd wordt als randvoorwaarden "
+            "voor de leggerprofielen, zoals breedte en talud per hydro-object.\n"
+            "Wanneer een nieuwe leggerdatabase gemaakt moet worden, selecteer dan bij "
+            "voorkeur de DAMO en HDB die ook voor de opbouw van het 3di model zijn "
+            "gebruikt.\n"
+            "Is er al een 'leggerdatabase' aangemaakt, sla deze stap dan over en zorg "
+            "dat dit bestand (met als extentie .sqlite) in de tweede stap geselecteerd "
+            "wordt. Let wel op: opnieuw uitgevoerde stappen en leggerkeuzes zullen "
+            "bestaande data overschrijven.")
         self.box_explanation.addWidget(self.msg_upper_row)
 
     def select_DAMO(self):
@@ -156,7 +162,6 @@ class PolderSelectionWidget(QWidget):#, FORM_CLASS):
     def create_spatialite_database(self):
         # todo:
         #  feedback if input is incorrect.
-        #  feedback of proces en of het gelukt is
 
         settings = QSettings('leggertool', 'filepaths')
         try:
@@ -183,8 +188,13 @@ class PolderSelectionWidget(QWidget):#, FORM_CLASS):
         filepath_DAMO = self.var_text_DAMO.text()
         filepath_HDB = self.var_text_HDB.text()
 
-        if not filepath_DAMO:
-            # todo: raise error
+        if not os.path.exists(filepath_DAMO):
+            messagebar_message(
+                'Aanmaken leggerdatabase mislukt',
+                'Opgegeven DAMO database bestaat niet',
+                level=2,
+                duration=10)
+
             raise Exception('Geselecteerde DAMO database mist')
 
         legger_class = CreateLeggerSpatialite(
@@ -197,6 +207,16 @@ class PolderSelectionWidget(QWidget):#, FORM_CLASS):
 
         # set root_tool as last, because this triggers other actions
         self.root_tool.polder_datasource = database
+
+        # create views
+        con_legger = dbapi.connect(self.root_tool.polder_datasource)
+        create_legger_views(con_legger)
+
+        messagebar_message(
+            'Aanmaken leggerdatabase',
+            'Aanmaken leggerdatabase is gelukt',
+            level=3,
+            duration=10)
 
     def setup_ui(self):
         self.setMinimumWidth(700)
@@ -280,7 +300,6 @@ class PolderSelectionWidget(QWidget):#, FORM_CLASS):
         self.hbox_LDB.addWidget(self.var_text_leggerdatabase)
         self.hbox_LDB.addWidget(self.load_leggerdatabase_button)
         self.box_leggerdatabase_input.addLayout(self.hbox_LDB)
-
 
         # Create groupbox and add H or VBoxes to it
         self.groupBox_explanation = QtGui.QGroupBox(self)

@@ -66,8 +66,8 @@ class LayerManager():
             ]),
             ('tbv begroeiingsgraad', [
                 ('aanwijzen', 'hydroobject', 'begroeiingsvariant_id', 'begroeiingsvariant', 'geometry', None),
-                ('begroeiingsadvies', 'begroeiingsadvies4', 'advies_id', 'begroeiingsvariant', 'geometry', None),
-                ('begroeiingsvariant', 'begroeiingsadvies4', 'aangew_bv_id', 'begroeiingsvariant',
+                ('begroeiingsadvies', 'begroeiingsadvies', 'advies_id', 'begroeiingsvariant', 'geometry', None),
+                ('begroeiingsvariant', 'begroeiingsadvies', 'aangew_bv_id', 'begroeiingsvariant',
                  'geometry', None),
                 # ('sterk min profiel', 'ruimte_view', 'ruim', 'min_max_line', 'geometry', None),
                 # ('ruimte', 'ruimte_view', 'over_width', 'min_max_line', 'geometry', None),
