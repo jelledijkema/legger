@@ -314,9 +314,9 @@ class ProfileCalculationWidget(QWidget):  # , FORM_CLASS):
         con_legger = dbapi.connect(self.polder_datasource)
         maaktabellen(con_legger.cursor())
         con_legger.commit()
-        doe_profinprof(con_legger.cursor(), con_legger.cursor())
+        resultaat = doe_profinprof(con_legger.cursor(), con_legger.cursor())
         con_legger.commit()
-
+        self.feedbacktext.setText(resultaat)
         self.feedbacktext.setText("De fit % zijn berekend.")
 
     def execute_snap_points(self):

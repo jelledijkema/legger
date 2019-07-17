@@ -101,6 +101,10 @@ class ProfileModel(BaseModel):
                            column_width=50,
                            column_name='over d')
 
+        verhang = ValueField(show=True,
+                           column_width=50,
+                           column_name='verhang')
+
         hover = ValueField(show=False,
                            default_value=False)
 
