@@ -4,6 +4,7 @@ from qgis.core import QgsSpatialIndex, QgsFeature, QgsGeometry, QgsRectangle
 
 from collections import OrderedDict
 
+
 # use fiona collection for 'normal' use
 
 
@@ -101,7 +102,6 @@ class BaseCollection(object):
             qbbox = QgsRectangle(*bbox)
             selected.intersection_update(set(self._spatial_index.intersects(qbbox)))
 
-
         if mask:
             # todo
             pass
@@ -129,16 +129,25 @@ class BaseCollection(object):
         for record in records:
             record['id'] = nr
             self.ordered_dict[nr] = record
-            geom = shape(record['geometry'])
+
             # rtree
             # self._spatial_index.insert(nr, geom)
             # QGIS:
             feature = QgsFeature()
             feature.setFeatureId(nr)
-            qgeom = QgsGeometry()
-            qgeom.fromWkb(geom.to_wkb())
-            feature.setGeometry(qgeom)
+            try:
+                geom = shape(record['geometry'])
+                qgeom = QgsGeometry()
+                qgeom.fromWkb(geom.to_wkb())
 
+            except:
+                wkt = "{}({})".format(
+                    record['geometry']['type'],
+                    ",".join(["{} {}".format(*c) for c in record['geometry']['coordinates']]))
+                qgeom = QgsGeometry()
+                qgeom.fromWkt(wkt)
+
+            feature.setGeometry(qgeom)
             self._spatial_index.insertFeature(feature)
             nr += 1
 

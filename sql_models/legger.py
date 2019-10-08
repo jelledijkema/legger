@@ -24,10 +24,24 @@ def get_or_create(session, model, defaults=None, **kwargs):
         return instance, True
 
 
+class Categorie(Base):
+    __tablename__ = 'categorie'
+
+    categorie = Column(Integer(), primary_key=True, index=True)
+    naam = Column(String(20))
+    variant_diepte_min = Column(Float())
+    variant_diepte_max = Column(Float())
+    default_talud = Column(Float())
+
+    def __str__(self):
+        return u'categorie {0} - {1}'.format(
+            self.categorie, self.naam)
+
+
 class BegroeiingsVariant(Base):
     __tablename__ = 'begroeiingsvariant'
 
-    id = Column(Integer(), primary_key=True, autoincrement=True)
+    id = Column(Integer(), primary_key=True, autoincrement=True, index=True)
     naam = Column(String(20))
     friction = Column(Float())
     is_default = Column(Boolean, default=False)
@@ -48,7 +62,7 @@ class Waterdeel(Base):
     __tablename__ = 'waterdeel'
     extend_existing = True
 
-    id = Column(Integer, primary_key=True)
+    id = Column(Integer, primary_key=True, index=True)
     shape_length = Column(Float)
     shape_area = Column(Float)
     geometry = Column("GEOMETRY", Geometry(geometry_type='MULTIPOLYGON', srid=28992))
@@ -62,18 +76,21 @@ class HydroObject(Base):
     __tablename__ = 'hydroobject'
     extend_existing = True
 
-    id = Column(Integer, primary_key=True)
+    id = Column(Integer, primary_key=True, index=True)
     geometry = Column("GEOMETRY", Geometry(geometry_type='MULTILINESTRING', srid=28992))
     code = Column(String(50), index=True)
     categorieoppwaterlichaam = Column(Integer)
     streefpeil = Column(Float)
+    debiet_3di = Column(Float)
+    debiet_aangepast = Column(Float)
     debiet = Column(Float)
     channel_id = Column(Integer)  # link to 3di id
     flowline_id = Column(Integer)  # link to 3di id
     score = Column(Float)
     begroeiingsvariant_id = Column(Integer,
-                                   ForeignKey(BegroeiingsVariant.__tablename__ + ".id"))
-
+                                   ForeignKey(BegroeiingsVariant.__tablename__ + ".id"),
+                                   index=True)
+    opmerkingen = Column(String())
     # shape_length = Column(Float)
 
     profielen = relationship("Profielen",
@@ -103,7 +120,6 @@ class HydroObject(Base):
                                       # primaryjoin="Varianten.begroeiingsvariant_id == BegroeiingsVariant.id",
                                       uselist=False)
 
-
     def __str__(self):
         return u'Hydro object {0}'.format(
             self.code)
@@ -112,12 +128,13 @@ class HydroObject(Base):
 class Profielen(Base):
     __tablename__ = 'profielen'
 
-    id = Column(Integer, primary_key=True)
+    id = Column(Integer, primary_key=True, index=True)
     proident = Column(String(24))
     bron_profiel = Column(String(50))
     pro_id = Column(Integer, index=True)
     hydro_id = Column(Integer,
-                      ForeignKey(HydroObject.__tablename__ + ".id"))
+                      ForeignKey(HydroObject.__tablename__ + ".id"),
+                      index=True)
     # shape_lengte = Column(Float)
     hydro = relationship(HydroObject,
                          back_populates="profielen")
@@ -134,7 +151,7 @@ class Profielen(Base):
 class Profielpunten(Base):
     __tablename__ = 'profielpunten'
 
-    objectid = Column(Integer, primary_key=True, autoincrement=True)
+    objectid = Column(Integer, primary_key=True, autoincrement=True, index=True)
     pbp_id = Column(Integer)
     prw_id = Column(Integer)
     pbpident = Column(String(24))
@@ -143,7 +160,8 @@ class Profielpunten(Base):
     iws_hoogte = Column(Float)
     afstand = Column(Float)
     pro_pro_id = Column(Integer,
-                        ForeignKey(Profielen.__tablename__ + '.pro_id'))
+                        ForeignKey(Profielen.__tablename__ + '.pro_id'),
+                        index=True)
     geometry = Column("GEOMETRY", Geometry(geometry_type='POINT', srid=28992))
 
     profiel = relationship(
@@ -158,7 +176,7 @@ class Profielpunten(Base):
 class Kenmerken(Base):
     __tablename__ = 'kenmerken'
 
-    id = Column(Integer, primary_key=True)
+    id = Column(Integer, primary_key=True, index=True)
     diepte = Column(Float)
     bron_diepte = Column(String(50))
     bodemhoogte = Column(Float)
@@ -170,8 +188,8 @@ class Kenmerken(Base):
     grondsoort = Column(String(50))
     bron_grondsoort = Column(String(50))
     hydro_id = Column(Integer,
-                      ForeignKey(HydroObject.__tablename__ + ".id"))
-
+                      ForeignKey(HydroObject.__tablename__ + ".id"),
+                      index=True)
     na_lengte = Column(Float)
     voor_lengte = Column(Float)
     new_category = Column(Integer)
@@ -188,10 +206,12 @@ class Kenmerken(Base):
 class Varianten(Base):
     __tablename__ = 'varianten'
 
-    id = Column(String(), primary_key=True)
+    id = Column(String(), primary_key=True, index=True)
     begroeiingsvariant_id = Column(Integer,
-                                   ForeignKey(BegroeiingsVariant.__tablename__ + ".id"))
-    diepte = Column(Float)
+                                   ForeignKey(BegroeiingsVariant.__tablename__ + ".id"),
+                                   index=True)
+    diepte = Column(Float,
+                    index=True)
     waterbreedte = Column(Float)
     bodembreedte = Column(Float)
     talud = Column(Float)
@@ -199,7 +219,8 @@ class Varianten(Base):
     verhang_bos_bijkerk = Column(Float)
     opmerkingen = Column(String())
     hydro_id = Column(Integer,
-                      ForeignKey(HydroObject.__tablename__ + ".id"))
+                      ForeignKey(HydroObject.__tablename__ + ".id"),
+                      index=True)
 
     begroeiingsvariant = relationship(BegroeiingsVariant,
                                       # foreign_keys='begroeiingsvariant_id',
@@ -230,11 +251,12 @@ class GeselecteerdeProfielen(Base):
 
     hydro_id = Column(Integer,
                       ForeignKey(HydroObject.__tablename__ + ".id"),
-                      primary_key=True)
+                      primary_key=True,
+                      index=True)
     variant_id = Column(String(),
-                        ForeignKey(Varianten.__tablename__ + ".id"))
+                        ForeignKey(Varianten.__tablename__ + ".id"),
+                        index=True)
     selected_on = Column(DateTime, default=datetime.datetime.utcnow)
-    opmerkingen = Column(String())
 
     hydro = relationship(HydroObject,
                          back_populates="geselecteerd")
@@ -248,8 +270,12 @@ class ProfielFiguren(Base):
 
     # object_id = Column(Integer, primary_key=True)
     hydro_id = Column('id_hydro', Integer,
-                      ForeignKey(HydroObject.__tablename__ + ".id"))
-    profid = Column(String(16), ForeignKey(Varianten.__tablename__ + ".id"), primary_key=True, )
+                      ForeignKey(HydroObject.__tablename__ + ".id"),
+                      index=True)
+    profid = Column(String(16),
+                    ForeignKey(Varianten.__tablename__ + ".id"),
+                    primary_key=True,
+                    index=True)
     type_prof = Column(String(1))
     coord = Column(String())
     peil = Column(Float)
@@ -282,7 +308,7 @@ class DuikerSifonHevel(Base):
     __tablename__ = 'duikersifonhevel'
     extend_existing = True
 
-    id = Column(Integer, primary_key=True)
+    id = Column(Integer, primary_key=True, index=True)
     geometry = Column("GEOMETRY", Geometry(geometry_type='MULTILINESTRING', srid=28992))
     code = Column(String(50), index=True)
     categorie = Column(Integer)
@@ -294,9 +320,9 @@ class DuikerSifonHevel(Base):
     vormkoker = Column(Float)
     # shape_lengte = Column(Float)
 
-    debiet = Column(Float)  # extra?
-    channel_id = Column(Integer)  # extra?
-    flowline_id = Column(Integer)  # extra?
+    debiet = Column(Float)  # extra
+    channel_id = Column(Integer)  # extra
+    flowline_id = Column(Integer)  # extra
 
     def __str__(self):
         return u'DuikerSifonHevel {0}'.format(

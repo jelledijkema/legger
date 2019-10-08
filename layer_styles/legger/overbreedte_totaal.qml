@@ -84,7 +84,7 @@
           <prop k="offset_unit" v="MapUnit"/>
           <prop k="use_custom_dash" v="0"/>
           <prop k="width_dd_active" v="1"/>
-          <prop k="width_dd_expression" v="to_real( &quot;geselecteerd_waterbreedte&quot; )&#xd;&#xa;+ to_real(  &quot;overbreedte_links&quot;)&#xd;&#xa;+ to_real(  &quot;overbreedte_rechts&quot;  )"/>
+          <prop k="width_dd_expression" v="CASE &#xd;&#xa;WHEN &quot;geselecteerd_waterbreedte&quot; IS NULL THEN -1&#xd;&#xa;WHEN &quot;overbreedte_links&quot; IS NULL &#xd;&#xa;THEN &#xd;&#xa; &quot;breedte&quot; &#xd;&#xa;ELSE &#xd;&#xa;to_real( &quot;geselecteerd_waterbreedte&quot; )&#xd;&#xa;+ to_real(  &quot;overbreedte_links&quot;)&#xd;&#xa;+ to_real(  &quot;overbreedte_rechts&quot;  )&#xd;&#xa;END"/>
           <prop k="width_dd_field" v=""/>
           <prop k="width_dd_useexpr" v="1"/>
           <prop k="width_map_unit_scale" v="0,0,0,0,0,0"/>
@@ -127,7 +127,7 @@
     <property key="labeling/distMapUnitScale" value="0,0,0,0,0,0"/>
     <property key="labeling/drawLabels" value="true"/>
     <property key="labeling/enabled" value="true"/>
-    <property key="labeling/fieldName" value="'overbreedte: ' || &#xd;&#xa;round(to_real(  &quot;overbreedte_links&quot;)&#xd;&#xa;+ to_real(  &quot;overbreedte_rechts&quot;    ),2) &#xd;&#xa;|| ' m'"/>
+    <property key="labeling/fieldName" value="CASE WHEN fit_score IS NULL&#xd;&#xa;THEN 'BGT overbreedte: ' || &#xd;&#xa;round( &quot;breedte&quot; -&#xd;&#xa;&#x9;to_real( &quot;geselecteerd_waterbreedte&quot; ),2)&#xd;&#xa;ELSE &#xd;&#xa;'gemeten overbreedte: ' || &#xd;&#xa;round(to_real(  &quot;overbreedte_links&quot;)&#xd;&#xa;+ to_real(  &quot;overbreedte_rechts&quot;    ),2) &#xd;&#xa;END&#xd;&#xa;"/>
     <property key="labeling/fitInPolygonOnly" value="false"/>
     <property key="labeling/fontBold" value="false"/>
     <property key="labeling/fontCapitals" value="0"/>
@@ -169,7 +169,7 @@
     <property key="labeling/offsetType" value="0"/>
     <property key="labeling/placeDirectionSymbol" value="0"/>
     <property key="labeling/placement" value="3"/>
-    <property key="labeling/placementFlags" value="12"/>
+    <property key="labeling/placementFlags" value="10"/>
     <property key="labeling/plussign" value="false"/>
     <property key="labeling/predefinedPositionOrder" value="TR,TL,BR,BL,R,L,TSR,BSR"/>
     <property key="labeling/preserveRotation" value="true"/>
@@ -354,7 +354,7 @@
       <column width="-1" hidden="0" type="field" name="breedte"/>
       <column width="-1" hidden="0" type="field" name="taludvoorkeur"/>
       <column width="-1" hidden="0" type="field" name="lengte"/>
-      <column width="-1" hidden="0" type="field" name="geselecteerd_op"/>
+      <column width="251" hidden="0" type="field" name="geselecteerd_op"/>
       <column width="159" hidden="0" type="field" name="geselecteerde_diepte"/>
       <column width="142" hidden="0" type="field" name="geselecteerd_waterbreedte"/>
       <column width="176" hidden="0" type="field" name="geselecteerde_bodembreedte"/>

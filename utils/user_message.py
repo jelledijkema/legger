@@ -4,7 +4,7 @@ except Exception:
     iface = None
 
 
-def messagebar_message(title, msg, level=None, duration=0):
+def messagebar_message(title, msg, level=None, duration=0, prevent_duplicates=True):
     """ Show message in the message bar (just above the map)
     args:
         title: (str) title of messages, showed bold in the start of the message
@@ -21,4 +21,10 @@ def messagebar_message(title, msg, level=None, duration=0):
         print("%s: %s" % (title, msg))
 
     if iface is not None:
+        if (prevent_duplicates and
+                iface.messageBar().currentItem() is not None and
+                hasattr(iface.messageBar().currentItem(), 'title') and
+                iface.messageBar().currentItem().title() == title):
+            return
+
         iface.messageBar().pushMessage(title, msg, level, duration)

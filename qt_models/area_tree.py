@@ -10,7 +10,8 @@ HORIZONTAL_HEADERS = (
     {'field': 'selected', 'show': False, 'field_type': CHECKBOX_FIELD, 'column_width': 50,
      'single_selection': True},
     {'field': 'hover', 'show': False, 'field_type': CHECKBOX_FIELD, 'column_width': 50},
-    {'field': 'distance', 'header': 'omvang', 'column_width': 50},
+    {'field': 'weight', 'header': 'prioriteit', 'column_width': 50},
+    {'field': 'distance', 'header': 'afstand', 'column_width': 50, 'show': False},
 )
 
 

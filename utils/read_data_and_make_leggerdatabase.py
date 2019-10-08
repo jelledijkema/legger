@@ -100,6 +100,9 @@ class CreateLeggerSpatialite(object):
         # Stap 4: verwijder onnodige tabellen
         self.delete_imported_tables()
 
+        # Stap 5: add default settings to tabellen
+        self.add_default_settings()
+
     def create_spatialite(self, delete_existing=True):
         # Step 1: make empty legger database
 
@@ -260,6 +263,14 @@ class CreateLeggerSpatialite(object):
         session.execute("VACUUM")
         session.commit()
 
+    def add_default_settings(self):
+        session = self.db.get_session()
+        session.execute("INSERT INTO categorie(categorie, naam, variant_diepte_min, variant_diepte_max, default_talud) VALUES "
+                        "(1, 'primair', 0.3, 8, 1.5),"
+                        "(2, 'secundair', 0.3, 2.5, 1.5),"
+                        "(3, 'tertaire', 0.3, 1, 1.5),"
+                        "(4, 'overig', 0.3, 1, 1.5)")
+        session.commit()
 
 def main():
     test_data_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), os.pardir, 'tests', 'data'))
@@ -279,6 +290,7 @@ def main():
     )
 
     legger_class.full_import_ogr2ogr()
+
 
 
 if __name__ == '__main__':

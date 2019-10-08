@@ -13,13 +13,13 @@ from PyQt4.QtCore import pyqtSignal
 from PyQt4.QtGui import QComboBox, QWidget
 from legger.sql_models.legger import BegroeiingsVariant, HydroObject, get_or_create
 from legger.sql_models.legger_database import LeggerDatabase
-from legger.sql_models.legger_views import create_legger_views
 from legger.utils.profile_match_a import doe_profinprof, maaktabellen
 from legger.utils.read_tdi_results import (get_timestamps, read_tdi_culvert_results, read_tdi_results,
                                            write_tdi_culvert_results_to_db, write_tdi_results_to_db)
 from legger.utils.snap_points import snap_points
 from legger.utils.theoretical_profiles import Kb, create_theoretical_profiles, write_theoretical_profile_results_to_db
 from pyspatialite import dbapi2 as dbapi
+from legger.utils.redirect_flows_to_main_branches import redirect_flows
 
 log = logging.getLogger(__name__)
 
@@ -109,13 +109,9 @@ class ProfileCalculationWidget(QWidget):  # , FORM_CLASS):
         self.last_surge_text = "kies opstuwingsnorm"
 
         # fill surge combobox
-        surge_choices = [self.last_surge_text] + ['%s' % s for s in [2.0, 2.5, 3.0, 3.5, 4.0, 4.5, 5.0]]
+        surge_choices = ['%s' % s for s in [1.5, 2.0, 2.5, 3.0, 3.5, 4.0, 4.5, 5.0]]
         self.surge_combo_box.insertItems(0, surge_choices)
-        self.surge_combo_box.setCurrentIndex(0)
-
-        # set surge combobox listeners
-        self.surge_combo_box.currentIndexChanged.connect(
-            self.surge_selection_change)
+        self.surge_combo_box.setCurrentIndex(3)
 
     def timestep_selection_change(self, nr):
         """Proces new selected timestep in combobox
@@ -128,18 +124,6 @@ class ProfileCalculationWidget(QWidget):  # , FORM_CLASS):
             self.timestep = -1
         else:
             self.timestep = nr - 1
-
-    def surge_selection_change(self, nr):
-        """Proces new selected timestep in combobox
-
-        :param nr:
-        :return:
-        """
-        text = self.surge_combo_box.currentText()
-        if text == self.last_surge_text:
-            self.surge_selection = 3.0
-        else:
-            self.surge_selection = text
 
     def closeEvent(self, event):
         """
@@ -201,12 +185,14 @@ class ProfileCalculationWidget(QWidget):  # , FORM_CLASS):
         session = db.get_session()
         session.query(HydroObject)
 
-        timestamp = 'laatst' if self.timestep == 0 else '{0} op {1:.0f} s'.format(self.timestep + 1,
-                                                                                  self.timestamps[self.timestep])
+        timestamp = 'laatst' if self.timestep == 0 else '{0} op {1:.0f} s'.format(
+            self.timestep + 1,
+            self.timestamps[self.timestep])
+
         self.feedbackmessage = 'Neem tijdstap {0}'.format(timestamp)
 
-        # try:
-        if True:
+        result = None
+        try:
             # read 3di channel results
             result = read_tdi_results(
                 self.path_model_db,
@@ -217,26 +203,25 @@ class ProfileCalculationWidget(QWidget):  # , FORM_CLASS):
             )
             self.feedbackmessage += "\nDatabases zijn gekoppeld."
 
-        # except Exception, e:
-        #     self.feedbackmessage += "\nDatabases zijn niet gekoppeld. melding: {0}\n".format(e.message)
-        # finally:
-        #     self.feedbacktext.setText(self.feedbackmessage)
-
-        try:
-            # write 3di channel result to legger spatialite
-            write_tdi_results_to_db(
-                result,
-                self.polder_datasource)
-
-            con_legger = dbapi.connect(self.polder_datasource)
-            create_legger_views(con_legger)
-
-            self.feedbackmessage = self.feedbackmessage + "\n3Di resultaten weggeschreven naar polder database."
-        except:
-            self.feedbackmessage = self.feedbackmessage + "\nFout in wegschrijven 3Di resultaten naar polder database."
+        except Exception, e:
+            self.feedbackmessage += "\nDatabases zijn niet gekoppeld. melding: {0}\n".format(e.message)
         finally:
             self.feedbacktext.setText(self.feedbackmessage)
 
+        if result is not None:
+            try:
+                # write 3di channel result to legger spatialite
+                write_tdi_results_to_db(
+                    result,
+                    self.polder_datasource)
+
+                self.feedbackmessage = self.feedbackmessage + "\n3Di resultaten weggeschreven naar polder database."
+            except:
+                self.feedbackmessage = self.feedbackmessage + "\nFout in wegschrijven 3Di resultaten naar polder database."
+            finally:
+                self.feedbacktext.setText(self.feedbackmessage)
+
+        culv_results = None
         try:
             # read 3di culvert results
             culv_results = read_tdi_culvert_results(
@@ -252,15 +237,21 @@ class ProfileCalculationWidget(QWidget):  # , FORM_CLASS):
         finally:
             self.feedbacktext.setText(self.feedbackmessage)
 
-        try:
-            # write 3di culvert results to legger spatialite
-            write_tdi_culvert_results_to_db(culv_results,
-                                            self.polder_datasource)
-            self.feedbackmessage = self.feedbackmessage + "\n3Di culvert resultaten weggeschreven."
-        except:
-            self.feedbackmessage = self.feedbackmessage + "\nFout, 3Di culvert resultaten niet weggeschreven."
-        finally:
-            self.feedbacktext.setText(self.feedbackmessage)
+        if culv_results is not None:
+            try:
+                # write 3di culvert results to legger spatialite
+                write_tdi_culvert_results_to_db(culv_results, self.polder_datasource)
+                self.feedbackmessage = self.feedbackmessage + "\n3Di culvert resultaten weggeschreven."
+            except:
+                self.feedbackmessage = self.feedbackmessage + "\nFout, 3Di culvert resultaten niet weggeschreven."
+            finally:
+                self.feedbacktext.setText(self.feedbackmessage)
+
+    def execute_redirect_flows(self):
+
+        redirect_flows(self.iface, self.polder_datasource)
+        self.feedbacktext.setText("Debieten zijn aangepast.")
+
 
     def explain_step2(self):
         """
@@ -295,11 +286,6 @@ class ProfileCalculationWidget(QWidget):  # , FORM_CLASS):
         # do one query, don't know what the reason was for this...
         session = db.get_session()
 
-        # delete existing variants
-        # session.execute("Verwijder van varianten")
-        # session.execute("Verwijder begroeiingsvariant")
-        session.commit()
-
         get_or_create(session, BegroeiingsVariant, naam='standaard',
                       defaults={'friction': Kb, 'is_default': True})
 
@@ -310,18 +296,20 @@ class ProfileCalculationWidget(QWidget):  # , FORM_CLASS):
                       defaults={'friction': 0.5 * Kb})
         session.commit()
 
+        opstuw_norm = float(self.surge_combo_box.currentText())
+
         for bv in session.query(BegroeiingsVariant).all():
 
-            try:
-                profiles = create_theoretical_profiles(self.polder_datasource, bv)
+            if True: # try:
+                profiles = create_theoretical_profiles(self.polder_datasource, opstuw_norm, bv)
                 self.feedbackmessage = "Profielen zijn berekend."
-            except:
-                self.feedbackmessage = "Fout, profielen konden niet worden berekend."
-            finally:
-                self.feedbacktext.setText(self.feedbackmessage)
+            # except:
+            #     self.feedbackmessage = "Fout, profielen konden niet worden berekend."
+            # finally:
+            #     self.feedbacktext.setText(self.feedbackmessage)
 
             try:
-                write_theoretical_profile_results_to_db(session, profiles, self.polder_datasource, bv)
+                write_theoretical_profile_results_to_db(session, profiles, opstuw_norm, bv)
                 self.feedbackmessage = self.feedbackmessage + ("\nProfielen opgeslagen in legger db.")
             except:
                 self.feedbackmessage = self.feedbackmessage + ("\nFout, profielen niet opgeslagen in legger database.")
@@ -333,9 +321,9 @@ class ProfileCalculationWidget(QWidget):  # , FORM_CLASS):
         con_legger = dbapi.connect(self.polder_datasource)
         maaktabellen(con_legger.cursor())
         con_legger.commit()
-        doe_profinprof(con_legger.cursor(), con_legger.cursor())
+        resultaat = doe_profinprof(con_legger.cursor(), con_legger.cursor())
         con_legger.commit()
-
+        self.feedbacktext.setText(resultaat)
         self.feedbacktext.setText("De fit % zijn berekend.")
 
     def execute_snap_points(self):
@@ -404,11 +392,17 @@ class ProfileCalculationWidget(QWidget):  # , FORM_CLASS):
         self.step1_explanation_button.setObjectName(_fromUtf8("uitleg_stap1"))
         self.step1_explanation_button.clicked.connect(self.explain_step1)
 
+        # Assembling step 2 row
+        self.step_redirect_flow_button = QtGui.QPushButton(self)
+        self.step_redirect_flow_button.setObjectName(_fromUtf8("redirect_flow"))
+        self.step_redirect_flow_button.clicked.connect(self.execute_redirect_flows)
+
         self.groupBox_step1 = QtGui.QGroupBox(self)
         self.groupBox_step1.setTitle("stap 1: Kies een tijdstap")
         self.box_step1 = QtGui.QVBoxLayout()
         self.box_step1.addWidget(self.timestep_combo_box)
         self.box_step1.addWidget(self.step1_button)
+        self.box_step1.addWidget(self.step_redirect_flow_button)
         self.box_step1.addWidget(self.step1_explanation_button)
         self.groupBox_step1.setLayout(self.box_step1)  # box toevoegen aan groupbox
         self.upper_row.addWidget(self.groupBox_step1)
@@ -502,6 +496,7 @@ class ProfileCalculationWidget(QWidget):  # , FORM_CLASS):
         self.save_button.setText(_translate("Dialog", "Opslaan en sluiten", None))
         self.step1_explanation_button.setText(_translate("Dialog", "Uitleg stap 1", None))
         self.step1_button.setText(_translate("Dialog", "Verbindt resultaten van netCDF aan de hydro-objecten", None))
+        self.step_redirect_flow_button.setText(_translate("Dialog", "Herverdeel debieten naar primair", None))
         self.step2_explanation_button.setText(_translate("Dialog", "Uitleg stap 2", None))
         self.step2_button.setText(_translate("Dialog", "Bereken alle mogelijke leggerprofielen", None))
         self.step3_button.setText(

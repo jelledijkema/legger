@@ -50,8 +50,10 @@ class Legger(QObject):
             if qVersion() > '4.3.3':
                 QCoreApplication.installTranslator(self.translator)
 
-        self.polder_datasource = r'C:\Users\basti\.qgis2\python\plugins\legger\tests\data\20180613_legger_Marken.sqlite'
-            # "Kies eerst een legger database"
+        # self.polder_datasource = r'C:/tmp/wijdewormer/legger_wijdewormer.sqlite'
+        self.polder_datasource = None
+        # None
+        # "Kies eerst een legger database"
 
         # self.db_path_result_sqlite = self.ts_datasource.rows[0].spatialite_cache_filepath().replace('\\', '/')
         # db_path_model_sqlite = ts_datasource.model_spatialite_filepath

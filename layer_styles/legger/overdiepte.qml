@@ -67,7 +67,7 @@
   </edittypes>
   <renderer-v2 attr="diepte - to_real( &quot;geselecteerde_diepte&quot; ) " forceraster="0" symbollevels="0" type="graduatedSymbol" graduatedMethod="GraduatedColor" enableorderby="0">
     <ranges>
-      <range render="true" symbol="0" lower="-10.000000000000000" upper="-0.050000000000000" label=" -10.00 - -0.05 "/>
+      <range render="true" symbol="0" lower="-99.000000000000000" upper="-0.050000000000000" label=" -99.00 - -0.05 "/>
       <range render="true" symbol="1" lower="-0.050000000000000" upper="0.000000000000000" label=" -0.05 - 0.00 "/>
       <range render="true" symbol="2" lower="0.000000000000000" upper="0.050000000000000" label=" 0.00 - 0.05 "/>
       <range render="true" symbol="3" lower="0.050000000000000" upper="0.250000000000000" label=" 0.05 - 0.25 "/>
@@ -85,7 +85,7 @@
           <prop k="joinstyle" v="bevel"/>
           <prop k="line_color" v="215,25,28,255"/>
           <prop k="line_style" v="solid"/>
-          <prop k="line_width" v="1.26"/>
+          <prop k="line_width" v="1.06"/>
           <prop k="line_width_unit" v="MM"/>
           <prop k="offset" v="0"/>
           <prop k="offset_map_unit_scale" v="0,0,0,0,0,0"/>
@@ -104,7 +104,7 @@
           <prop k="joinstyle" v="bevel"/>
           <prop k="line_color" v="246,144,83,255"/>
           <prop k="line_style" v="solid"/>
-          <prop k="line_width" v="1.26"/>
+          <prop k="line_width" v="1.06"/>
           <prop k="line_width_unit" v="MM"/>
           <prop k="offset" v="0"/>
           <prop k="offset_map_unit_scale" v="0,0,0,0,0,0"/>
@@ -123,7 +123,7 @@
           <prop k="joinstyle" v="bevel"/>
           <prop k="line_color" v="255,223,154,255"/>
           <prop k="line_style" v="solid"/>
-          <prop k="line_width" v="0.86"/>
+          <prop k="line_width" v="1.06"/>
           <prop k="line_width_unit" v="MM"/>
           <prop k="offset" v="0"/>
           <prop k="offset_map_unit_scale" v="0,0,0,0,0,0"/>
@@ -142,7 +142,7 @@
           <prop k="joinstyle" v="bevel"/>
           <prop k="line_color" v="220,240,158,255"/>
           <prop k="line_style" v="solid"/>
-          <prop k="line_width" v="0.86"/>
+          <prop k="line_width" v="1.06"/>
           <prop k="line_width_unit" v="MM"/>
           <prop k="offset" v="0"/>
           <prop k="offset_map_unit_scale" v="0,0,0,0,0,0"/>
@@ -161,7 +161,7 @@
           <prop k="joinstyle" v="bevel"/>
           <prop k="line_color" v="138,204,98,255"/>
           <prop k="line_style" v="solid"/>
-          <prop k="line_width" v="0.86"/>
+          <prop k="line_width" v="1.06"/>
           <prop k="line_width_unit" v="MM"/>
           <prop k="offset" v="0"/>
           <prop k="offset_map_unit_scale" v="0,0,0,0,0,0"/>
@@ -180,7 +180,7 @@
           <prop k="joinstyle" v="bevel"/>
           <prop k="line_color" v="26,150,65,255"/>
           <prop k="line_style" v="solid"/>
-          <prop k="line_width" v="0.86"/>
+          <prop k="line_width" v="1.06"/>
           <prop k="line_width_unit" v="MM"/>
           <prop k="offset" v="0"/>
           <prop k="offset_map_unit_scale" v="0,0,0,0,0,0"/>
@@ -255,7 +255,7 @@
     <property key="labeling/distMapUnitScale" value="0,0,0,0,0,0"/>
     <property key="labeling/drawLabels" value="true"/>
     <property key="labeling/enabled" value="true"/>
-    <property key="labeling/fieldName" value="'overdiepte: ' || round(to_real( &quot;overdiepte&quot; ),2) || ' m'"/>
+    <property key="labeling/fieldName" value="CASE WHEN &quot;overdiepte&quot; IS NULL &#xd;&#xa;THEN 'theor. overdiepte: '|| &#xd;&#xa;round(&quot;diepte&quot; -  &quot;geselecteerde_diepte&quot; ,2)&#xd;&#xa;ELSE&#xd;&#xa;'overdiepte: ' || round(to_real( &quot;overdiepte&quot; ),2) &#xd;&#xa;END&#xd;&#xa;|| ' m'"/>
     <property key="labeling/fitInPolygonOnly" value="false"/>
     <property key="labeling/fontBold" value="false"/>
     <property key="labeling/fontCapitals" value="0"/>

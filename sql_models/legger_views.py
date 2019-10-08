@@ -1,19 +1,21 @@
 def create_legger_views(session):
     session.execute(
         """
-        DROP VIEW IF EXISTS hydroobjects_kenmerken4;
+        DROP VIEW IF EXISTS hydroobjects_kenmerken;
         """
     )
 
     session.execute(
         """
-            CREATE VIEW hydroobjects_kenmerken4 AS 
+            CREATE VIEW hydroobjects_kenmerken AS 
             SELECT 
                 h.id, 
                 code, 
                 categorieoppwaterlichaam, 
                 streefpeil, 
-                ABS(debiet) as debiet, 
+                ABS(debiet) as debiet,
+                ABS(debiet_3di) as debiet_3di,
+                ABS(debiet_aangepast) as debiet_aangepast,
                 diepte, 
                 breedte, 
                 taludvoorkeur,
@@ -27,23 +29,23 @@ def create_legger_views(session):
                 geselecteerd_breedte,
                 geselecteerde_variant,
                 geselecteerde_begroeiingsvariant,
-                selectie_opmerkingen,
+                h.opmerkingen,
                 CASE 
-                  WHEN h.debiet >= 0 THEN "GEOMETRY"
-                  WHEN h.debiet THEN ST_REVERSE("GEOMETRY")
+                  WHEN h.debiet_3di >= 0 THEN "GEOMETRY"
+                  WHEN h.debiet_3di THEN ST_REVERSE("GEOMETRY")
                     ELSE "GEOMETRY" 
                 END AS "GEOMETRY",
                 CASE 
-                  WHEN h.debiet >= 0 THEN MakeLine(StartPoint("GEOMETRY"), EndPoint("GEOMETRY"))
-                  WHEN h.debiet THEN MakeLine(EndPoint("GEOMETRY"), StartPoint("GEOMETRY"))
+                  WHEN h.debiet_3di >= 0 THEN MakeLine(StartPoint("GEOMETRY"), EndPoint("GEOMETRY"))
+                  WHEN h.debiet_3di THEN MakeLine(EndPoint("GEOMETRY"), StartPoint("GEOMETRY"))
                     ELSE MakeLine(StartPoint("GEOMETRY"), EndPoint("GEOMETRY"))
                 END AS line,
-                CASE WHEN h.debiet > 0 THEN 1
-                    WHEN h.debiet  THEN 1
+                CASE WHEN h.debiet_3di > 0 THEN 1
+                    WHEN h.debiet_3di  THEN 1
                     ELSE 3 
                 END AS direction,
-                CASE WHEN h.debiet >= 0 THEN CAST(0 AS BIT)
-                    WHEN h.debiet  THEN CAST(1 AS BIT)
+                CASE WHEN h.debiet_3di >= 0 THEN CAST(0 AS BIT)
+                    WHEN h.debiet_3di  THEN CAST(1 AS BIT)
                     ELSE null 
                 END AS reversed
             FROM hydroobject h 
@@ -64,8 +66,7 @@ def create_legger_views(session):
                 v.diepte as geselecteerd_diepte,
                 v.waterbreedte as geselecteerd_breedte,
                 v.id as geselecteerde_variant,
-                v.begroeiingsvariant_id as geselecteerde_begroeiingsvariant,
-                g.opmerkingen as selectie_opmerkingen
+                v.begroeiingsvariant_id as geselecteerde_begroeiingsvariant
                 FROM geselecteerd g, varianten v
                 WHERE g.variant_id = v.id) as sel
                 ON sel.hydro_id = h.id       
@@ -73,7 +74,7 @@ def create_legger_views(session):
 
     session.execute(
         """
-        DELETE FROM views_geometry_columns WHERE view_name = 'hydroobjects_kenmerken3';
+        DELETE FROM views_geometry_columns WHERE view_name = 'hydroobjects_kenmerken';
         """
     )
 
@@ -81,14 +82,24 @@ def create_legger_views(session):
         """
             INSERT INTO views_geometry_columns (view_name, view_geometry, view_rowid, f_table_name, 
               f_geometry_column, read_only)
-            VALUES('hydroobjects_kenmerken4', 'geometry', 'id', 'hydroobject', 'geometry', 1);         
+            VALUES('hydroobjects_kenmerken', 'geometry', 'id', 'hydroobject', 'geometry', 1);         
+        """)
+
+    session.execute(
+        """
+            SELECT UpdateLayerStatistics('hydroobject');
+        """)
+
+    session.execute(
+        """
+            SELECT UpdateLayerStatistics('hydroobjects_kenmerken');
         """)
 
     session.execute(
         """
             INSERT INTO views_geometry_columns (view_name, view_geometry, view_rowid, f_table_name, 
               f_geometry_column, read_only)
-            VALUES('hydroobjects_kenmerken4', 'line', 'id', 'hydroobject', 'geometry', 1);         
+            VALUES('hydroobjects_kenmerken', 'line', 'id', 'hydroobject', 'geometry', 1);         
         """)
 
     session.commit()
@@ -110,7 +121,9 @@ def create_legger_views(session):
                 h.categorieoppwaterlichaam, 
                 h.streefpeil, 
                 h.debiet,
-                k.diepte, 
+                h.debiet_3di,
+                h.debiet_aangepast,
+                k.diepte,
                 k.breedte, 
                 k.taludvoorkeur, 
                 ST_LENGTH(h.geometry) as lengte,
@@ -123,6 +136,7 @@ def create_legger_views(session):
                 v.talud as geselecteerd_talud,
                 v.verhang_bos_bijkerk as verhang,
                 v.opmerkingen as profiel_opmerking,
+                v.begroeiingsvariant_id as geselecteerde_begroeiingsvariant,
                 p.t_fit as fit_score,
                 p.t_afst as offset,
                 p.t_overdiepte as overdiepte,
@@ -150,13 +164,18 @@ def create_legger_views(session):
 
     session.execute(
         """
-        DROP VIEW IF EXISTS begroeiingsadvies4;
+            SELECT UpdateLayerStatistics('hydroobjects_selected_legger');
+        """)
+
+    session.execute(
+        """
+        DROP VIEW IF EXISTS begroeiingsadvies;
         """
     )
 
     session.execute(
         """
-        CREATE VIEW begroeiingsadvies4 AS
+        CREATE VIEW begroeiingsadvies AS
           SELECT
             bv.naam as advies_naam,
             a.*
@@ -244,7 +263,7 @@ def create_legger_views(session):
 
     session.execute(
         """
-        DELETE FROM views_geometry_columns WHERE view_name = 'begroeiingsadvies4';
+        DELETE FROM views_geometry_columns WHERE view_name = 'begroeiingsadvies';
         """
     )
 
@@ -252,9 +271,7 @@ def create_legger_views(session):
         """
             INSERT INTO views_geometry_columns (view_name, view_geometry, view_rowid, f_table_name, 
               f_geometry_column, read_only)
-            VALUES('begroeiingsadvies4', 'geometry', 'id', 'hydroobject', 'geometry', 1);         
+            VALUES('begroeiingsadvies', 'geometry', 'id', 'hydroobject', 'geometry', 1);         
         """)
-
-
 
     session.commit()
