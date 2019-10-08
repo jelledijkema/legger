@@ -221,7 +221,10 @@ class BaseTreeModel(QtCore.QAbstractItemModel):
         signal (bool): send signal
         return: None
         """
-        column_nr = self.get_column_nr(key)
+        try:
+            column_nr = self.get_column_nr(key)
+        except ValueError:
+            raise ValueError('Key {} niet gevonden in kolom configuratie'.format(key))
         index = self.createIndex(item.row(), column_nr, item)
         self.setData(index, value, role, signal)
 

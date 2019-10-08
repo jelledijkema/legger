@@ -3,8 +3,8 @@ from collections import OrderedDict
 from random import randint
 
 import numpy as np
-from ThreeDiToolbox.models.base import BaseModel
-from ThreeDiToolbox.models.base_fields import ValueField, ColorField, CheckboxField
+
+from .base import ModifiedBaseModel, ValueField, ColorField, CheckboxField
 
 COLOR_LIST = [
     (34, 34, 34),
@@ -70,7 +70,7 @@ def select_default_color(item_field):
     return (randint(0, 256), randint(0, 256), randint(0, 256), 180)
 
 
-class ProfileModel(BaseModel):
+class ProfileModel(ModifiedBaseModel):
     """Model implementation for possible legger profiles"""
 
     class Fields:
@@ -78,9 +78,10 @@ class ProfileModel(BaseModel):
 
         active = CheckboxField(show=True,
                                default_value=False,
-                               column_width=20,
-                               column_name='')
-        color = ColorField(show=True,
+                               column_width=40,
+                               column_name='',
+                               color_from='color')
+        color = ColorField(show=False,
                            column_width=20,
                            column_name='',
                            default_value=(230, 143, 172, 160))
@@ -88,18 +89,43 @@ class ProfileModel(BaseModel):
                           column_width=130,
                           column_name='name')
         depth = ValueField(show=True,
-                           column_width=50,
-                           column_name='diepte')
+                           column_width=55,
+                           round=2,
+                           column_name='dpt',
+                           column_tooltip='profieldiepte [m]')
         begroeiingsvariant = ValueField(show=True,
                                         column_width=80,
-                                        column_name='begroei.')
+                                        column_name='begr',
+                                        column_tooltip='begroeiingsvariant naam')
         score = ValueField(show=True,
-                           column_width=50,
-                           column_name='score')
+                           column_width=55,
+                           round=0,
+                           column_name='sc',
+                           column_tooltip='score')
 
         over_depth = ValueField(show=True,
-                           column_width=50,
-                           column_name='over d')
+                                column_width=55,
+                                round=1,
+                                column_name='od',
+                                column_tooltip='overdiepte [m]')
+        over_depth_color = ColorField(show=False)
+
+        over_width = ValueField(show=True,
+                                column_width=55,
+                                round=1,
+                                column_name='ob',
+                                column_tooltip='overbreedte [m]')
+        over_width_color = ColorField(show=False,
+                                      default_value=(0, 0, 0, 0))
+
+        verhang = ValueField(show=True,
+                             column_width=60,
+                             round=1,
+                             column_name='verh',
+                             column_tooltip='verhang [cm/km]',
+                             color_from='verhang_color')
+        verhang_color = ColorField(show=False,
+                                   default_value=(0, 0, 0, 0))
 
         hover = ValueField(show=False,
                            default_value=False)

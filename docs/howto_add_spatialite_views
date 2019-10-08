@@ -65,3 +65,5 @@ First the existing row with the view is deleted (if it exists), after it is adde
               f_geometry_column, read_only)
             VALUES('hydroobjects_selected_legger', 'geometry', 'objectid', 'hydroobject', 'geometry', 1);
         """)
+
+4. Run `SELECT UpdateLayerStatistics('<< tablename >>');` after changing a view of table

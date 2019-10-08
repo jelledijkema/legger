@@ -473,7 +473,7 @@ def doe_profinprof(cur0, cur1, aantalstappen=200, precisie=0.0001, codevastebode
     :param debug:
     :return:
     """
-    try:
+    if True:
         # maaktabellen(cur0) # IS NIET MEER NODIG
         logger.debug('voor gemeten profielen')
         gemetenprofielen = haal_meetprofielen1(cur0, codevastebodem, peilcriterium, debug)
@@ -517,8 +517,8 @@ def doe_profinprof(cur0, cur1, aantalstappen=200, precisie=0.0001, codevastebode
         cur0.execute('create index profielfiguren1 on profielfiguren(profid)')
         cur0.execute('vacuum')
         resultaat = "klaar"
-    except ImportError:
-        resultaat = "Niet correct, run evt opnieuw met debug = 1 om te onderzoeken"
+    #except ImportError:
+    #    resultaat = "Niet correct, run evt opnieuw met debug = 1 om te onderzoeken"
     return resultaat
 
 #

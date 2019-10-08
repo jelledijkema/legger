@@ -19,6 +19,8 @@ from qgis.core import QgsFeature, QgsGeometry, QgsMapLayerRegistry
 from qgis.networkanalysis import QgsLineVectorLayerDirector
 from sqlalchemy import and_, or_
 
+from legger.utils.formats import try_round
+
 from .network_table_widgets import LeggerTreeWidget, StartpointTreeWidget, VariantenTable
 
 log = logging.getLogger('legger.' + __name__)
@@ -41,6 +43,18 @@ PRE_SELECTED = 'opgegeven'
 STRATEGY_THIS = 'dit hydrovak'
 STRATEGY_DONWSTREAM_ALL = 'benedenstr. altijd'
 STRATEGY_DONWSTREAM_LESS = 'benedenstr. of meer'
+
+
+def interpolated_color(value, color_map, alpha=255):
+    for i, cm in enumerate(color_map):
+        if value <= cm[0]:
+            if i == 0:
+                return list(cm[1]) + [alpha]
+            else:
+                prev = color_map[i-1]
+                fraction = (value - prev[0]) / (cm[0] - prev[0])
+                return [p * (1-fraction) + n * fraction for p, n in zip(prev[1], cm[1])] + [alpha]
+    return list(color_map[-1][1]) + [alpha]
 
 
 class LeggerWidget(QDockWidget):
@@ -304,21 +318,22 @@ class LeggerWidget(QDockWidget):
                     score = None
                     if len(figuren) > 0:
                         figuur = figuren[0]
-                        over_width = "{0:.2f}".format(figuur.t_overbreedte_l + figuur.t_overbreedte_r) \
+                        over_width = "{0:.1f}".format(figuur.t_overbreedte_l + figuur.t_overbreedte_r) \
                             if figuur.t_overbreedte_l is not None else over_width
-                        score = "{0:.2f}".format(figuur.t_fit)
-                        over_depth = "{0:.2f}".format(
+                        score = "{0:.0f}".format(figuur.t_fit)
+                        over_depth = "{0:.1f}".format(
                             figuur.t_overdiepte) if figuur.t_overdiepte is not None else over_depth
                     else:
-                        over_depth = "{0:.2f}*".format(over_depth)
-                        over_width = "{0:.2f}*".format(over_width)
+                        over_depth = "{}*".format(round(over_depth, 1)) if type(over_depth) == float else '-'
+                        over_width = "{}*".format(round(over_width, 1)) if type(over_width) == float else '-'
 
+                    verhang = round(profilev.verhang_bos_bijkerk, 0) if type(profilev.verhang_bos_bijkerk) == float else '-'
                     self.legger_model.setDataItemKey(node, 'selected_depth', depth)
                     self.legger_model.setDataItemKey(node, 'selected_width', width)
                     self.legger_model.setDataItemKey(node, 'selected_variant_id', profilev.id)
-                    self.legger_model.setDataItemKey(
-                        node, 'selected_begroeiingsvariant_id', profilev.begroeiingsvariant_id)
-
+                    self.legger_model.setDataItemKey(node, 'selected_begroeiingsvariant_id',
+                                                     profilev.begroeiingsvariant_id)
+                    self.legger_model.setDataItemKey(node, 'verhang', verhang)
                     self.legger_model.setDataItemKey(node, 'score', score)
                     self.legger_model.setDataItemKey(node, 'over_depth', over_depth)
                     self.legger_model.setDataItemKey(node, 'over_width', over_width)
@@ -706,6 +721,13 @@ class LeggerWidget(QDockWidget):
             var = var.filter(or_(BegroeiingsVariant.naam == self.active_begroeiings_variant,
                                  Varianten.id == selected_variant_id))
 
+        from legger import settings
+        verhang = 3.0
+        color_map = (
+            (verhang / 3, settings.LOW_COLOR),
+            (verhang, settings.OK_COLOR),
+            (verhang * 3, settings.HIGH_COLOR),
+        )
         profs = []
         for profile in var.all():
             active = selected_variant_id == profile.id
@@ -716,7 +738,8 @@ class LeggerWidget(QDockWidget):
                 'begroeiingsvariant': profile.begroeiingsvariant.naam,
                 'score': "{0:.2f}".format(profile.figuren[0].t_fit) if profile.figuren else None,
                 'over_depth': "{0:.2f}".format(profile.figuren[0].t_overdiepte) if profile.figuren else None,
-                'color': (243, 132, 0, 255) if active else (243, 132, 0, 30),
+                'verhang': "{}".format(try_round(profile.verhang_bos_bijkerk, 2, '-')),
+                'color': interpolated_color(value=profile.verhang_bos_bijkerk, color_map=color_map, alpha=(255 if active else 30)),
                 'points': [
                     (-0.5 * profile.waterbreedte, hydro_object.streefpeil),
                     (-0.5 * profile.bodembreedte, hydro_object.streefpeil - profile.diepte),
@@ -813,6 +836,7 @@ class LeggerWidget(QDockWidget):
         self.button_bar_hlayout.addWidget(self.show_manual_input_button)
         self.show_manual_input_button.setDisabled(True)
 
+        self.button_bar_hlayout.addWidget(QLabel("filter t/m categorie:"))
         self.category_combo = QComboBox(self)
         self.button_bar_hlayout.addWidget(self.category_combo)
 
@@ -844,7 +868,7 @@ class LeggerWidget(QDockWidget):
         sizePolicy.setHeightForWidth(
             self.tree_table_tab.sizePolicy().hasHeightForWidth())
         self.tree_table_tab.setSizePolicy(sizePolicy)
-        self.tree_table_tab.setMinimumSize(QSize(750, 0))
+        self.tree_table_tab.setMinimumSize(QSize(850, 0))
 
         self.contentLayout.addWidget(self.tree_table_tab)
 
@@ -923,7 +947,7 @@ class LeggerWidget(QDockWidget):
 
         # variantentable
         self.plot_item_table = VariantenTable(self, variant_model=self.variant_model)
-        self.plot_item_table.setMinimumWidth(300)
+        self.plot_item_table.setMinimumWidth(380)
 
         self.rightVstack.addWidget(self.plot_item_table)
 
