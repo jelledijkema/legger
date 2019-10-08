@@ -50,7 +50,8 @@ class Legger(QObject):
             if qVersion() > '4.3.3':
                 QCoreApplication.installTranslator(self.translator)
 
-        self.polder_datasource = r'C:/tmp/wijdewormer/legger_wijdewormer.sqlite'
+        # self.polder_datasource = r'C:/tmp/wijdewormer/legger_wijdewormer.sqlite'
+        self.polder_datasource = None
         # None
         # "Kies eerst een legger database"
 

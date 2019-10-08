@@ -19,6 +19,7 @@ from legger.utils.read_tdi_results import (get_timestamps, read_tdi_culvert_resu
 from legger.utils.snap_points import snap_points
 from legger.utils.theoretical_profiles import Kb, create_theoretical_profiles, write_theoretical_profile_results_to_db
 from pyspatialite import dbapi2 as dbapi
+from legger.utils.redirect_flows_to_main_branches import redirect_flows
 
 log = logging.getLogger(__name__)
 
@@ -246,6 +247,12 @@ class ProfileCalculationWidget(QWidget):  # , FORM_CLASS):
             finally:
                 self.feedbacktext.setText(self.feedbackmessage)
 
+    def execute_redirect_flows(self):
+
+        redirect_flows(self.iface, self.polder_datasource)
+        self.feedbacktext.setText("Debieten zijn aangepast.")
+
+
     def explain_step2(self):
         """
         Uitleg van stap 1
@@ -293,13 +300,13 @@ class ProfileCalculationWidget(QWidget):  # , FORM_CLASS):
 
         for bv in session.query(BegroeiingsVariant).all():
 
-            try:
+            if True: # try:
                 profiles = create_theoretical_profiles(self.polder_datasource, opstuw_norm, bv)
                 self.feedbackmessage = "Profielen zijn berekend."
-            except:
-                self.feedbackmessage = "Fout, profielen konden niet worden berekend."
-            finally:
-                self.feedbacktext.setText(self.feedbackmessage)
+            # except:
+            #     self.feedbackmessage = "Fout, profielen konden niet worden berekend."
+            # finally:
+            #     self.feedbacktext.setText(self.feedbackmessage)
 
             try:
                 write_theoretical_profile_results_to_db(session, profiles, opstuw_norm, bv)
@@ -385,11 +392,17 @@ class ProfileCalculationWidget(QWidget):  # , FORM_CLASS):
         self.step1_explanation_button.setObjectName(_fromUtf8("uitleg_stap1"))
         self.step1_explanation_button.clicked.connect(self.explain_step1)
 
+        # Assembling step 2 row
+        self.step_redirect_flow_button = QtGui.QPushButton(self)
+        self.step_redirect_flow_button.setObjectName(_fromUtf8("redirect_flow"))
+        self.step_redirect_flow_button.clicked.connect(self.execute_redirect_flows)
+
         self.groupBox_step1 = QtGui.QGroupBox(self)
         self.groupBox_step1.setTitle("stap 1: Kies een tijdstap")
         self.box_step1 = QtGui.QVBoxLayout()
         self.box_step1.addWidget(self.timestep_combo_box)
         self.box_step1.addWidget(self.step1_button)
+        self.box_step1.addWidget(self.step_redirect_flow_button)
         self.box_step1.addWidget(self.step1_explanation_button)
         self.groupBox_step1.setLayout(self.box_step1)  # box toevoegen aan groupbox
         self.upper_row.addWidget(self.groupBox_step1)
@@ -483,6 +496,7 @@ class ProfileCalculationWidget(QWidget):  # , FORM_CLASS):
         self.save_button.setText(_translate("Dialog", "Opslaan en sluiten", None))
         self.step1_explanation_button.setText(_translate("Dialog", "Uitleg stap 1", None))
         self.step1_button.setText(_translate("Dialog", "Verbindt resultaten van netCDF aan de hydro-objecten", None))
+        self.step_redirect_flow_button.setText(_translate("Dialog", "Herverdeel debieten naar primair", None))
         self.step2_explanation_button.setText(_translate("Dialog", "Uitleg stap 2", None))
         self.step2_button.setText(_translate("Dialog", "Bereken alle mogelijke leggerprofielen", None))
         self.step3_button.setText(

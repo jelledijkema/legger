@@ -365,7 +365,8 @@ def write_tdi_results_to_db(hydroobject_results, path_legger_db):
     for hydroobj in session.query(HydroObject):
         if hydroobj.id in results:
             result = results[hydroobj.id]
-            hydroobj.debiet = result['qend']
+            hydroobj.debiet_3di = result['qend']
+            hydroobj.debiet = hydroobj.debiet_3di
             hydroobj.channel_id = result['channel_id']
             hydroobj.flowline_id = result['flowline_id']
             hydroobj.score = result['score']

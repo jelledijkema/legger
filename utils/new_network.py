@@ -8,6 +8,8 @@ from .formats import make_type
 DISTANCE_PROPERTER_NR = 0
 FEAT_ID_PROPERTER_NR = 1
 
+min_flow = 0.000001
+
 
 def merge_dicts(x, y):
     """merge two dictionaries into a new dictionary (for python 2.x).
@@ -149,17 +151,9 @@ class NewNetwork(object):
         #                                                    self.id_start_tree,
         #                                                    0)
 
-    def build_tree(self):
-        """
-        function that analyses tree and creates tree structure of network.
-        Sets self.arc_tree and self.start_arcs
+    def hydrovak_class_tree_with_data(self):
 
-        returns (tuple): tuple with dictionary of arc_tree en list of start arc_nrs
-        """
         arc_tree = {}
-        start_arcs = {}
-        in_between_arcs = {}
-
         # create dicts with lines (arcs), required information and mark vertexes in bi-directional islands
         for arc_nr in range(0, self.graph.arcCount()):
             arc = self.graph.arc(arc_nr)
@@ -185,10 +179,183 @@ class NewNetwork(object):
                     'downstream_arc': None,
                     'upstream_arcs': None,
                     'min_category_in_path': 4,
+                    'modified_flow': None,
                     'cum_weight': 0,
                 },
                 feature=line_feature,
             )
+
+        return arc_tree
+
+    def get_bidirectional_islands(self, arc_tree=None):
+
+        if arc_tree is None:
+            arc_tree = self.hydrovak_class_tree_with_data()
+
+        output_islands = []
+        line_queue = {i: arc_tree[i] for i in range(self.graph.arcCount()) if arc_tree[i].feature['direction'] == 3}
+
+        def find_connected_bidirectional_recursive(arc_nr):
+
+            arc = self.graph.arc(arc_nr)
+            if arc_nr in line_queue:
+                del line_queue[arc_nr]
+
+            bidirectional_line_island = [arc_nr]
+
+            connected_lines = self.graph.vertex(arc.outVertex()).inArc()
+            connected_lines += self.graph.vertex(arc.outVertex()).outArc()
+            connected_lines += self.graph.vertex(arc.inVertex()).inArc()
+            connected_lines += self.graph.vertex(arc.inVertex()).outArc()
+
+            for connected_line in connected_lines:
+                if connected_line in line_queue:
+                    bidirectional_line_island.extend(find_connected_bidirectional_recursive(connected_line))
+
+            return bidirectional_line_island
+
+        try:
+            line = next(line_queue.itervalues())
+            while line:
+                output_islands.append(find_connected_bidirectional_recursive(line['arc_nr']))
+
+                # next for while loop
+                line = next(line_queue.itervalues())
+        except StopIteration, e:
+            pass
+
+        return output_islands
+
+    def fill_bidirectional_gaps(self, arc_tree=None, bidirectional_islands=None):
+
+        if arc_tree is None:
+            arc_tree = self.hydrovak_class_tree_with_data()
+
+        if bidirectional_islands is None:
+            bidirectional_islands = self.get_bidirectional_islands(self, arc_tree)
+
+        for island in bidirectional_islands:
+            vertexes = {}
+
+            # get inflow and outflow of vertexes
+            for arc_nr in island:
+                for vertex_nr in self.graph.arc(arc_nr).inVertex():
+                    if vertex_nr in vertexes:
+                        continue
+                    vertex = self.graph.vertex(vertex_nr)
+                    inflow = sum(
+                        [abs(arc_tree[arc_nr]['flow_3di']) for arc_nr in vertex.outArc()
+                         if arc_tree[arc_nr]['flow_3di'] is not None])
+                    outflow = sum(
+                        [abs(arc_tree[arc_nr]['flow_3di']) for arc_nr in vertex.inArc()
+                         if arc_tree[arc_nr]['flow_3di'] is not None])
+
+                    vertexes[vertex_nr] = inflow - outflow
+
+            # rate in between vertexes
+
+
+
+            # supply flows to arcs
+
+        return arc_tree
+
+    def re_distribute_flow(self):
+
+        vertex_done = [False for i in range(self.graph.vertexCount())]
+        arc_flow = [None for i in range(self.graph.arcCount())]
+
+        arc_tree = self.hydrovak_class_tree_with_data()
+
+        # set initial vertex_queue on points with no upstream vertexes
+        vertex_queue = [i for i in range(self.graph.vertexCount()) if len(self.graph.vertex(i).outArc()) == 0]
+
+        current_vertex_nr = vertex_queue.pop()
+        while current_vertex_nr is not None:
+            current_vertex = self.graph.vertex(current_vertex_nr)
+
+            modified_flow_in = sum(
+                [abs(arc_flow[arc_id]) for arc_id in current_vertex.outArc() if arc_flow[arc_id] is not None])
+            original_flow_in = sum(
+                [abs(arc_tree[arc_nr]['flow_3di']) for arc_nr in current_vertex.outArc() if
+                 arc_tree[arc_nr]['flow_3di'] is not None])
+            original_flow_out = sum(
+                [abs(arc_tree[arc_nr]['flow_3di']) for arc_nr in current_vertex.inArc() if
+                 arc_tree[arc_nr]['flow_3di'] is not None])
+
+            arcs = [arc_tree[arc_nr] for arc_nr in current_vertex.inArc()]
+            arcs = sorted(arcs, key=lambda a: a['flow'])
+            if 387746 in [arc['hydro_id'] for arc in arcs]:
+                a = 1
+
+            # check if redistribution is required
+            rerouting_required = False
+            last_category = 100
+            categories_out = [arc['category'] for arc in arcs]
+            if categories_out:
+                rerouting_required = (min(categories_out) != max(categories_out) and min(categories_out) == 1)
+            else:
+                rerouting_required = False
+
+            if rerouting_required:
+                sum_flow_primary = sum(
+                    [abs(arc['flow_3di']) for arc in arcs if arc['category'] == 1 and arc['flow_3di'] is not None])
+
+                nr_not_primary = len([arc for arc in arcs if arc['category'] != 1])
+                primary_factor = (original_flow_out - nr_not_primary * min_flow) / sum_flow_primary
+                for arc in arcs:
+                    if arc['category'] == 1:
+                        arc['flow_corrected'] = primary_factor * arc['flow_3di']
+                    else:
+                        arc['flow_corrected'] = min_flow
+            else:
+                for arc in arcs:
+                    arc['flow_corrected'] = arc['flow_3di']
+
+            # compensate for changed flows upstream
+            change_flow_in = modified_flow_in - original_flow_in
+            if original_flow_out != 0:
+                percentual_change = 1.0 + change_flow_in / original_flow_out
+            else:
+                percentual_change = 1.0
+
+            if percentual_change < 0.0:
+                a = 1
+
+            for arc in arcs:
+                flow = arc['flow_corrected'] * percentual_change if arc['flow_corrected'] is not None else None
+                if arc.feature['reversed'] == 1:
+                    flow = -1 * flow
+                arc['flow_corrected'] = flow
+                arc_flow[arc['arc_nr']] = flow
+
+            vertex_done[current_vertex_nr] = True
+            # check if vertexes can be added to the flow
+            for arc in arcs:
+                if not vertex_done[arc['out_vertex']]:
+                    vertex = self.graph.vertex(arc['out_vertex'])
+                    complete = all([arc_flow[arc_nr] is not None for arc_nr in vertex.outArc()])
+                    if complete:
+                        vertex_queue.append(arc['out_vertex'])
+
+            # next
+            if vertex_queue:
+                current_vertex_nr = vertex_queue.pop()
+            else:
+                current_vertex_nr = None
+
+        return arc_flow, arc_tree
+
+    def build_tree(self):
+        """
+        function that analyses tree and creates tree structure of network.
+        Sets self.arc_tree and self.start_arcs
+
+        returns (tuple): tuple with dictionary of arc_tree en list of start arc_nrs
+        """
+        arc_tree = self.hydrovak_class_tree_with_data()
+        start_arcs = {}
+        in_between_arcs = {}
 
         # for each arc, set downstream arc. When multiple, select one with highest flow.
         # also identify start arcs and inbetween arcs (areas are group of arcs with same targetlevel). Inbetween arcs

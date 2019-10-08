@@ -1,6 +1,23 @@
 from qgis.core import NULL
 
 
+def try_round(value_or_function, decimals=0, default_value=None):
+
+    if callable(value_or_function):
+        try:
+            value = value_or_function()
+        except (ValueError, TypeError):
+            return default_value
+    else:
+        value = value_or_function
+    if value is None:
+        return default_value
+    try:
+        return round(value, decimals)
+    except ValueError:
+        return default_value
+
+
 def python_value(value, default_value=None, func=None):
     """
     help function for translating QVariant Null values into None

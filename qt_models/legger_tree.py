@@ -14,33 +14,33 @@ from legger.utils.formats import transform_none
 HORIZONTAL_HEADERS = (
     {'field': 'code', 'column_width': 180, 'show': True},
     {'field': 'hydro_id', 'column_width': 100, 'show': False},
-    {'field': 'sp', 'field_type': CHECKBOX_FIELD, 'column_width': 22, 'single_selection': True,
-     'default': False},
-    {'field': 'ep', 'field_type': CHECKBOX_FIELD, 'column_width': 22, 'single_selection': True,
-     'default': False},
+    {'field': 'sp', 'field_type': CHECKBOX_FIELD, 'column_width': 25, 'single_selection': True,
+     'default': False, 'header': 's', 'header_tooltip': 'startpunt traject'},
+    {'field': 'ep', 'header': 'e', 'field_type': CHECKBOX_FIELD, 'column_width': 25, 'single_selection': True,
+     'default': False, 'header_tooltip': 'eindpunt traject'},
     {'field': 'selected', 'field_type': CHECKBOX_FIELD, 'show': False, 'single_selection': True,
      'default': False},
     {'field': 'hover', 'field_type': CHECKBOX_FIELD, 'show': False, 'column_width': 50, 'default': Qt.Unchecked},
     {'field': 'distance', 'header': 'afstand', 'show': False, 'column_width': 50},
     {'field': 'length', 'header': 'Lengte', 'show': False, 'column_width': 50},
-    {'field': 'category', 'header': 'cat', 'column_width': 30},
-    {'field': 'begroeiingsvariant_id', 'header': 'beg', 'column_width': 40},
+    {'field': 'category', 'header': 'cat', 'header_tooltip': 'categorie waterlichaam', 'column_width': 30},
+    {'field': 'begroeiingsvariant_id', 'header': 'beg', 'header_tooltip': 'gezette begroeiingsvariant id', 'column_width': 40},
     {'field': 'flow', 'header': 'debiet', 'show': False, 'column_width': 50},
     {'field': 'target_level', 'show': False, 'column_width': 50},
     {'field': 'depth', 'header': 'diepte', 'show': False, 'column_width': 50},
     {'field': 'width', 'header': 'breedte', 'show': False, 'column_width': 50},
     {'field': 'variant_min_depth', 'show': False, 'column_width': 60},
     {'field': 'variant_max_depth', 'show': False, 'column_width': 60},
-    {'field': 'selected_depth_tmp', 'header': 'sel d', 'column_width': 60},
-    {'field': 'selected_depth', 'header': 'prof d', 'column_width': 60},
-    {'field': 'selected_width', 'header': 'prof b', 'column_width': 60},
-    {'field': 'verhang', 'header': 'verhang', 'column_width': 60},
-    {'field': 'over_depth', 'header': 'over d', 'column_width': 60},
-    {'field': 'over_width', 'header': 'over b', 'column_width': 60},
-    {'field': 'selected_begroeiingsvariant_id', 'header': 'beg', 'column_width': 40},
-    {'field': 'score', 'show': True, 'column_width': 50},
+    {'field': 'selected_depth_tmp', 'header': 'sel d', 'header_tooltip': 'geselecteerde diepte tijdens hover over varianten', 'column_width': 60},
+    {'field': 'selected_depth', 'header': 'pd', 'header_tooltip': 'geselecteerde diepte', 'column_width': 60},
+    {'field': 'selected_width', 'header': 'pb', 'header_tooltip': 'geselecteerde breedte', 'column_width': 60},
+    {'field': 'verhang', 'header': 'verh', 'header_tooltip': 'verhang (cm/km)', 'column_width': 60},
+    {'field': 'over_depth', 'header': 'od', 'header_tooltip': 'overdiepte (* obv theoretisch profiel)', 'column_width': 60},
+    {'field': 'over_width', 'header': 'ob', 'header_tooltip': 'overbreedte (* obv theoretisch profiel)', 'column_width': 60},
+    {'field': 'selected_begroeiingsvariant_id', 'header': 'beg', 'header_tooltip': 'geselecteerde begroeiingsvariant id', 'column_width': 40},
+    {'field': 'score', 'show': True, 'header_tooltip': 'score fit', 'column_width': 50},
     {'field': 'selected_variant_id', 'show': False, 'column_width': 100},
-    {'field': 'selected_remarks', 'header': 'opm', 'show': True, 'column_width': 30, 'field_type': INDICATION_HOVER},
+    {'field': 'selected_remarks', 'header': 'opm', 'header_tooltip': 'opmerkingen bij hydrovak', 'show': True, 'column_width': 30, 'field_type': INDICATION_HOVER},
 )
 
 
@@ -63,6 +63,8 @@ class hydrovak_class(object):
 
         self.field_mapping = {
             'category': 'categorieoppwaterlichaam',
+            'flow_3di': 'debiet_3di',
+            'flow_corrected': 'debiet_aangepast',
             'flow': 'debiet',
             'target_level': 'streefpeil',
             'hydro_id': 'id',
@@ -446,6 +448,29 @@ class LeggerTreeModel(BaseTreeModel):
             loop(parent)
 
         loop(endpoint)
+
+    def headerData(self, column, orientation, role):
+        """
+        get header data. Currently only column titles for horizontal headers.
+
+        column (int): column number
+        orientation (Qt orientation): Qt orientation (Qt.Horizontal or Qt.Vertical)
+        role (Qt role): type of data returned (value or style attribute)
+        return:
+        """
+        if orientation == Qt.Horizontal:
+            if role == Qt.DisplayRole:
+                try:
+                    return self.headers[column].get(
+                        'header', self.headers[column]['field'])
+                except IndexError:
+                    pass
+            elif role == Qt.ToolTipRole:
+                try:
+                    return self.headers[column].get('header_tooltip')
+                except IndexError:
+                    pass
+        return None
 
     def data_change_post_process(self, index, to_index):
         """

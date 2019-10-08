@@ -24,6 +24,20 @@ def get_or_create(session, model, defaults=None, **kwargs):
         return instance, True
 
 
+class Categorie(Base):
+    __tablename__ = 'categorie'
+
+    categorie = Column(Integer(), primary_key=True, index=True)
+    naam = Column(String(20))
+    variant_diepte_min = Column(Float())
+    variant_diepte_max = Column(Float())
+    default_talud = Column(Float())
+
+    def __str__(self):
+        return u'categorie {0} - {1}'.format(
+            self.categorie, self.naam)
+
+
 class BegroeiingsVariant(Base):
     __tablename__ = 'begroeiingsvariant'
 
@@ -67,6 +81,8 @@ class HydroObject(Base):
     code = Column(String(50), index=True)
     categorieoppwaterlichaam = Column(Integer)
     streefpeil = Column(Float)
+    debiet_3di = Column(Float)
+    debiet_aangepast = Column(Float)
     debiet = Column(Float)
     channel_id = Column(Integer)  # link to 3di id
     flowline_id = Column(Integer)  # link to 3di id

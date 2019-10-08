@@ -13,7 +13,9 @@ def create_legger_views(session):
                 code, 
                 categorieoppwaterlichaam, 
                 streefpeil, 
-                ABS(debiet) as debiet, 
+                ABS(debiet) as debiet,
+                ABS(debiet_3di) as debiet_3di,
+                ABS(debiet_aangepast) as debiet_aangepast,
                 diepte, 
                 breedte, 
                 taludvoorkeur,
@@ -29,21 +31,21 @@ def create_legger_views(session):
                 geselecteerde_begroeiingsvariant,
                 h.opmerkingen,
                 CASE 
-                  WHEN h.debiet >= 0 THEN "GEOMETRY"
-                  WHEN h.debiet THEN ST_REVERSE("GEOMETRY")
+                  WHEN h.debiet_3di >= 0 THEN "GEOMETRY"
+                  WHEN h.debiet_3di THEN ST_REVERSE("GEOMETRY")
                     ELSE "GEOMETRY" 
                 END AS "GEOMETRY",
                 CASE 
-                  WHEN h.debiet >= 0 THEN MakeLine(StartPoint("GEOMETRY"), EndPoint("GEOMETRY"))
-                  WHEN h.debiet THEN MakeLine(EndPoint("GEOMETRY"), StartPoint("GEOMETRY"))
+                  WHEN h.debiet_3di >= 0 THEN MakeLine(StartPoint("GEOMETRY"), EndPoint("GEOMETRY"))
+                  WHEN h.debiet_3di THEN MakeLine(EndPoint("GEOMETRY"), StartPoint("GEOMETRY"))
                     ELSE MakeLine(StartPoint("GEOMETRY"), EndPoint("GEOMETRY"))
                 END AS line,
-                CASE WHEN h.debiet > 0 THEN 1
-                    WHEN h.debiet  THEN 1
+                CASE WHEN h.debiet_3di > 0 THEN 1
+                    WHEN h.debiet_3di  THEN 1
                     ELSE 3 
                 END AS direction,
-                CASE WHEN h.debiet >= 0 THEN CAST(0 AS BIT)
-                    WHEN h.debiet  THEN CAST(1 AS BIT)
+                CASE WHEN h.debiet_3di >= 0 THEN CAST(0 AS BIT)
+                    WHEN h.debiet_3di  THEN CAST(1 AS BIT)
                     ELSE null 
                 END AS reversed
             FROM hydroobject h 
@@ -85,6 +87,16 @@ def create_legger_views(session):
 
     session.execute(
         """
+            SELECT UpdateLayerStatistics('hydroobject');
+        """)
+
+    session.execute(
+        """
+            SELECT UpdateLayerStatistics('hydroobjects_kenmerken');
+        """)
+
+    session.execute(
+        """
             INSERT INTO views_geometry_columns (view_name, view_geometry, view_rowid, f_table_name, 
               f_geometry_column, read_only)
             VALUES('hydroobjects_kenmerken', 'line', 'id', 'hydroobject', 'geometry', 1);         
@@ -109,7 +121,9 @@ def create_legger_views(session):
                 h.categorieoppwaterlichaam, 
                 h.streefpeil, 
                 h.debiet,
-                k.diepte, 
+                h.debiet_3di,
+                h.debiet_aangepast,
+                k.diepte,
                 k.breedte, 
                 k.taludvoorkeur, 
                 ST_LENGTH(h.geometry) as lengte,
@@ -146,6 +160,11 @@ def create_legger_views(session):
             INSERT INTO views_geometry_columns (view_name, view_geometry, view_rowid, f_table_name, 
               f_geometry_column, read_only)
             VALUES('hydroobjects_selected_legger', 'geometry', 'id', 'hydroobject', 'geometry', 1);         
+        """)
+
+    session.execute(
+        """
+            SELECT UpdateLayerStatistics('hydroobjects_selected_legger');
         """)
 
     session.execute(
@@ -254,7 +273,5 @@ def create_legger_views(session):
               f_geometry_column, read_only)
             VALUES('begroeiingsadvies', 'geometry', 'id', 'hydroobject', 'geometry', 1);         
         """)
-
-
 
     session.commit()

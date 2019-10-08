@@ -19,6 +19,8 @@ from qgis.core import QgsFeature, QgsGeometry, QgsMapLayerRegistry
 from qgis.networkanalysis import QgsLineVectorLayerDirector
 from sqlalchemy import and_, or_
 
+from legger.utils.formats import try_round
+
 from .network_table_widgets import LeggerTreeWidget, StartpointTreeWidget, VariantenTable
 
 log = logging.getLogger('legger.' + __name__)
@@ -316,22 +318,22 @@ class LeggerWidget(QDockWidget):
                     score = None
                     if len(figuren) > 0:
                         figuur = figuren[0]
-                        over_width = "{0:.2f}".format(figuur.t_overbreedte_l + figuur.t_overbreedte_r) \
+                        over_width = "{0:.1f}".format(figuur.t_overbreedte_l + figuur.t_overbreedte_r) \
                             if figuur.t_overbreedte_l is not None else over_width
-                        score = "{0:.2f}".format(figuur.t_fit)
-                        over_depth = "{0:.2f}".format(
+                        score = "{0:.0f}".format(figuur.t_fit)
+                        over_depth = "{0:.1f}".format(
                             figuur.t_overdiepte) if figuur.t_overdiepte is not None else over_depth
                     else:
-                        over_depth = "{0:.2}*".format(over_depth)
-                        over_width = "{0:.2}*".format(over_width)
+                        over_depth = "{}*".format(round(over_depth, 1)) if type(over_depth) == float else '-'
+                        over_width = "{}*".format(round(over_width, 1)) if type(over_width) == float else '-'
 
+                    verhang = round(profilev.verhang_bos_bijkerk, 0) if type(profilev.verhang_bos_bijkerk) == float else '-'
                     self.legger_model.setDataItemKey(node, 'selected_depth', depth)
                     self.legger_model.setDataItemKey(node, 'selected_width', width)
                     self.legger_model.setDataItemKey(node, 'selected_variant_id', profilev.id)
                     self.legger_model.setDataItemKey(node, 'selected_begroeiingsvariant_id',
                                                      profilev.begroeiingsvariant_id)
-                    self.legger_model.setDataItemKey(node, 'verhang',
-                                                     profilev.verhang_bos_bijkerk)
+                    self.legger_model.setDataItemKey(node, 'verhang', verhang)
                     self.legger_model.setDataItemKey(node, 'score', score)
                     self.legger_model.setDataItemKey(node, 'over_depth', over_depth)
                     self.legger_model.setDataItemKey(node, 'over_width', over_width)
@@ -736,7 +738,7 @@ class LeggerWidget(QDockWidget):
                 'begroeiingsvariant': profile.begroeiingsvariant.naam,
                 'score': "{0:.2f}".format(profile.figuren[0].t_fit) if profile.figuren else None,
                 'over_depth': "{0:.2f}".format(profile.figuren[0].t_overdiepte) if profile.figuren else None,
-                'verhang': "{0:.2f}".format(profile.verhang_bos_bijkerk),
+                'verhang': "{}".format(try_round(profile.verhang_bos_bijkerk, 2, '-')),
                 'color': interpolated_color(value=profile.verhang_bos_bijkerk, color_map=color_map, alpha=(255 if active else 30)),
                 'points': [
                     (-0.5 * profile.waterbreedte, hydro_object.streefpeil),
@@ -834,6 +836,7 @@ class LeggerWidget(QDockWidget):
         self.button_bar_hlayout.addWidget(self.show_manual_input_button)
         self.show_manual_input_button.setDisabled(True)
 
+        self.button_bar_hlayout.addWidget(QLabel("filter t/m categorie:"))
         self.category_combo = QComboBox(self)
         self.button_bar_hlayout.addWidget(self.category_combo)
 
@@ -865,7 +868,7 @@ class LeggerWidget(QDockWidget):
         sizePolicy.setHeightForWidth(
             self.tree_table_tab.sizePolicy().hasHeightForWidth())
         self.tree_table_tab.setSizePolicy(sizePolicy)
-        self.tree_table_tab.setMinimumSize(QSize(750, 0))
+        self.tree_table_tab.setMinimumSize(QSize(850, 0))
 
         self.contentLayout.addWidget(self.tree_table_tab)
 
@@ -944,7 +947,7 @@ class LeggerWidget(QDockWidget):
 
         # variantentable
         self.plot_item_table = VariantenTable(self, variant_model=self.variant_model)
-        self.plot_item_table.setMinimumWidth(300)
+        self.plot_item_table.setMinimumWidth(380)
 
         self.rightVstack.addWidget(self.plot_item_table)
 
