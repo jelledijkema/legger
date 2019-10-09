@@ -41,22 +41,29 @@ def read_spatialite(cursor):
     - soil type of area ditch is located
     """
 
-    cursor.execute("Select ho.id, km.diepte, km.breedte, ho.categorieoppwaterlichaam, km.steilste_talud, km.grondsoort, "
-              "ST_LENGTH(TRANSFORM(ho.geometry, 28992)) as length, ho.debiet "
-              "from hydroobject ho "
-              "left outer join kenmerken km on ho.id = km.hydro_id ")
+    cursor.execute("Select ho.id, km.diepte, km.breedte, ho.categorieoppwaterlichaam, km.taludvoorkeur, km.grondsoort, "
+                   "ST_LENGTH(TRANSFORM(ho.geometry, 28992)) as length, ho.debiet "
+                   "from hydroobject ho "
+                   "left outer join kenmerken km on ho.id = km.hydro_id ")
 
     all_hits = cursor.fetchall()
 
-    return DataFrame(all_hits, columns=[
-        'object_id',
-        'DIEPTE',
-        'max_ditch_width',
-        'category',
-        'slope',
-        'grondsoort',
-        'length',
-        'normative_flow'])
+    df = DataFrame(
+        all_hits,
+        columns=[
+            'object_id',
+            'DIEPTE',
+            'max_ditch_width',
+            'category',
+            'slope',
+            'grondsoort',
+            'length',
+            'normative_flow']
+    )
+
+    df.slope = pd.to_numeric(df.slope)
+
+    return df
 
 
 def calc_bos_bijkerk(normative_flow, ditch_bottom_width, water_depth, slope, friction_bos_bijkerk=Kb):
@@ -127,7 +134,7 @@ def calc_profile_variants_for_all(hydro_objects,
         else:
             to_depth = store_all_to_depth
 
-        to_depth = max(to_depth, row.DIEPTE * 1.2)
+        to_depth = max(to_depth, row.DIEPTE * 1.2 if pd.notnull(row.DIEPTE) else None)
 
         try:
             variants_table = variants_table.append(
@@ -203,7 +210,11 @@ def calc_profile_variants_for_hydro_object(
         while gradient_bos_bijkerk > gradient_norm or gradient_manning > gradient_norm:
 
             ditch_bottom_width = ditch_bottom_width + 0.05
-            ditch_width = ditch_bottom_width + water_depth * slope * 2
+            try:
+                ditch_width = ditch_bottom_width + water_depth * slope * 2.0
+            except Exception as e:
+                a = 1
+                raise e
 
             if friction_bos_bijkerk is not None:
                 gradient_bos_bijkerk = calc_bos_bijkerk(
@@ -278,13 +289,14 @@ def create_theoretical_profiles(legger_db_filepath, gradient_norm, bv):
     max_depth_settings = {cat['categorie']: cat['variant_diepte_max'] for cat in all_categories
                           if cat['variant_diepte_max'] is not None}
     default_slope = {cat['categorie']: cat['default_talud'] for cat in all_categories
-                          if cat['default_talud'] is not None}
+                     if cat['default_talud'] is not None}
 
     for category, default_slope in default_slope.items():
-        hydro_objects[(pd.isnull(hydro_objects.slope)) & (hydro_objects.category == category)].slope = default_slope
+        hydro_objects.loc[
+            (pd.isnull(hydro_objects.slope)) & (hydro_objects.category == category), 'slope'] = default_slope
 
-    hydro_objects[(hydro_objects.grondsoort == "veenweide") & (hydro_objects.slope < 3.0)].slope = 3.0
-    hydro_objects[(pd.isnull(hydro_objects.slope))].slope = 2.0
+    hydro_objects.loc[(hydro_objects.grondsoort == "veenweide") & (hydro_objects.slope < 3.0), 'slope'] = 3.0
+    hydro_objects.loc[(pd.isnull(hydro_objects.slope)), 'slope'] = 2.0
     # Part 3: calculate variants
     # todo. get store_all_.... from userinput
     # todo. add manning to friction table

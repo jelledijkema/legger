@@ -228,6 +228,8 @@ class NewNetwork(object):
 
     def fill_bidirectional_gaps(self, arc_tree=None, bidirectional_islands=None):
 
+        raise NotImplementedError('functie niet geimplementeerd')
+
         if arc_tree is None:
             arc_tree = self.hydrovak_class_tree_with_data()
 
@@ -253,8 +255,6 @@ class NewNetwork(object):
                     vertexes[vertex_nr] = inflow - outflow
 
             # rate in between vertexes
-
-
 
             # supply flows to arcs
 
