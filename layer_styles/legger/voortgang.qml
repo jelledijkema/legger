@@ -1,5 +1,5 @@
 <!DOCTYPE qgis PUBLIC 'http://mrcc.com/qgis.dtd' 'SYSTEM'>
-<qgis version="2.18.27" simplifyAlgorithm="0" minimumScale="0" maximumScale="1e+08" simplifyDrawingHints="1" minLabelScale="0" maxLabelScale="1e+08" simplifyDrawingTol="1" readOnly="0" simplifyMaxScale="1" hasScaleBasedVisibilityFlag="0" simplifyLocal="1" scaleBasedLabelVisibilityFlag="0">
+<qgis version="2.18.26" simplifyAlgorithm="0" minimumScale="0" maximumScale="1e+08" simplifyDrawingHints="1" minLabelScale="0" maxLabelScale="1e+08" simplifyDrawingTol="1" readOnly="0" simplifyMaxScale="1" hasScaleBasedVisibilityFlag="0" simplifyLocal="1" scaleBasedLabelVisibilityFlag="0">
   <edittypes>
     <edittype widgetv2type="TextEdit" name="id">
       <widgetv2config IsMultiline="0" fieldEditable="1" constraint="" UseHtml="0" labelOnTop="0" constraintDescription="" notNull="0"/>
@@ -49,6 +49,9 @@
     <edittype widgetv2type="TextEdit" name="profiel_opmerking">
       <widgetv2config IsMultiline="0" fieldEditable="1" constraint="" UseHtml="0" labelOnTop="0" constraintDescription="" notNull="0"/>
     </edittype>
+    <edittype widgetv2type="TextEdit" name="geselecteerde_begroeiingsvariant">
+      <widgetv2config IsMultiline="0" fieldEditable="1" constraint="" UseHtml="0" labelOnTop="0" constraintDescription="" notNull="0"/>
+    </edittype>
     <edittype widgetv2type="TextEdit" name="fit_score">
       <widgetv2config IsMultiline="0" fieldEditable="1" constraint="" UseHtml="0" labelOnTop="0" constraintDescription="" notNull="0"/>
     </edittype>
@@ -69,7 +72,7 @@
     <rules key="{18d5599b-d660-43c5-9e55-31a071955870}">
       <rule filter=" &quot;geselecteerd_op&quot; IS NOT NULL AND&#xd;&#xa;  &quot;fit_score&quot; > 0.999" key="{261842c9-d3ff-4c2c-9127-e574a0f7ca88}" symbol="0" label="gekozen, 100% fit"/>
       <rule filter=" &quot;geselecteerd_op&quot; IS NOT NULL AND&#xd;&quot;fit_score&quot; IS NULL" key="{100d625e-a3bd-493e-b902-d3a438ebc0c6}" symbol="1" label="gekozen, theror. profiel vergeleken"/>
-      <rule filter=" &quot;geselecteerd_op&quot; IS NOT NULL AND&#xd;( to_real(&quot;fit_score&quot;) &lt; 0.999 AND to_real(&quot;fit_score&quot;) >= 0.999)" key="{71c74d0e-841f-4272-8549-7f1c4d9923e0}" symbol="2" label="gekozen, 95% fit"/>
+      <rule filter=" &quot;geselecteerd_op&quot; IS NOT NULL AND&#xd;( to_real(&quot;fit_score&quot;) &lt; 0.999 AND to_real(&quot;fit_score&quot;) >= 0.95)" key="{71c74d0e-841f-4272-8549-7f1c4d9923e0}" symbol="2" label="gekozen, 95% fit"/>
       <rule filter=" &quot;geselecteerd_op&quot; IS NOT NULL AND&#xd;to_real(&quot;fit_score&quot;) &lt; 0.95" key="{a8564247-e44b-4a19-9f1e-65dd2823a1d8}" symbol="3" label="gekozen, lage fit"/>
       <rule filter=" &quot;geselecteerd_op&quot; IS NULL " key="{291639cc-b940-4090-a62a-760512e5ea19}" symbol="4" label="nog kiezen"/>
     </rules>
@@ -177,7 +180,7 @@
           <prop k="joinstyle" v="bevel"/>
           <prop k="line_color" v="149,149,149,255"/>
           <prop k="line_style" v="solid"/>
-          <prop k="line_width" v="0.86"/>
+          <prop k="line_width" v="0.46"/>
           <prop k="line_width_unit" v="MM"/>
           <prop k="offset" v="0"/>
           <prop k="offset_map_unit_scale" v="0,0,0,0,0,0"/>
@@ -427,11 +430,12 @@
     <alias field="geselecteerd_talud" index="13" name=""/>
     <alias field="verhang" index="14" name=""/>
     <alias field="profiel_opmerking" index="15" name=""/>
-    <alias field="fit_score" index="16" name=""/>
-    <alias field="offset" index="17" name=""/>
-    <alias field="overdiepte" index="18" name=""/>
-    <alias field="overbreedte_links" index="19" name=""/>
-    <alias field="overbreedte_rechts" index="20" name=""/>
+    <alias field="geselecteerde_begroeiingsvariant" index="16" name=""/>
+    <alias field="fit_score" index="17" name=""/>
+    <alias field="offset" index="18" name=""/>
+    <alias field="overdiepte" index="19" name=""/>
+    <alias field="overbreedte_links" index="20" name=""/>
+    <alias field="overbreedte_rechts" index="21" name=""/>
   </aliases>
   <excludeAttributesWMS/>
   <excludeAttributesWFS/>
@@ -460,6 +464,7 @@
       <column width="-1" hidden="0" type="field" name="overbreedte_links"/>
       <column width="-1" hidden="0" type="field" name="overbreedte_rechts"/>
       <column width="-1" hidden="1" type="actions"/>
+      <column width="-1" hidden="0" type="field" name="geselecteerde_begroeiingsvariant"/>
     </columns>
   </attributetableconfig>
   <editform>.</editform>
@@ -505,6 +510,7 @@ def my_form_open(dialog, layer, feature):
     <default field="geselecteerd_talud" expression=""/>
     <default field="verhang" expression=""/>
     <default field="profiel_opmerking" expression=""/>
+    <default field="geselecteerde_begroeiingsvariant" expression=""/>
     <default field="fit_score" expression=""/>
     <default field="offset" expression=""/>
     <default field="overdiepte" expression=""/>
