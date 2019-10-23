@@ -2,14 +2,12 @@
     Interface for adding profiles
 """
 
-import datetime
 from PyQt4 import QtCore, QtGui
 
 import pyqtgraph as pg
 from legger.sql_models.legger import Varianten
 from legger.utils.theoretical_profiles import calc_bos_bijkerk
 from legger.sql_models.legger import BegroeiingsVariant
-from legger.sql_models.legger_database import LeggerDatabase
 
 try:
     _fromUtf8 = QtCore.QString.fromUtf8
@@ -137,16 +135,16 @@ class NewWindow(QtGui.QWidget):
                                                 self.ditch_slope,
                                                 friction_bos_bijkerk=begroeiings_variant.friction
                                                 )
-                bodembreedte_bericht = ("{.2f} cm/ km is het verhang\n"
-                                        "{.2f} m is de bodembreedte"
-                                        ).format(self.verhang, self.ditch_bottomwidth)
+                bodembreedte_bericht = ("{0:.2f} cm/ km is het verhang\n"
+                                        "{1:.2f} m is de bodembreedte"
+                                        ).format(float(self.verhang), float(self.ditch_bottomwidth))
 
         except ZeroDivisionError:
             verhang_bericht = "Delen door 0!"
             bodembreedte_bericht = "Geen berekening mogelijk"
 
-        except:
-            verhang_bericht = "Om onbekende redenen kan er geen berekening voor verhang worden gemaakt."
+        except Exception as e:
+            verhang_bericht = "Om onbekende redenen kan er geen berekening voor verhang worden gemaakt. foutmelding: {}".format(e.message)
             bodembreedte_bericht = "Controleer of dit hydro object alle input variabelen heeft."
 
         finally:

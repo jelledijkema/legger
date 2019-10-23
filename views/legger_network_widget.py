@@ -7,8 +7,10 @@ from PyQt4.QtGui import (QApplication, QComboBox, QDockWidget, QGroupBox, QHBoxL
 from legger.qt_models.area_tree import AreaTreeItem, AreaTreeModel, area_class
 from legger.qt_models.legger_tree import LeggerTreeItem, LeggerTreeModel
 from legger.qt_models.profile import ProfileModel
-from legger.sql_models.legger import BegroeiingsVariant, GeselecteerdeProfielen, HydroObject, ProfielFiguren, Varianten
+from legger.sql_models.legger import (BegroeiingsVariant, GeselecteerdeProfielen, HydroObject, Kenmerken,
+                                      ProfielFiguren, Varianten)
 from legger.sql_models.legger_database import LeggerDatabase
+from legger.utils.formats import try_round
 from legger.utils.legger_map_manager import LeggerMapManager
 from legger.utils.network_utils import LeggerMapVisualisation
 from legger.utils.new_network import NewNetwork
@@ -18,8 +20,6 @@ from network_graph_widgets import LeggerPlotWidget, LeggerSideViewPlotWidget
 from qgis.core import QgsFeature, QgsGeometry, QgsMapLayerRegistry
 from qgis.networkanalysis import QgsLineVectorLayerDirector
 from sqlalchemy import and_, or_
-
-from legger.utils.formats import try_round
 
 from .network_table_widgets import LeggerTreeWidget, StartpointTreeWidget, VariantenTable
 
@@ -51,9 +51,9 @@ def interpolated_color(value, color_map, alpha=255):
             if i == 0:
                 return list(cm[1]) + [alpha]
             else:
-                prev = color_map[i-1]
+                prev = color_map[i - 1]
                 fraction = (value - prev[0]) / (cm[0] - prev[0])
-                return [p * (1-fraction) + n * fraction for p, n in zip(prev[1], cm[1])] + [alpha]
+                return [p * (1 - fraction) + n * fraction for p, n in zip(prev[1], cm[1])] + [alpha]
     return list(color_map[-1][1]) + [alpha]
 
 
@@ -320,14 +320,15 @@ class LeggerWidget(QDockWidget):
                         figuur = figuren[0]
                         over_width = "{0:.1f}".format(figuur.t_overbreedte_l + figuur.t_overbreedte_r) \
                             if figuur.t_overbreedte_l is not None else over_width
-                        score = "{0:.0f}".format(figuur.t_fit)
+                        score = "{0:.2f}".format(figuur.t_fit)
                         over_depth = "{0:.1f}".format(
                             figuur.t_overdiepte) if figuur.t_overdiepte is not None else over_depth
                     else:
                         over_depth = "{}*".format(round(over_depth, 1)) if type(over_depth) == float else '-'
                         over_width = "{}*".format(round(over_width, 1)) if type(over_width) == float else '-'
 
-                    verhang = round(profilev.verhang_bos_bijkerk, 0) if type(profilev.verhang_bos_bijkerk) == float else '-'
+                    verhang = round(profilev.verhang_bos_bijkerk, 0) if type(
+                        profilev.verhang_bos_bijkerk) == float else '-'
                     self.legger_model.setDataItemKey(node, 'selected_depth', depth)
                     self.legger_model.setDataItemKey(node, 'selected_width', width)
                     self.legger_model.setDataItemKey(node, 'selected_variant_id', profilev.id)
@@ -388,7 +389,6 @@ class LeggerWidget(QDockWidget):
                 output_hydrovakken += hydrovakken
 
         return output_hydrovakken
-
 
     def data_changed_legger_tree(self, index, to_index):
         """
@@ -724,22 +724,37 @@ class LeggerWidget(QDockWidget):
         from legger import settings
         verhang = 3.0
         color_map = (
-            (verhang / 3, settings.LOW_COLOR),
-            (verhang, settings.OK_COLOR),
-            (verhang * 3, settings.HIGH_COLOR),
+            (1.0, settings.LOW_COLOR),
+            (3.0, settings.OK_COLOR),
+            (4.0, settings.HIGH_COLOR),
         )
         profs = []
         for profile in var.all():
             active = selected_variant_id == profile.id
+            over_width = None
+            over_depth = None
+
+            if profile.figuren:
+                over_width = profile.figuren[0].t_overbreedte_l + profile.figuren[0].t_overbreedte_r
+                over_depth = profile.figuren[0].t_overdiepte
+            else:
+                if profile.hydro.kenmerken and profile.hydro.kenmerken[0].diepte is not None and profile.diepte is not None:
+                    over_depth = profile.hydro.kenmerken[0].diepte - profile.diepte
+                if profile.hydro.kenmerken and profile.hydro.kenmerken[0].breedte is not None and profile.waterbreedte is not None:
+                    over_width = profile.hydro.kenmerken[0].breedte - profile.waterbreedte
+
             profs.append({
                 'name': profile.id,
                 'active': active,  # digits differ far after the
                 'depth': profile.diepte,
                 'begroeiingsvariant': profile.begroeiingsvariant.naam,
-                'score': "{0:.2f}".format(profile.figuren[0].t_fit) if profile.figuren else None,
-                'over_depth': "{0:.2f}".format(profile.figuren[0].t_overdiepte) if profile.figuren else None,
-                'verhang': "{}".format(try_round(profile.verhang_bos_bijkerk, 2, '-')),
-                'color': interpolated_color(value=profile.verhang_bos_bijkerk, color_map=color_map, alpha=(255 if active else 30)),
+                'score': profile.figuren[0].t_fit if profile.figuren else None,
+                'over_depth': over_depth if over_depth is not None else None,
+                'over_width': over_width if over_depth is not None else None,
+                'over_width_color': [255, 0, 0] if over_width < 0 else [255, 255, 255],
+                'verhang': profile.verhang_bos_bijkerk,
+                'color': interpolated_color(value=profile.verhang_bos_bijkerk, color_map=color_map,
+                                            alpha=(255 if active else 80)),
                 'points': [
                     (-0.5 * profile.waterbreedte, hydro_object.streefpeil),
                     (-0.5 * profile.bodembreedte, hydro_object.streefpeil - profile.diepte),

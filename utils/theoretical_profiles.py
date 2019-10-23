@@ -42,7 +42,7 @@ def read_spatialite(cursor):
     """
 
     cursor.execute("Select ho.id, km.diepte, km.breedte, ho.categorieoppwaterlichaam, km.taludvoorkeur, km.grondsoort, "
-                   "ST_LENGTH(TRANSFORM(ho.geometry, 28992)) as length, ho.debiet "
+                   "ST_LENGTH(ST_TRANSFORM(ho.geometry, 28992)) as length, ho.debiet "
                    "from hydroobject ho "
                    "left outer join kenmerken km on ho.id = km.hydro_id ")
 
@@ -130,7 +130,7 @@ def calc_profile_variants_for_all(hydro_objects,
         else:
             from_depth = store_all_from_depth
         if depth_mapping_field and type(store_all_to_depth) == dict:
-            to_depth = store_all_to_depth.get(getattr(row, depth_mapping_field), 1000)
+            to_depth = store_all_to_depth.get(getattr(row, depth_mapping_field), 8)
         else:
             to_depth = store_all_to_depth
 
@@ -191,25 +191,30 @@ def calc_profile_variants_for_hydro_object(
                                         'normative_flow', 'gradient_bos_bijkerk', 'friction_bos_bijkerk',
                                         'surge'])
 
-    # minus 0.05, because in loop this is added
-    water_depth = store_from_depth - 0.05
+    # minus 0.10, because in loop this is added
+    water_depth = store_from_depth - 0.10
 
     go_on = True
     while go_on:
         # water_depth for this while loop
-        water_depth = water_depth + 0.05
+        if water_depth <= 1:
+            water_depth = water_depth + 0.10
+        elif water_depth <= 3:
+            water_depth = water_depth + 0.20
+        else:
+            water_depth = water_depth + 0.50
 
         # initial values for finding profile which fits
         gradient_bos_bijkerk = 1000
         gradient_manning = 1000
-        # minus 0.05, because in loop 0.05 is added
-        ditch_bottom_width = minimal_bottom_width - 0.05
+        # minus 0.10, because in loop 0.10 is added
+        ditch_bottom_width = minimal_bottom_width - 0.10
         ditch_width = None
 
         # make sure this loop runs at least one time to calculate values
         while gradient_bos_bijkerk > gradient_norm or gradient_manning > gradient_norm:
 
-            ditch_bottom_width = ditch_bottom_width + 0.05
+            ditch_bottom_width = ditch_bottom_width + 0.10
             try:
                 ditch_width = ditch_bottom_width + water_depth * slope * 2.0
             except Exception as e:
@@ -286,8 +291,21 @@ def create_theoretical_profiles(legger_db_filepath, gradient_norm, bv):
 
     min_depth_settings = {cat['categorie']: cat['variant_diepte_min'] for cat in all_categories
                           if cat['variant_diepte_min'] is not None}
+
     max_depth_settings = {cat['categorie']: cat['variant_diepte_max'] for cat in all_categories
                           if cat['variant_diepte_max'] is not None}
+
+    # additional: set max on 1.2 times th maximal depth within the specific category
+    cursor.execute(
+        "Select categorieoppwaterlichaam, max(diepte) as max_diepte from hydroobjects_kenmerken GROUP BY categorieoppwaterlichaam ")
+    categories_max_depth = cursor.fetchall()
+    for cat in categories_max_depth:
+        if cat['categorieoppwaterlichaam'] in max_depth_settings:
+            max_depth_settings[cat['categorieoppwaterlichaam']] = min(
+                cat['max_diepte'] * 1.2, max_depth_settings[cat['categorieoppwaterlichaam']])
+        else:
+            max_depth_settings[cat['categorieoppwaterlichaam']] = cat['max_diepte'] * 1.2
+
     default_slope = {cat['categorie']: cat['default_talud'] for cat in all_categories
                      if cat['default_talud'] is not None}
 
