@@ -89,37 +89,38 @@ class ProfileModel(ModifiedBaseModel):
                           column_width=130,
                           column_name='name')
         depth = ValueField(show=True,
-                           column_width=55,
+                           column_width=45,
                            round=2,
                            column_name='dpt',
                            column_tooltip='profieldiepte [m]')
         begroeiingsvariant = ValueField(show=True,
-                                        column_width=80,
+                                        column_width=70,
                                         column_name='begr',
                                         column_tooltip='begroeiingsvariant naam')
         score = ValueField(show=True,
-                           column_width=55,
-                           round=0,
+                           column_width=45,
+                           round=2,
                            column_name='sc',
                            column_tooltip='score')
 
         over_depth = ValueField(show=True,
-                                column_width=55,
-                                round=1,
+                                column_width=45,
+                                round=2,
                                 column_name='od',
                                 column_tooltip='overdiepte [m]')
         over_depth_color = ColorField(show=False)
 
         over_width = ValueField(show=True,
-                                column_width=55,
-                                round=1,
+                                column_width=45,
+                                round=2,
                                 column_name='ob',
+                                color_from='over_width_color',
                                 column_tooltip='overbreedte [m]')
         over_width_color = ColorField(show=False,
                                       default_value=(0, 0, 0, 0))
 
         verhang = ValueField(show=True,
-                             column_width=60,
+                             column_width=45,
                              round=1,
                              column_name='verh',
                              column_tooltip='verhang [cm/km]',

@@ -134,7 +134,7 @@ def create_legger_views(session):
                 v.waterbreedte as geselecteerd_waterbreedte,
                 v.bodembreedte as geselecteerde_bodembreedte,
                 v.talud as geselecteerd_talud,
-                v.verhang_bos_bijkerk as verhang,
+                v.verhang as verhang,
                 v.opmerkingen as profiel_opmerking,
                 v.begroeiingsvariant_id as geselecteerde_begroeiingsvariant,
                 p.t_fit as fit_score,

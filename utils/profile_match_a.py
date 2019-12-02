@@ -272,7 +272,7 @@ def mkgemprof(axyzlist, peil):
     return shapely.geometry.Polygon(xy[tel])
 
 
-def prof_in_prof(profgem, proftheo, aantstap=100, delta=0.001, obdiepte=0.3, debug=0):
+def prof_in_prof(profgem, proftheo, aantstap=100, delta=0.001, obdiepte=0.001, debug=0):
     """Het theoretisch profiel wordt in stapjes verschoven over het gemeten profiel (te beginnen links van het
     gemeten profiel zonder overlap, tot en met rechts van het gemeten profiel zonder overlap). Indien het
     theoretisch profiel nergens past binnen het gemeten profiel is de plek met het maximale oppervlak van de
@@ -459,7 +459,7 @@ def controlefig(gemprof, theoprof, afstand, fit, fractie, overdiepte, overlinks,
     return
 
 def doe_profinprof(cur0, cur1, aantalstappen=200, precisie=0.0001, codevastebodem="Z1", peilcriterium="min",
-                           projectiecriterium="eindpunt", obdiepte=0.3, debug=0):
+                           projectiecriterium="eindpunt", obdiepte=0.001, debug=0):
     """
 
     :param cur0: cursor naar de legger database
@@ -530,7 +530,7 @@ def doe_profinprof(cur0, cur1, aantalstappen=200, precisie=0.0001, codevastebode
 # codevastebodem = "Z1"  # de code in de profieldata voor de vaste bodem
 # peilcriterium = "min"  # het criterium om het peil voor een hydroobject te kiezen, geldige waarden min en max
 # projectiecriterium = 'eindpunt'  # het criterium voor de projectie van de profielpunten, geldige waarden eindpunt
-# obdiepte = 0.3  # de diepte waarop de overbreedte bepaald moet worden
+# obdiepte = 0.001  # de diepte waarop de overbreedte bepaald moet worden
 # debug = 0  # vlag om extra output te genereren, geldige waarden 0 of 1
 #
 # con = sql.connect('../tests/data/HHW_20180129.sqlite')

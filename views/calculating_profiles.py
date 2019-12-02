@@ -7,6 +7,7 @@
 from __future__ import division
 
 import logging
+import time
 
 from PyQt4 import QtCore, QtGui
 from PyQt4.QtCore import pyqtSignal
@@ -16,10 +17,10 @@ from legger.sql_models.legger_database import LeggerDatabase
 from legger.utils.profile_match_a import doe_profinprof, maaktabellen
 from legger.utils.read_tdi_results import (get_timestamps, read_tdi_culvert_results, read_tdi_results,
                                            write_tdi_culvert_results_to_db, write_tdi_results_to_db)
-from legger.utils.snap_points import snap_points
-from legger.utils.theoretical_profiles import Kb, create_theoretical_profiles, write_theoretical_profile_results_to_db
-from pyspatialite import dbapi2 as dbapi
 from legger.utils.redirect_flows_to_main_branches import redirect_flows
+from legger.utils.snap_points import snap_points
+from pyspatialite import dbapi2 as dbapi
+from legger.utils.theoretical_profiles import Kb, create_theoretical_profiles, write_theoretical_profile_results_to_db
 
 log = logging.getLogger(__name__)
 
@@ -252,7 +253,6 @@ class ProfileCalculationWidget(QWidget):  # , FORM_CLASS):
         redirect_flows(self.iface, self.polder_datasource)
         self.feedbacktext.setText("Debieten zijn aangepast.")
 
-
     def explain_step2(self):
         """
         Uitleg van stap 1
@@ -286,21 +286,15 @@ class ProfileCalculationWidget(QWidget):  # , FORM_CLASS):
         # do one query, don't know what the reason was for this...
         session = db.get_session()
 
-        get_or_create(session, BegroeiingsVariant, naam='standaard',
-                      defaults={'friction': Kb, 'is_default': True})
+        # instance = session.query(BegroeiingsVariant).filter_by(naam='basis').first()
 
-        get_or_create(session, BegroeiingsVariant, naam='deels begroeid',
-                      defaults={'friction': 0.75 * Kb})
-
-        get_or_create(session, BegroeiingsVariant, naam='sterk begroeid',
-                      defaults={'friction': 0.5 * Kb})
-        session.commit()
+        # session.query('Select * FROM varianten')
 
         opstuw_norm = float(self.surge_combo_box.currentText())
 
         for bv in session.query(BegroeiingsVariant).all():
 
-            if True: # try:
+            if True:  # try:
                 profiles = create_theoretical_profiles(self.polder_datasource, opstuw_norm, bv)
                 self.feedbackmessage = "Profielen zijn berekend."
             # except:
@@ -335,16 +329,24 @@ class ProfileCalculationWidget(QWidget):  # , FORM_CLASS):
     def execute_pre_fill(self):
         self.feedbacktext.setText("Waarschuwing: nog niet geimplementeerd")
 
+    def run_all(self):
+        self.execute_snap_points()
+        time.sleep(1)
+        self.execute_step1()
+        time.sleep(1)
+        self.execute_redirect_flows()
+        time.sleep(1)
+        self.execute_step2()
+        time.sleep(1)
+        self.execute_step3()
+        self.feedbacktext.setText("Alle taken uitgevoerd.")
+
     def setup_ui(self):
         self.verticalLayout = QtGui.QVBoxLayout(self)
         self.verticalLayout.setObjectName(_fromUtf8("verticalLayout"))
 
         self.information_row = QtGui.QHBoxLayout()
         self.information_row.setObjectName(_fromUtf8("Information row"))
-        self.upper_row = QtGui.QHBoxLayout()
-        self.upper_row.setObjectName(_fromUtf8("Upper row"))
-        self.middle_row = QtGui.QHBoxLayout()
-        self.middle_row.setObjectName(_fromUtf8("Middle row"))
         self.bottom_row = QtGui.QHBoxLayout()
         self.bottom_row.setObjectName(_fromUtf8("Bottom row"))
         self.feedback_row = QtGui.QHBoxLayout()
@@ -384,6 +386,16 @@ class ProfileCalculationWidget(QWidget):  # , FORM_CLASS):
         # timestep selection for UPPER ROW groupbox:
         self.timestep_combo_box = QComboBox(self)
 
+        # Assembling step 0 row
+        self.snap_points_button = QtGui.QPushButton(self)
+        self.snap_points_button.setObjectName(_fromUtf8("Snap points"))
+        self.snap_points_button.clicked.connect(self.execute_snap_points)
+        self.groupBox_snap_points = QtGui.QGroupBox(self)
+        self.groupBox_snap_points.setTitle("Stap 1: snap eindpunten")
+        self.box_snap_points = QtGui.QHBoxLayout()
+        self.box_snap_points.addWidget(self.snap_points_button)
+        self.groupBox_snap_points.setLayout(self.box_snap_points)  # box toevoegen aan groupbox
+
         # Assembling step 1 row
         self.step1_button = QtGui.QPushButton(self)
         self.step1_button.setObjectName(_fromUtf8("stap1"))
@@ -398,16 +410,15 @@ class ProfileCalculationWidget(QWidget):  # , FORM_CLASS):
         self.step_redirect_flow_button.clicked.connect(self.execute_redirect_flows)
 
         self.groupBox_step1 = QtGui.QGroupBox(self)
-        self.groupBox_step1.setTitle("stap 1: Kies een tijdstap")
+        self.groupBox_step1.setTitle("stap 2: lees 3di resultaten")
         self.box_step1 = QtGui.QVBoxLayout()
         self.box_step1.addWidget(self.timestep_combo_box)
         self.box_step1.addWidget(self.step1_button)
         self.box_step1.addWidget(self.step_redirect_flow_button)
         self.box_step1.addWidget(self.step1_explanation_button)
         self.groupBox_step1.setLayout(self.box_step1)  # box toevoegen aan groupbox
-        self.upper_row.addWidget(self.groupBox_step1)
 
-        # surge selection:
+        #         # surge selection:
         self.surge_combo_box = QComboBox(self)
 
         # Assembling step 2 row
@@ -419,46 +430,44 @@ class ProfileCalculationWidget(QWidget):  # , FORM_CLASS):
         self.step2_explanation_button.clicked.connect(self.explain_step2)
 
         self.groupBox_step2 = QtGui.QGroupBox(self)
-        self.groupBox_step2.setTitle("stap2: bereken de varianten")
+        self.groupBox_step2.setTitle("stap 3: bereken varianten")
         self.box_step2 = QtGui.QVBoxLayout()
         self.box_step2.addWidget(self.surge_combo_box)
         self.box_step2.addWidget(self.step2_button)
         self.box_step2.addWidget(self.step2_explanation_button)
         self.groupBox_step2.setLayout(self.box_step2)  # box toevoegen aan groupbox
-        self.middle_row.addWidget(self.groupBox_step2)
 
         # Assembling step 3 row
         self.step3_button = QtGui.QPushButton(self)
         self.step3_button.setObjectName(_fromUtf8("Stap 3"))
         self.step3_button.clicked.connect(self.execute_step3)
         self.groupBox_step3 = QtGui.QGroupBox(self)
-        self.groupBox_step3.setTitle("Step3:")
+        self.groupBox_step3.setTitle("Stap 3: bepaal scores")
         self.box_step3 = QtGui.QHBoxLayout()
         self.box_step3.addWidget(self.step3_button)
         self.groupBox_step3.setLayout(self.box_step3)  # box toevoegen aan groupbox
         self.bottom_row.addWidget(self.groupBox_step3)
 
-        # Assembling step 4 row
-        self.snap_points_button = QtGui.QPushButton(self)
-        self.snap_points_button.setObjectName(_fromUtf8("Snap points"))
-        self.snap_points_button.clicked.connect(self.execute_snap_points)
-        self.groupBox_snap_points = QtGui.QGroupBox(self)
-        self.groupBox_snap_points.setTitle("Stap 4:")
-        self.box_snap_points = QtGui.QHBoxLayout()
-        self.box_snap_points.addWidget(self.snap_points_button)
-        self.groupBox_snap_points.setLayout(self.box_snap_points)  # box toevoegen aan groupbox
-        self.bottom_row.addWidget(self.groupBox_snap_points)
-
         # Assembling step 5 row
         self.pre_fill_button = QtGui.QPushButton(self)
-        self.pre_fill_button.setObjectName(_fromUtf8("Snap points"))
+        self.pre_fill_button.setObjectName(_fromUtf8("pre fill profiles"))
         self.pre_fill_button.clicked.connect(self.execute_pre_fill)
         self.groupBox_pre_fill = QtGui.QGroupBox(self)
-        self.groupBox_pre_fill.setTitle("Stap 5:")
+        self.groupBox_pre_fill.setTitle("Stap 4: invullen waar evident")
         self.box_pre_fill = QtGui.QHBoxLayout()
         self.box_pre_fill.addWidget(self.pre_fill_button)
         self.groupBox_pre_fill.setLayout(self.box_pre_fill)  # box toevoegen aan groupbox
         self.bottom_row.addWidget(self.groupBox_pre_fill)
+
+        # Assembling run all
+        self.run_all_button = QtGui.QPushButton(self)
+        self.run_all_button.setObjectName(_fromUtf8("pre fill profiles"))
+        self.run_all_button.clicked.connect(self.run_all)
+        self.groupBox_run_all = QtGui.QGroupBox(self)
+        self.groupBox_run_all.setTitle("Run alle (vergeet 3di resultaten niet te selecteren)")
+        self.box_run_all = QtGui.QHBoxLayout()
+        self.box_run_all.addWidget(self.run_all_button)
+        self.groupBox_run_all.setLayout(self.box_run_all)  # box toevoegen aan groupbox
 
         # Assembling feedback row
         self.feedbacktext = QtGui.QTextEdit(self)
@@ -481,9 +490,11 @@ class ProfileCalculationWidget(QWidget):  # , FORM_CLASS):
 
         # Lay-out in elkaar zetten.
         self.verticalLayout.addLayout(self.information_row)
-        self.verticalLayout.addLayout(self.upper_row)
-        self.verticalLayout.addLayout(self.middle_row)
+        self.verticalLayout.addWidget(self.groupBox_snap_points)
+        self.verticalLayout.addWidget(self.groupBox_step1)
+        self.verticalLayout.addWidget(self.groupBox_step2)
         self.verticalLayout.addLayout(self.bottom_row)
+        self.verticalLayout.addWidget(self.groupBox_run_all)
         self.verticalLayout.addLayout(self.feedback_row)
         self.verticalLayout.addLayout(self.exit_row)
 
@@ -506,5 +517,7 @@ class ProfileCalculationWidget(QWidget):  # , FORM_CLASS):
 
         self.pre_fill_button.setText(
             _translate("Dialog", "Vul profielen in waar duidelijk", None))
+        self.run_all_button.setText(
+            _translate("Dialog", "Run alle taken achter elkaar", None))
 
         self.cancel_button.setText(_translate("Dialog", "Cancel", None))

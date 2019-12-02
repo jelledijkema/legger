@@ -87,7 +87,7 @@ class VariantenTable(QTableView):
             item = self.model().rows[row_nr]
             item.hover.value = False
             if not item.active.value:
-                item.color.value = list(item.color.value)[:3] + [20]
+                item.color.value = list(item.color.value)[:3] + [80]
 
     def hover_enter(self, row_nr):
         if row_nr >= 0:

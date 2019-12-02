@@ -1,5 +1,5 @@
-pandas
-geopandas
+pandas==0.24.2
+# geopandas
 descartes
-shapely==1.6.3
-osgeo
+shapely==1.6.4.post1
+gdal

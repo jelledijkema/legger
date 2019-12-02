@@ -34,7 +34,7 @@ session.execute(
                 k.diepte,
                 k.breedte,
                 k.taludvoorkeur,
-                v.verhang_bos_bijkerk as verhang,
+                v.verhang as verhang,
                 v.opmerkingen as profiel_opmerking,
                 p.t_fit as fit_score,
                 p.t_afst as offset,

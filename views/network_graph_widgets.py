@@ -105,7 +105,7 @@ class LeggerPlotWidget(pg.PlotWidget):
          :param index: index of changed field
          """
         model = self.variant_model
-        if model.columns[index.column()].name == 'color':
+        if model.columns[index.column()].name in ['color', 'active']:
             item = model.rows[index.row()]
             if item.active.value:
                 item._plot.setPen(color=item.color.value,

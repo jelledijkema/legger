@@ -5,6 +5,7 @@ from PyQt4 import QtCore
 from PyQt4.QtCore import Qt
 from PyQt4.QtGui import QBrush
 from legger.utils.formats import transform_none
+from legger.utils.formats import try_round
 
 CHECKBOX_FIELD = 1
 INDICATION_HOVER = 2
@@ -62,7 +63,11 @@ class BaseTreeItem(object):
             if column == 1:
                 return ""
         else:
-            return self.data_item.data(column, qvalue)
+            value = self.data_item.data(column, qvalue)
+            if self.headers[column].get('round') is not None:
+                value = try_round(value, self.headers[column].get('round'))
+            return value
+
         return None
 
     def setData(self, column, value, role, signal=True):
