@@ -24,26 +24,15 @@ def get_or_create(session, model, defaults=None, **kwargs):
         return instance, True
 
 
-class Categorie(Base):
-    __tablename__ = 'categorie'
-
-    categorie = Column(Integer(), primary_key=True, index=True)
-    naam = Column(String(20))
-    variant_diepte_min = Column(Float())
-    variant_diepte_max = Column(Float())
-    default_talud = Column(Float())
-
-    def __str__(self):
-        return u'categorie {0} - {1}'.format(
-            self.categorie, self.naam)
-
-
 class BegroeiingsVariant(Base):
     __tablename__ = 'begroeiingsvariant'
 
     id = Column(Integer(), primary_key=True, autoincrement=True, index=True)
     naam = Column(String(20))
-    friction = Column(Float())
+    friction_manning = Column(Float())
+    friction_begroeiing = Column(Float())
+    begroeiingsdeel = Column(Float())
+
     is_default = Column(Boolean, default=False)
 
     profielvariant = relationship('Varianten',
@@ -72,6 +61,21 @@ class Waterdeel(Base):
             self.id)
 
 
+class Categorie(Base):
+    __tablename__ = 'categorie'
+    extend_existing = True
+
+    categorie = Column(Integer(), primary_key=True, index=True)
+    naam = Column(String(20))
+    variant_diepte_min = Column(Float())
+    variant_diepte_max = Column(Float())
+    default_talud = Column(Float())
+
+    def __str__(self):
+        return u'categorie {0} - {1}'.format(
+            self.categorie, self.naam)
+
+
 class HydroObject(Base):
     __tablename__ = 'hydroobject'
     extend_existing = True
@@ -93,8 +97,9 @@ class HydroObject(Base):
     opmerkingen = Column(String())
     # shape_length = Column(Float)
 
-    profielen = relationship("Profielen",
-                             back_populates="hydro")
+    # profielen = relationship("Profielen",
+    #                          uselist=True,
+    #                          back_populates="hydro")
 
     kenmerken = relationship("Kenmerken",
                              back_populates="hydro")
@@ -136,16 +141,21 @@ class Profielen(Base):
                       ForeignKey(HydroObject.__tablename__ + ".id"),
                       index=True)
     # shape_lengte = Column(Float)
-    hydro = relationship(HydroObject,
-                         back_populates="profielen")
+    # hydro = relationship(HydroObject,
+    #                      back_populates="profielen")
 
-    profielpunten = relationship(
-        "Profielpunten",
-        back_populates="profiel")
+    # profielpunten = relationship(
+    #     "Profielpunten",
+    #     uselist=True,
+    #     back_populates="profiel")
 
     def __str__(self):
         return u'profiel {0} - {1}'.format(
             self.id, self.proident)
+
+
+HydroObject.profielen = relationship(Profielen, uselist=True, back_populates="hydro")
+Profielen.hydro = relationship(HydroObject, back_populates="profielen")
 
 
 class Profielpunten(Base):
@@ -166,11 +176,21 @@ class Profielpunten(Base):
 
     profiel = relationship(
         "Profielen",
+        uselist=False,
         back_populates="profielpunten")
 
     def __str__(self):
         return u'profielpunt {0}'.format(
             self.pbpident)
+
+Profielen.profielpunten = relationship(
+        Profielpunten,
+        uselist=True,
+        back_populates="profiel")
+Profielpunten.profiel = relationship(
+    Profielen,
+    uselist=False,
+    back_populates="profielpunten")
 
 
 class Kenmerken(Base):
@@ -216,7 +236,7 @@ class Varianten(Base):
     bodembreedte = Column(Float)
     talud = Column(Float)
     # maatgevend_debiet = Column(Float)
-    verhang_bos_bijkerk = Column(Float)
+    verhang = Column(Float)
     opmerkingen = Column(String())
     hydro_id = Column(Integer,
                       ForeignKey(HydroObject.__tablename__ + ".id"),
@@ -327,3 +347,6 @@ class DuikerSifonHevel(Base):
     def __str__(self):
         return u'DuikerSifonHevel {0}'.format(
             self.code)
+
+
+

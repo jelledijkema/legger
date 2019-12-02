@@ -286,15 +286,9 @@ class ProfileCalculationWidget(QWidget):  # , FORM_CLASS):
         # do one query, don't know what the reason was for this...
         session = db.get_session()
 
-        get_or_create(session, BegroeiingsVariant, naam='standaard',
-                      defaults={'friction': Kb, 'is_default': True})
+        # instance = session.query(BegroeiingsVariant).filter_by(naam='basis').first()
 
-        get_or_create(session, BegroeiingsVariant, naam='deels begroeid',
-                      defaults={'friction': 0.75 * Kb})
-
-        get_or_create(session, BegroeiingsVariant, naam='sterk begroeid',
-                      defaults={'friction': 0.5 * Kb})
-        session.commit()
+        # session.query('Select * FROM varianten')
 
         opstuw_norm = float(self.surge_combo_box.currentText())
 

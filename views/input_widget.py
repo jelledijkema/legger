@@ -6,7 +6,7 @@ from PyQt4 import QtCore, QtGui
 
 import pyqtgraph as pg
 from legger.sql_models.legger import Varianten
-from legger.utils.theoretical_profiles import calc_bos_bijkerk
+from legger.utils.theoretical_profiles import calc_pitlo_griffioen
 from legger.sql_models.legger import BegroeiingsVariant
 
 try:
@@ -129,12 +129,15 @@ class NewWindow(QtGui.QWidget):
                 bodembreedte_bericht = "Bodembreedte is negatief of 0"
             else:
                 placeholder_norm_flow = self.legger_item.hydrovak.get('flow', 0)
-                self.verhang = calc_bos_bijkerk(placeholder_norm_flow,
-                                                self.ditch_bottomwidth,
-                                                self.waterdepth,
-                                                self.ditch_slope,
-                                                friction_bos_bijkerk=begroeiings_variant.friction
-                                                )
+                self.verhang = calc_pitlo_griffioen(
+                    placeholder_norm_flow,
+                    self.ditch_bottomwidth,
+                    self.waterdepth,
+                    self.ditch_slope,
+                    friction_manning=begroeiings_variant.friction_manning,
+                    friction_begroeiing=begroeiings_variant.friction_begroeiing,
+                    begroeiingsdeel=begroeiings_variant.begroeiingsdeel)
+
                 bodembreedte_bericht = ("{0:.2f} cm/ km is het verhang\n"
                                         "{1:.2f} m is de bodembreedte"
                                         ).format(float(self.verhang), float(self.ditch_bottomwidth))
@@ -144,7 +147,8 @@ class NewWindow(QtGui.QWidget):
             bodembreedte_bericht = "Geen berekening mogelijk"
 
         except Exception as e:
-            verhang_bericht = "Om onbekende redenen kan er geen berekening voor verhang worden gemaakt. foutmelding: {}".format(e.message)
+            verhang_bericht = "Om onbekende redenen kan er geen berekening voor verhang worden gemaakt. foutmelding: {}".format(
+                e.message)
             bodembreedte_bericht = "Controleer of dit hydro object alle input variabelen heeft."
 
         finally:
@@ -183,7 +187,7 @@ class NewWindow(QtGui.QWidget):
                 waterbreedte=self.ditch_width,
                 bodembreedte=self.ditch_bottomwidth,
                 talud=self.ditch_slope,
-                verhang_bos_bijkerk=self.verhang,
+                verhang=self.verhang,
                 opmerkingen='handmatig aangemaakt',
                 begroeiingsvariant=begroeiings_variant,
                 hydro_id=self.legger_item.hydrovak.get('hydro_id')
