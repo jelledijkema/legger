@@ -1,3 +1,4 @@
+"""Dit is van Renske"""
 from pandas import DataFrame
 from pyspatialite import dbapi2 as sql
 
@@ -58,30 +59,50 @@ def read_spatialite(cursor):
         'length',
         'normative_flow'])
 
-
-def calc_bos_bijkerk(normative_flow, ditch_bottom_width, water_depth, slope, friction_bos_bijkerk=Kb):
+def calc_pitlo_griffioen(friction_vegetation, water_open, water_grown, normative_flow, friction_manning, hydraulic_radius):
     """
-    A calculation of the formula for gradient in the water level according to De Bos and Bijkerk.
-    Based on physical parameters like normative flow, ditch width, water depth and slope.
+    A calculation of the formula for gradient in the water level according to Pitlo and Griffioen.
+    Based on physical parameters like normative flow, ditch width, water depth and slope as well as 
+    different level of vegetation growth. When plant_percentage < 25%, use Manning. 
     """
-    ditch_circumference = (ditch_bottom_width
-                           + (np.sqrt(water_depth ** 2 + (slope * water_depth) ** 2))
-                           + (np.sqrt(water_depth ** 2 + (slope * water_depth) ** 2)))
-
-    ditch_cross_section_area = (ditch_bottom_width * water_depth
-                                + (0.5 * (water_depth * slope) * water_depth)
-                                + (0.5 * (water_depth * slope) * water_depth))
-
-    # Formule: Hydraulische Straal = Nat Oppervlak/ Natte Omtrek
-    hydraulic_radius = ditch_cross_section_area / ditch_circumference
-
-    # Formule: Gradient = Q / (((A*Kb*(waterdiepte^1/3))*(hydraulische straal^1/2)^2)*100000)
-    gradient_bos_bijkerk = ((normative_flow / (
-            ditch_cross_section_area * friction_bos_bijkerk * (water_depth ** 0.333333) *
-            (hydraulic_radius ** 0.5))) ** 2) * 100000
-
-    return gradient_bos_bijkerk
-
+    ## Water_width staat ook in de legger - moet nog toegevoegd worden in script? 
+    
+    #friction_manning en friction_vegetation verschillen per begroeiinsgpercentage
+    df_parameters = pd.DataFrame({
+        'name':    [ 'friction_vegetation', 'friction_manning', 'value_percentage'],
+        '25_50':   [          30,                   20,              0.55         ],
+        '50_100':  [          65,                   40,              0.90         ]
+    }).set_index('name')
+    
+    #Bereken natte omtrek, hydraulische straal en doorstroomoppervlak voor een zwevend open bakje (dus niet hele sloot!)
+    ditch_wet_circumference = water_width + (2*(1-value_percentage)*water_depth
+    ditch_cross_section_area = 0.5*(water_width + ditch_bottom_width)*water_depth
+    
+    #Bereken oppervlakte van open en begroeid water op basis van het begroeiinsgpercentage. Stuur door naar manning als % < 25... 
+    #if plant_percentage = 0_25
+        #goto(calc_manning)                                             
+    if plant_percentage = 25_50
+        water_open = (1-value_percentage[25_50])*ditch_cross_section_area
+        water_grown = value_percentage[25_50]*ditch_cross_section_area
+    if plant_percentage = 50_100
+        water_open = (1-value_percentage[50_100])*ditch_cross_section_area
+        water_grown = value_percentage[50_100]*ditch_cross_section_area
+                                            
+    wet_hydraulic_radius = water_open/ditch_wet_circumference 
+         
+    #Bereken verhang. I = (W*A2*Q + ((Km^2)/2)*R^(4/3)*A1^2 - Km*A1*(R^(4/3)*((Km^2)/4)*R^(4/3)*A1^2 + W*A2*Q))^(1/2))/(A2^2)*(W^2)
+    #Omgerekend naar cm/km
+    #Hoe zorg je ervoor dat de juiste friction_vegetation/friction_manning vanuit het dataframe worden gebruikt?  
+    gradient_pitlo_griffioen = (((friction_vegetation * water_grown * normative_flow +
+                                   friction_manning**2/2 * wet_hydraulic_radius**(4/3) * water_open**2 -
+                                    friction_manning * water_open * (wet_hydraulic_radius**(4/3) * (friction_manning**2/4 * wet_hydraulic_radius**(4/3) * water_open**2 + friction_vegetation * water_grown * normative_flow)) ** 0.5)/
+                                    (water_grown**2 * friction_vegetation**2)))*100*1000
+    
+return gradient_pitlo_griffioen
+                                             
+#Melding weeregeven wanneer het verhang groter wordt dan de norm.
+if gradient_pitlo_griffioen > 4
+    raise ValueError('Verhang is groter dan de norm van 4 cm/km, dit begroeiingspercentage wordt niet toegestaan') 
 
 def calc_manning(normative_flow, ditch_bottom_width, water_depth, slope, friction_manning=Km):
     ditch_circumference = (ditch_bottom_width
@@ -95,7 +116,7 @@ def calc_manning(normative_flow, ditch_bottom_width, water_depth, slope, frictio
     # Formule: Hydraulische Straal = Nat Oppervlak/ Natte Omtrek
     hydraulic_radius = ditch_cross_section_area / ditch_circumference
 
-    # Furmule: Verhang = ((Q / (A*Km*(hydraulische straal^(2/3)))^2)*100000
+    # Formule: Verhang = ((Q / (A*Km*(hydraulische straal^(2/3)))^2)*100000
     gradient_manning = ((normative_flow /
                          (ditch_cross_section_area * friction_manning * (hydraulic_radius ** 0.666667))) ** 2) * 100000
 
