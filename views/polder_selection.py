@@ -212,6 +212,33 @@ class PolderSelectionWidget(QWidget):  # , FORM_CLASS):
         con_legger = dbapi.connect(self.root_tool.polder_datasource)
         create_legger_views(con_legger)
 
+        con_legger.execute("""
+            WITH 
+                max_diepte as (Select pr.hydro_id as hydro_id, min(pp.iws_hoogte) as bodemhoogte, ho.streefpeil - min(pp.iws_hoogte)  as diepte, "meting" as bron
+                from profielpunten pp, profielen pr, hydroobject ho
+                where pp.pro_pro_id = pr.pro_id AND ho.id = pr.hydro_id AND osmomsch="Z1"
+                group by pr.hydro_id)
+    
+            UPDATE kenmerken
+            SET (bodemhoogte, diepte, bron_diepte) = (SELECT bodemhoogte, diepte, bron FROM max_diepte WHERE kenmerken.hydro_id = max_diepte.hydro_id)
+            WHERE kenmerken.hydro_id in (SELECT hydro_id FROM max_diepte)    
+            """)
+        con_legger.execute("""
+            INSERT INTO begroeiingsvariant(id, naam, is_default, friction_manning, friction_begroeiing, begroeiingsdeel) 
+            VALUES 
+                (1, 'basis', 1, 27.2, 80, 0.1),
+                (2, 'half vol', 0, 27.2, 80, 0.5),
+                (3, 'volledig begroeid', 0, 27.2, 80, 0.9)
+            """)
+        # con_legger.execute("""
+        #             INSERT INTO categorie(categorie, naam, variant_diepte_max, default_talud)
+        #             VALUES
+        #                 (1, 'primair', 4, 2),
+        #                 (2, 'secundair', 2, 2),
+        #                 (3, 'tertiare', 1.5, 2)
+        #             """)
+        con_legger.commit()
+
         messagebar_message(
             'Aanmaken leggerdatabase',
             'Aanmaken leggerdatabase is gelukt',
