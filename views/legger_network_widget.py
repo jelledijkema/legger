@@ -80,6 +80,10 @@ class LeggerWidget(QDockWidget):
         self.legger_model = LeggerTreeModel()
         self.area_model = AreaTreeModel()
 
+        if not path_legger_db:
+            messagebar_message("Database selectie", "Selecteer eerst een legger database", level=1)
+            raise Exception("Selecteer eerst een legger database")
+
         # create session (before setup_ui)
         db = LeggerDatabase(
             {'db_path': path_legger_db},
@@ -87,6 +91,12 @@ class LeggerWidget(QDockWidget):
         )
         db.create_and_check_fields()
         self.session = db.get_session()
+        # todo: request something to test connection and through error message otherwise
+        hydro_object_count = self.session.query(HydroObject).count()
+
+        if hydro_object_count == 0:
+            messagebar_message("Database selectie", "Database bevat geen hydrovakken", level=1)
+            raise Exception("Database bevat geen hydrovakken")
 
         # initial values
         self.selected_hydrovak = None
@@ -122,8 +132,9 @@ class LeggerWidget(QDockWidget):
         self.child_selection_strategies = OrderedDict((
             ('gekozen traject tot waarde', 'selected_branch_till_value'),
             ('gekozen traject tot eind', 'selected_branch_till_end'),
-            ('bovenstrooms tot waarde', 'upstream_till_value'),
-            ('bovenstrooms tot eind', 'upstream_till_end'),
+            ('alleen dit hydrovak', 'selected_hydrovak'),
+            ('bovenstrooms (met zijtakken) tot waarde ', 'upstream_till_value'),
+            ('bovenstrooms (met zijtakken) tot eind', 'upstream_till_end'),
         ))
 
         self.child_selection_strategy_combo.insertItems(0, self.child_selection_strategies.keys())
@@ -249,6 +260,7 @@ class LeggerWidget(QDockWidget):
                 options:
                    - 'selected_branch_till_value',
                    - 'selected_branch_till_end',
+                   - 'selected_hydrovak',
                    - 'upstream_till_value',
                    - 'upstream_till_end'
         begroeiings_strategy (str):
@@ -277,6 +289,8 @@ class LeggerWidget(QDockWidget):
             # get selected variant. if variant_id is None, try based on depth and begroeiingsvariant
             if variant_id is not None:
                 profile_variant = self.session.query(Varianten).filter(Varianten.id == variant_id)
+                if begroeiingsvariant is None or begroeiingsvariant == 'all' and profile_variant.count():
+                    begroeiingsvariant = profile_variant[0].begroeiingsvariant_id
             else:
                 # use given begroeiingsvariant if stategy is all_upstream otherwise use begroeiingsgraad
                 # set on hydrovak or the default begroeiingsgraad
@@ -286,7 +300,7 @@ class LeggerWidget(QDockWidget):
                         begroeiingsvariant) != str:
                     profile_variant = self.session.query(Varianten).filter(
                         Varianten.hydro_id == node.hydrovak.get('hydro_id'),
-                        Varianten.begroeiingsvariant == begroeiingsvariant,
+                        Varianten.begroeiingsvariant_id == begroeiingsvariant,
                         Varianten.diepte < depth + precision,
                         Varianten.diepte > depth - precision
                     )
@@ -318,17 +332,16 @@ class LeggerWidget(QDockWidget):
                     score = None
                     if len(figuren) > 0:
                         figuur = figuren[0]
-                        over_width = "{0:.1f}".format(figuur.t_overbreedte_l + figuur.t_overbreedte_r) \
+                        over_width = "{0:.2f}".format(figuur.t_overbreedte_l + figuur.t_overbreedte_r) \
                             if figuur.t_overbreedte_l is not None else over_width
                         score = "{0:.2f}".format(figuur.t_fit)
-                        over_depth = "{0:.1f}".format(
+                        over_depth = "{0:.2f}".format(
                             figuur.t_overdiepte) if figuur.t_overdiepte is not None else over_depth
                     else:
-                        over_depth = "{}*".format(round(over_depth, 1)) if type(over_depth) == float else '-'
-                        over_width = "{}*".format(round(over_width, 1)) if type(over_width) == float else '-'
+                        over_depth = "{}*".format(try_round(over_depth, 2, '-'))
+                        over_width = "{}*".format(try_round(over_width, 2, '-'))
 
-                    verhang = round(profilev.verhang_bos_bijkerk, 0) if type(
-                        profilev.verhang_bos_bijkerk) == float else '-'
+                    verhang = try_round(profilev.verhang, 1, '-')
                     self.legger_model.setDataItemKey(node, 'selected_depth', depth)
                     self.legger_model.setDataItemKey(node, 'selected_width', width)
                     self.legger_model.setDataItemKey(node, 'selected_variant_id', profilev.id)
@@ -365,7 +378,9 @@ class LeggerWidget(QDockWidget):
         # elif begroeiings_strategy == 'maximum':
         #     pass
 
-        if child_strategy in ['upstream_till_value', 'upstream_till_end'] or initial:
+        if child_strategy == 'selected_hydrovak':
+            loop_childs = []
+        elif child_strategy in ['upstream_till_value', 'upstream_till_end'] or initial:
             loop_childs = node.younger()
         else:  # 'selected_branch_till_value', 'selected_branch_till_end'
             if traject_nodes is None or len(traject_nodes) == 0:
@@ -752,8 +767,8 @@ class LeggerWidget(QDockWidget):
                 'over_depth': over_depth if over_depth is not None else None,
                 'over_width': over_width if over_depth is not None else None,
                 'over_width_color': [255, 0, 0] if over_width < 0 else [255, 255, 255],
-                'verhang': profile.verhang_bos_bijkerk,
-                'color': interpolated_color(value=profile.verhang_bos_bijkerk, color_map=color_map,
+                'verhang': profile.verhang,
+                'color': interpolated_color(value=profile.verhang, color_map=color_map,
                                             alpha=(255 if active else 80)),
                 'points': [
                     (-0.5 * profile.waterbreedte, hydro_object.streefpeil),

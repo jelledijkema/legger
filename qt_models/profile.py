@@ -105,14 +105,14 @@ class ProfileModel(ModifiedBaseModel):
 
         over_depth = ValueField(show=True,
                                 column_width=45,
-                                round=1,
+                                round=2,
                                 column_name='od',
                                 column_tooltip='overdiepte [m]')
         over_depth_color = ColorField(show=False)
 
         over_width = ValueField(show=True,
                                 column_width=45,
-                                round=1,
+                                round=2,
                                 column_name='ob',
                                 color_from='over_width_color',
                                 column_tooltip='overbreedte [m]')

@@ -230,6 +230,7 @@ class PolderSelectionWidget(QWidget):  # , FORM_CLASS):
                 (2, 'half vol', 0, 27.2, 80, 0.5),
                 (3, 'volledig begroeid', 0, 27.2, 80, 0.9)
             """)
+
         # con_legger.execute("""
         #             INSERT INTO categorie(categorie, naam, variant_diepte_max, default_talud)
         #             VALUES

@@ -66,6 +66,25 @@ def read_spatialite(cursor):
     return df
 
 
+def calc_pitlo_griffioen(flow, ditch_bottom_width, water_depth, slope, friction_manning, friction_begroeiing,
+                         begroeiingsdeel):
+    ditch_circumference = (ditch_bottom_width * np.sqrt(begroeiingsdeel) +
+                           (np.sqrt((water_depth * np.sqrt(begroeiingsdeel)) ** 2 +
+                                    (slope * water_depth * np.sqrt(begroeiingsdeel)) ** 2)) +
+                           (np.sqrt((water_depth * np.sqrt(begroeiingsdeel)) ** 2 +
+                                    (slope * water_depth * np.sqrt(begroeiingsdeel)) ** 2)))
+    total_cross_section_area = (ditch_bottom_width + water_depth * slope) * water_depth
+
+    A_1 = (1 - begroeiingsdeel) * total_cross_section_area
+    A_2 = begroeiingsdeel * total_cross_section_area
+    R = A_1 / ditch_circumference
+    B = A_2 * friction_begroeiing
+    C = friction_manning * A_1 * (R ** 0.66666666666667)
+
+    gradient = 100000 * (2 * B * flow + C ** 2 - C * np.sqrt(4 * B * flow + C ** 2)) / (2 * B ** 2)
+    return gradient
+
+
 def calc_bos_bijkerk(normative_flow, ditch_bottom_width, water_depth, slope, friction_bos_bijkerk=Kb):
     """
     A calculation of the formula for gradient in the water level according to De Bos and Bijkerk.
@@ -102,7 +121,7 @@ def calc_manning(normative_flow, ditch_bottom_width, water_depth, slope, frictio
     # Formule: Hydraulische Straal = Nat Oppervlak/ Natte Omtrek
     hydraulic_radius = ditch_cross_section_area / ditch_circumference
 
-    # Furmule: Verhang = ((Q / (A*Km*(hydraulische straal^(2/3)))^2)*100000
+    # Formule: Verhang = ((Q / (A*Km*(hydraulische straal^(2/3)))^2)*100000
     gradient_manning = ((normative_flow /
                          (ditch_cross_section_area * friction_manning * (hydraulic_radius ** 0.666667))) ** 2) * 100000
 
@@ -116,12 +135,13 @@ def calc_profile_variants_for_all(hydro_objects,
                                   store_all_from_depth=None,
                                   store_all_to_depth=None,
                                   depth_mapping_field=None,
-                                  friction_bos_bijkerk=None,
-                                  friction_manning=None):
+                                  friction_manning=None,
+                                  friction_begroeiing=None,
+                                  begroeiingsdeel=None):
     variants_table = DataFrame(columns=['object_id', 'object_waterdepth_id', 'slope',
                                         'water_depth', 'ditch_width', 'ditch_bottom_width',
-                                        'normative_flow', 'gradient_bos_bijkerk', 'friction_bos_bijkerk',
-                                        'surge'])
+                                        'normative_flow', 'gradient', 'friction_manning', 'friction_begroeiing',
+                                        'begroeiingsdeel', 'surge'])
 
     for row in hydro_objects.itertuples():
 
@@ -145,8 +165,9 @@ def calc_profile_variants_for_all(hydro_objects,
                     minimal_bottom_width=minimal_bottom_width,
                     store_from_depth=from_depth,
                     store_to_depth=to_depth,
-                    friction_bos_bijkerk=friction_bos_bijkerk,
-                    friction_manning=friction_manning
+                    friction_manning=friction_manning,
+                    friction_begroeiing=friction_begroeiing,
+                    begroeiingsdeel=begroeiingsdeel
                 ),
                 ignore_index=True
             )
@@ -164,15 +185,16 @@ def calc_profile_variants_for_hydro_object(
         minimal_bottom_width=None,
         store_from_depth=None,
         store_to_depth=None,
-        friction_bos_bijkerk=None,
-        friction_manning=None):
+        friction_manning=None,
+        friction_begroeiing=None,
+        begroeiingsdeel=None):
     """
     In this formula the different variants of suitable profiles are generated.
     The output is twofold:
     - a table where every variant is added.
     """
-    if friction_bos_bijkerk is None and friction_manning is None:
-        raise ValueError('friction bos_bijkerk or manning are both None, at least one must be provided. ')
+    if friction_manning is None or friction_begroeiing is None:
+        raise ValueError('friction manning or begroeiing are both None')
 
     slope = hydro_object.slope
     max_ditch_width = hydro_object.max_ditch_width
@@ -188,8 +210,8 @@ def calc_profile_variants_for_hydro_object(
     # a table where variants are saved.
     variants_table = DataFrame(columns=['object_id', 'object_waterdepth_id', 'slope',
                                         'water_depth', 'ditch_width', 'ditch_bottom_width',
-                                        'normative_flow', 'gradient_bos_bijkerk', 'friction_bos_bijkerk',
-                                        'surge'])
+                                        'normative_flow', 'gradient', 'friction_manning', 'friction_begroeiing',
+                                        'begroeiingsdeel', 'surge'])
 
     # minus 0.10, because in loop this is added
     water_depth = store_from_depth - 0.10
@@ -205,33 +227,23 @@ def calc_profile_variants_for_hydro_object(
             water_depth = water_depth + 0.50
 
         # initial values for finding profile which fits
-        gradient_bos_bijkerk = 1000
-        gradient_manning = 1000
+        gradient_pitlo_griffioen = 1000
         # minus 0.10, because in loop 0.10 is added
         ditch_bottom_width = minimal_bottom_width - 0.10
         ditch_width = None
 
         # make sure this loop runs at least one time to calculate values
-        while gradient_bos_bijkerk > gradient_norm or gradient_manning > gradient_norm:
+        while gradient_pitlo_griffioen > gradient_norm:
 
             ditch_bottom_width = ditch_bottom_width + 0.10
             try:
                 ditch_width = ditch_bottom_width + water_depth * slope * 2.0
             except Exception as e:
-                a = 1
                 raise e
 
-            if friction_bos_bijkerk is not None:
-                gradient_bos_bijkerk = calc_bos_bijkerk(
-                    normative_flow, ditch_bottom_width, water_depth, slope, friction_bos_bijkerk)
-            else:
-                gradient_bos_bijkerk = 0
-
-            if friction_manning is not None:
-                gradient_manning = calc_manning(
-                    normative_flow, ditch_bottom_width, water_depth, slope, friction_manning)
-            else:
-                gradient_manning = 0
+            gradient_pitlo_griffioen = calc_pitlo_griffioen(
+                normative_flow, ditch_bottom_width, water_depth, slope,
+                friction_manning, friction_begroeiing, begroeiingsdeel)
 
             # loop until gradient is lower than norm or profile gets wider than max_width
             # if first try is wider, this (to wide) profile is stored
@@ -240,7 +252,7 @@ def calc_profile_variants_for_hydro_object(
 
         # store
         object_waterdepth_id = "{0}_{1:.2f}-{2:.1f}".format(
-            object_id, water_depth, friction_bos_bijkerk)
+            object_id, water_depth, begroeiingsdeel)
 
         obj = [
             object_id,
@@ -250,15 +262,17 @@ def calc_profile_variants_for_hydro_object(
             ditch_width,
             ditch_bottom_width,
             normative_flow,
-            gradient_bos_bijkerk,
-            friction_bos_bijkerk,
-            length * gradient_bos_bijkerk / 1000,
+            gradient_pitlo_griffioen,
+            friction_manning,
+            friction_begroeiing,
+            begroeiingsdeel,
+            length * gradient_pitlo_griffioen / 1000,
         ]
 
         variants_table = variants_table.append(
             pd.DataFrame([obj], columns=variants_table.columns))
 
-        if water_depth >= store_to_depth and gradient_bos_bijkerk < gradient_norm:
+        if water_depth >= store_to_depth and gradient_pitlo_griffioen < gradient_norm:
             go_on = False
 
     variants_table.reset_index()
@@ -297,14 +311,16 @@ def create_theoretical_profiles(legger_db_filepath, gradient_norm, bv):
 
     # additional: set max on 1.2 times th maximal depth within the specific category
     cursor.execute(
-        "Select categorieoppwaterlichaam, max(diepte) as max_diepte from hydroobjects_kenmerken GROUP BY categorieoppwaterlichaam ")
+        "Select categorieoppwaterlichaam, max(diepte) as max_diepte from hydroobjects_kenmerken GROUP BY categorieoppwaterlichaam ORDER BY categorieoppwaterlichaam ")
     categories_max_depth = cursor.fetchall()
+
+    last_category = 15
     for cat in categories_max_depth:
         if cat['categorieoppwaterlichaam'] in max_depth_settings:
             max_depth_settings[cat['categorieoppwaterlichaam']] = min(
-                cat['max_diepte'] * 1.2, max_depth_settings[cat['categorieoppwaterlichaam']])
+                cat['max_diepte'] * 1.2, last_category, max_depth_settings[cat['categorieoppwaterlichaam']])
         else:
-            max_depth_settings[cat['categorieoppwaterlichaam']] = cat['max_diepte'] * 1.2
+            max_depth_settings[cat['categorieoppwaterlichaam']] = min(cat['max_diepte'] * 1.2, last_category)
 
     default_slope = {cat['categorie']: cat['default_talud'] for cat in all_categories
                      if cat['default_talud'] is not None}
@@ -313,7 +329,10 @@ def create_theoretical_profiles(legger_db_filepath, gradient_norm, bv):
         hydro_objects.loc[(pd.isnull(hydro_objects.slope)) & (hydro_objects.category == category), 'slope'] = slope
 
     hydro_objects.loc[(hydro_objects.grondsoort == "veenweide") & (hydro_objects.slope < 3.0), 'slope'] = 3.0
+    for cat, slope in default_slope.items():
+        hydro_objects.loc[(pd.isnull(hydro_objects.slope) & hydro_objects.category == cat), 'slope'] = slope
     hydro_objects.loc[(pd.isnull(hydro_objects.slope)), 'slope'] = 2.0
+
     # Part 3: calculate variants
     # todo. get store_all_.... from userinput
     # todo. add manning to friction table
@@ -325,8 +344,10 @@ def create_theoretical_profiles(legger_db_filepath, gradient_norm, bv):
         depth_mapping_field='category',
         store_all_from_depth=min_depth_settings,
         store_all_to_depth=max_depth_settings,
-        friction_bos_bijkerk=bv.friction,
-        friction_manning=None)
+        friction_manning=bv.friction_manning,
+        friction_begroeiing=bv.friction_begroeiing,
+        begroeiingsdeel=bv.begroeiingsdeel
+    )
 
     log.info("All potential profiles are created\n")
     return profile_variants
@@ -337,7 +358,7 @@ def write_theoretical_profile_results_to_db(session, profile_results, gradient_n
 
     for row in profile_results.itertuples():
         # todo: add for manning
-        if row.gradient_bos_bijkerk > gradient_norm:
+        if row.gradient > gradient_norm:
             opmerkingen = "voldoet niet aan de norm."
         else:
             opmerkingen = ""
@@ -358,7 +379,7 @@ def write_theoretical_profile_results_to_db(session, profile_results, gradient_n
         variant.diepte = row.water_depth
         variant.waterbreedte = row.ditch_width
         variant.bodembreedte = row.ditch_bottom_width
-        variant.verhang_bos_bijkerk = row.gradient_bos_bijkerk
+        variant.verhang = row.gradient
         variant.opmerkingen = opmerkingen
 
     session.commit()
