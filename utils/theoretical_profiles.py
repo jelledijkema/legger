@@ -325,9 +325,8 @@ def create_theoretical_profiles(legger_db_filepath, gradient_norm, bv):
     default_slope = {cat['categorie']: cat['default_talud'] for cat in all_categories
                      if cat['default_talud'] is not None}
 
-    for category, default_slope in default_slope.items():
-        hydro_objects.loc[
-            (pd.isnull(hydro_objects.slope)) & (hydro_objects.category == category), 'slope'] = default_slope
+    for category, slope in default_slope.items():
+        hydro_objects.loc[(pd.isnull(hydro_objects.slope)) & (hydro_objects.category == category), 'slope'] = slope
 
     hydro_objects.loc[(hydro_objects.grondsoort == "veenweide") & (hydro_objects.slope < 3.0), 'slope'] = 3.0
     for cat, slope in default_slope.items():
