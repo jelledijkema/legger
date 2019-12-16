@@ -242,7 +242,7 @@ def calc_profile_variants_for_hydro_object(
                 raise e
 
             gradient_pitlo_griffioen = calc_pitlo_griffioen(
-                normative_flow, ditch_bottom_width, water_depth, slope,
+                abs(normative_flow), ditch_bottom_width, water_depth, slope,
                 friction_manning, friction_begroeiing, begroeiingsdeel)
 
             # loop until gradient is lower than norm or profile gets wider than max_width
