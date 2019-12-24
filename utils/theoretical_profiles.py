@@ -143,6 +143,8 @@ def calc_profile_variants_for_all(hydro_objects,
                                         'normative_flow', 'gradient', 'friction_manning', 'friction_begroeiing',
                                         'begroeiingsdeel', 'surge'])
 
+    hydro_objects.DIEPTE = pd.to_numeric(hydro_objects.DIEPTE, downcast='float', errors='coerce')
+
     for row in hydro_objects.itertuples():
 
         if depth_mapping_field and type(store_all_from_depth) == dict:
@@ -311,16 +313,25 @@ def create_theoretical_profiles(legger_db_filepath, gradient_norm, bv):
 
     # additional: set max on 1.2 times th maximal depth within the specific category
     cursor.execute(
-        "Select categorieoppwaterlichaam, max(diepte) as max_diepte from hydroobjects_kenmerken GROUP BY categorieoppwaterlichaam ORDER BY categorieoppwaterlichaam ")
+        "SELECT categorieoppwaterlichaam, max(diepte) as max_diepte FROM hydroobjects_kenmerken "
+        "WHERE diepte > 0 AND diepte < 10 GROUP BY categorieoppwaterlichaam ORDER BY categorieoppwaterlichaam ")
     categories_max_depth = cursor.fetchall()
 
     last_category = 15
     for cat in categories_max_depth:
+        try:
+            cat_max_depth = cat['max_diepte'] * 1.2
+        except TypeError as e:
+            log.warning('category max depth caclulation fault. Max depth is {} of type {}'.format(
+                cat['max_diepte'], type(cat['max_diepte'])))
+            cat_max_depth = 999
+
         if cat['categorieoppwaterlichaam'] in max_depth_settings:
+
             max_depth_settings[cat['categorieoppwaterlichaam']] = min(
-                cat['max_diepte'] * 1.2, last_category, max_depth_settings[cat['categorieoppwaterlichaam']])
+                cat_max_depth, last_category, max_depth_settings[cat['categorieoppwaterlichaam']])
         else:
-            max_depth_settings[cat['categorieoppwaterlichaam']] = min(cat['max_diepte'] * 1.2, last_category)
+            max_depth_settings[cat['categorieoppwaterlichaam']] = min(cat['max_diepte'] * cat_max_depth)
 
     default_slope = {cat['categorie']: cat['default_talud'] for cat in all_categories
                      if cat['default_talud'] is not None}
