@@ -482,7 +482,7 @@ def doe_profinprof(cur0, cur1, aantalstappen=200, precisie=0.0001, codevastebode
             gemprofshapely = mkgemprof(gemetenprofielen[profielid]['proj'], gemetenprofielen[profielid]['peil'])
 
             if gemprofshapely.is_empty:
-                logger.warning('Profiel %i geeft een lege profiel geometry terug. skip profiel')
+                logger.warning('Profiel %i geeft een lege profiel geometry terug. skip profiel', profielid)
                 continue
 
             h = qm % (gemetenprofielen[profielid]['hydroid'], gemetenprofielen[profielid]['proident'],
