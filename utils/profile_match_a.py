@@ -16,7 +16,7 @@ import matplotlib.pyplot as plt
 from descartes import PolygonPatch
 import logging
 
-logger = logging.getLogger('legger.utils.profile_match')
+logger = logging.getLogger(__name__)
 
 
 def mk_pro_x_hy_kompas(cur, straal=0.5, aantalstappen=90, srid=28992):
@@ -70,8 +70,8 @@ def peilperprofiel(cur, peilcriterium="min", debug=0):
         """
     if peilcriterium != 'min' and peilcriterium != 'max':
         peilcriterium = 'min'
-        if debug:
-            logger.debug("PEILCRITERIUM AANGEPAST NAAR %s", peilcriterium)
+        # logger.debug("PEILCRITERIUM AANGEPAST NAAR %s", peilcriterium)
+
     q = '''select pro.pro_id, pro.ovk_ovk_id, %s(streefpeil.waterhoogte) from 
             pro left outer join hydroobject on (pro.ovk_ovk_id = hydroobject.id) 
             left outer join peilgebiedpraktijk on (hydroobject.ws_in_peilgebied = peilgebiedpraktijk.code) 
@@ -86,8 +86,8 @@ def peilperprofiel(cur, peilcriterium="min", debug=0):
             left outer join streefpeil on (peilgebiedpraktijk.id=streefpeil.peilgebiedpraktijkid)
         group by hydroobject.id''' % peilcriterium
     cur.execute(q)
-    if debug:
-        logger.debug("aantal gemeten profielen in een hydro_object met een peil: %d ", len(prof))
+    # logger.debug("aantal gemeten profielen in een hydro_object met een peil: %d ", len(prof))
+
     return prof
 
 
@@ -105,12 +105,10 @@ def haal_meetprofielen1(cur, profielsoort="Z1", peilcriterium="min", debug=0):
     peilvanprofiel = {}
     q = 'select profielen.pro_id, hydroobject.id, hydroobject.streefpeil from profielen inner join hydroobject ' \
         'on (profielen.hydro_id=hydroobject.id)'
-    if debug:
-        logger.debug(q)
+    # logger.debug(q)
     for r in cur.execute(q):
         peilvanprofiel[r[0]] = (r[1], r[2])
-    if debug:
-        logger.debug(peilvanprofiel)
+    # logger.debug(peilvanprofiel)
     #peilvanprofiel = peilperprofiel(cur, peilcriterium, debug) # per profielid het hydroobject_id en het peil
     #q = '''select "c"."pro_pro_id", "b"."iws_volgnr", X("a"."GEOMETRY"), Y("a"."GEOMETRY"),
     #         "b"."iws_hoogte", a."OGC_FID"
@@ -154,8 +152,7 @@ def haal_meetprofielen1(cur, profielsoort="Z1", peilcriterium="min", debug=0):
             # laatste punt van profiel, 1000 m hoger
             prof[proid]["orig"].append([r[2], r[3], max(r[4], peilvanprofiel[proid][1]) + 1000.0, 0])
             prof[proid]['proident'] = r[6]
-    if debug:
-        logger.debug('aantal profielen in hydro-objecten met een peil: %d', len(prof))
+    # logger.debug('aantal profielen in hydro-objecten met een peil: %d', len(prof))
     return prof
 
 
@@ -192,10 +189,9 @@ def projecteerprofielen(prof, projectie="eindpunt", debug=0):
                 pr = lijn.interpolate(afstand)
                 prof[proid]['proj'].append([afstand, pr.x, pr.y, p[2], p[3]])
     else:
-        if debug:
-            logger.debug("PROJECTIECRITERIUM NIET GELDIG %s, GEEN PROJECTIE!", projectie)
-    if debug:
-        logger.debug("aantal geprojecteerde profielen: %d", len(prof))
+        pass
+        # logger.debug("PROJECTIECRITERIUM NIET GELDIG %s, GEEN PROJECTIE!", projectie)
+    # logger.debug("aantal geprojecteerde profielen: %d", len(prof))
     return prof
 
 
@@ -295,6 +291,7 @@ def prof_in_prof(profgem, proftheo, aantstap=100, delta=0.001, obdiepte=0.001, d
             overdiepte: de gemiddelde afstand onder rechte stuk van het theoretisch profiel tot het gemeten profiel
             linksover:  de afstand tussen het gemeten profiel en het theoretisch profiel op obdiepte links
             rechtsover: de afstand tussen het gemeten profiel en het theoretisch profiel op obdiepte rechts"""
+
     waterbreedte_gemeten = profgem.bounds[2] - profgem.bounds[0]
     waterbreedte_theo = proftheo.bounds[2] - proftheo.bounds[0]
     waterdiepte_theo = proftheo.bounds[3] - proftheo.bounds[1]
@@ -311,9 +308,8 @@ def prof_in_prof(profgem, proftheo, aantstap=100, delta=0.001, obdiepte=0.001, d
     traject = ''                            # in traject komt per stap een 0 of 1 (1 indien maxopp == zoekopp)
     optimaal = -waterbreedte_theo           # dit is de start van het theoretisch profiel, overlap is nul!
     fit = 0                                 # de verhouding maxopp / zoekopp (een goodness of fit)
-    if debug:
-        logger.debug("wb_gem: %.2f, wb_theo: %.2f; stap: %.2f, zoekopp: %.3f",
-              waterbreedte_gemeten, waterbreedte_theo, stap, zoekopp)
+    # logger.debug("wb_gem: %.2f, wb_theo: %.2f; stap: %.2f, zoekopp: %.3f",
+    #          waterbreedte_gemeten, waterbreedte_theo, stap, zoekopp)
     for i in xrange(aantstap):
         profzoek = shapely.affinity.translate(profzoek, stap, 0.0, 0.0)
         inter = gemprof.intersection(profzoek)
@@ -321,8 +317,7 @@ def prof_in_prof(profgem, proftheo, aantstap=100, delta=0.001, obdiepte=0.001, d
             optimaal = profzoek.bounds[0]
             maxopp = inter.area
             traject += '1'
-            if debug:
-                logger.debug('Volledig: optimaal: %f; maxopp: %f', optimaal, maxopp)
+            # logger.debug('Volledig: optimaal: %f; maxopp: %f', optimaal, maxopp)
         else:
             if inter.area == maxopp:
                 traject += '2'
@@ -331,15 +326,13 @@ def prof_in_prof(profgem, proftheo, aantstap=100, delta=0.001, obdiepte=0.001, d
                 maxopp = inter.area
                 traject = traject.replace('2', '0')  # evt oud traject met kleiner oppervlak weghalen
                 traject += '2'
-                if debug:
-                    logger.debug('Niet vol: optimaal: %f; maxopp: %f', optimaal, maxopp)
+                # logger.debug('Niet vol: optimaal: %f; maxopp: %f', optimaal, maxopp)
             else:
                 traject += '0'
     fit = maxopp / zoekopp  # de best fit
     fractie = (gemprof.area-maxopp) / gemprof.area # de overblijvende fractie oppervlak van het gemetenprofiel
-    if debug:
-        logger.debug('Na loop: Fit: %.3f; optimaal: %f', fit, optimaal)
-        logger.debug(traject)
+    # logger.debug('Na loop: Fit: %.3f; optimaal: %f', fit, optimaal)
+    # logger.debug(traject)
 
     if traject.find('1') > 0:           # er zijn 1 tekens in traject
         traject = traject.replace('2', '0')  # evt oud traject met kleiner oppervlak weghalen
@@ -353,8 +346,7 @@ def prof_in_prof(profgem, proftheo, aantstap=100, delta=0.001, obdiepte=0.001, d
         optimaal = astap * stap
         optimaal -= waterbreedte_theo   # corrigeer voor de verschuiving van het theoretisch profiel
     optimaal += profgem.bounds[0]       # corrigeer voor de verschuiving van het gemeten profiel
-    if debug:
-        logger.debug("optimaal: %f", optimaal)
+    # logger.debug("optimaal: %f", optimaal)
     roth = shapely.affinity.translate(mkrechthoekondertheoprofiel(rhlb, rhrb), optimaal, 0.0, 0.0)
     poloth = profgem.intersection(roth)
     overdiepte = poloth.area/(rhrb[0]-rhlb[0])  # oppervlak gedeeld door breedte geeft diepte
@@ -363,8 +355,7 @@ def prof_in_prof(profgem, proftheo, aantstap=100, delta=0.001, obdiepte=0.001, d
     rechtsover = 0.0
     restbak = profgem.difference(shapely.affinity.translate(proftheo,optimaal, 0.0, 0.0))
     hlijn = restbak.intersection(oblijn)        # restbak is restant gemeten profiel min theor. profiel
-    if debug:
-        logger.debug(hlijn)
+    # logger.debug(hlijn)
     if obdiepte < (profgem.bounds[3] - profgem.bounds[1]):  # de obdiepte is hoger dan de bodem van het gemetenprofiel
         try:
             xlinks = clijn.coords[0][0]
@@ -376,19 +367,18 @@ def prof_in_prof(profgem, proftheo, aantstap=100, delta=0.001, obdiepte=0.001, d
                         linksover = hlijn[0].length
                         rechtsover = hlijn[1].length
                 elif len(hlijn) == 3:  # is hlijn een MultiLineString van drie LineStrings
-                    if debug:
-                        logger.debug("hlijn 3 stuks, xl, xr, hl", xlinks, xrechts, hlijn)
+                    # logger.debug("hlijn 3 stuks, xl, xr, hl", xlinks, xrechts, hlijn)
                     if (hlijn[0].coords[1][0] == xlinks) and (hlijn[2].coords[1][0] == xrechts):
                         linksover = hlijn[1].length
                         rechtsover = hlijn[2].length
                 else:
-                    logger.debug(hlijn)
+                    # logger.debug(hlijn)
                     pass
             except:
-                logger.warning( "hlijn is geen MultiLineString")
+                logger.info( "hlijn is geen MultiLineString")
                 pass  # hlijn is geen MultiLineString
         except:
-            logger.warning("clijn is geen LineString")
+            logger.info("clijn is geen LineString")
             # clijn is geen LineString (mogelijk een MultiLineString)
     return fit, optimaal, fractie, overdiepte, linksover, rechtsover
 
@@ -475,7 +465,7 @@ def doe_profinprof(cur0, cur1, aantalstappen=200, precisie=0.0001, codevastebode
     """
     if True:
         # maaktabellen(cur0) # IS NIET MEER NODIG
-        logger.debug('voor gemeten profielen')
+        # logger.debug('voor gemeten profielen')
         gemetenprofielen = haal_meetprofielen1(cur0, codevastebodem, peilcriterium, debug)
         gemetenprofielen = projecteerprofielen(gemetenprofielen, projectiecriterium, debug)
         # verrijkgemprof(cur0, gemetenprofielen) NIET MEER NODIG
@@ -491,9 +481,13 @@ def doe_profinprof(cur0, cur1, aantalstappen=200, precisie=0.0001, codevastebode
             # levert een shapely polygoon
             gemprofshapely = mkgemprof(gemetenprofielen[profielid]['proj'], gemetenprofielen[profielid]['peil'])
 
+            if gemprofshapely.is_empty:
+                logger.warning('Profiel %i geeft een lege profiel geometry terug. skip profiel')
+                continue
+
             h = qm % (gemetenprofielen[profielid]['hydroid'], gemetenprofielen[profielid]['proident'],
                       gemprofshapely.wkt, gemetenprofielen[profielid]['peil'])
-            logger.debug(h)
+            # logger.debug(h)
             cur1.execute(h)
             for theo_data in cur0.execute(q % gemetenprofielen[profielid]['hydroid']):
                 # mkmogelijkprofiel aanroepen met talud, waterdiepte, bodembreedte en peil, levert een shapely polygon
@@ -508,7 +502,7 @@ def doe_profinprof(cur0, cur1, aantalstappen=200, precisie=0.0001, codevastebode
                                    shapely.affinity.translate(theoprofshapely, afstand, 0.0, 0.0).wkt,
                                    gemetenprofielen[profielid]['peil'], theo_data[2], theo_data[3], theo_data[4],
                                    fit, afstand, fractie, overdiepte, overlinks, overrechts))
-                logger.debug('na insert')
+                # logger.debug('na insert')
         if debug:
             controlefig(gemprofshapely, theoprofshapely, afstand, fit, fractie, overdiepte, overlinks,
                         overrechts, gemetenprofielen[profielid]['hydroid'], profielid,
