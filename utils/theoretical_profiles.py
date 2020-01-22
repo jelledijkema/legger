@@ -1,10 +1,11 @@
-from pandas import DataFrame
-from pyspatialite import dbapi2 as sql
-
 import logging
+
 import numpy as np
 import pandas as pd
 from legger.sql_models.legger import Varianten, get_or_create
+from pandas import DataFrame
+import sqlite3
+from legger.sql_models.legger_database import load_spatialite
 
 log = logging.getLogger('legger.' + __name__)
 
@@ -292,8 +293,9 @@ def create_theoretical_profiles(legger_db_filepath, gradient_norm, bv):
     return: calculated profile variant
     """
 
-    conn = sql.connect(legger_db_filepath)
-    conn.row_factory = sql.Row
+    conn = load_spatialite(legger_db_filepath)
+
+    conn.row_factory = sqlite3.Row
     cursor = conn.cursor()
 
     # Part 1: read SpatiaLite

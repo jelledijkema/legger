@@ -3,7 +3,7 @@
 
 [general]
 name=legger
-qgisMinimumVersion=2.18
+qgisMinimumVersion=3.4
 description=Leggertool, tool for getting 'legger' profiles based on dicharged and
     situational data
 version=1.2
@@ -24,8 +24,10 @@ repository=https://github.com/hhnk/legger
 # Tags are comma separated with spaces allowed
 # tags=
 
-homepage=https://github.com/hnk/legger/wiki
+homepage=https://github.com/hhnk-git/legger
 category=Plugins
 icon=media/icon_legger.png
 # experimental flag
 experimental=True
+
+server=False

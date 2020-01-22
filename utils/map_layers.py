@@ -3,7 +3,7 @@ import os.path
 from collections import OrderedDict
 import tempfile
 
-from qgis.core import (QgsDataSourceURI, QgsMapLayerRegistry, QgsProject, QgsVectorLayer)
+from qgis.core import (QgsDataSourceUri, QgsProject, QgsProject, QgsVectorLayer)
 
 log = logging.getLogger(__name__)
 
@@ -34,7 +34,7 @@ class LayerManager():
 
     def add_layer_to_group(self, group, vector_layer, style_path, visible=True, position=0):
         vector_layer.loadNamedStyle(style_path)
-        QgsMapLayerRegistry.instance().addMapLayer(
+        QgsProject.instance().addMapLayer(
             vector_layer,
             False)
         group.insertLayer(position, vector_layer)
@@ -94,12 +94,12 @@ class LayerManager():
         maplayer_group.removeAllChildren()
 
         # add source stat metadata
-        uri = QgsDataSourceURI()
+        uri = QgsDataSourceUri()
         uri.setDatabase(self.spatialite_path.replace('\\', '/'))
         uri.setDataSource('', 'legger_source', '')
 
         # vector_layer = QgsVectorLayer(uri.uri(), 'metadata statistiek bronnen', 'spatialite')
-        # QgsMapLayerRegistry.instance().addMapLayer(
+        # QgsProject.instance().addMapLayer(
         #     vector_layer,
         #     False)
         # stat_group.insertLayer(0, vector_layer)
@@ -113,7 +113,7 @@ class LayerManager():
             qgroup.setExpanded(False)
 
             for layer in layers:
-                uri = QgsDataSourceURI()
+                uri = QgsDataSourceUri()
                 uri.setDatabase(self.spatialite_path.replace('\\', '/'))
                 uri.setDataSource('', layer[1], layer[4])
 
@@ -126,14 +126,14 @@ class LayerManager():
                         'layer_styles',
                         'legger',
                         layer[3] + '.qml')
-                    style = file(style_path, 'r').read()
+                    style = open(style_path, 'r').read()
 
                     # replace by column name
                     style = style.replace('<<variable>>', layer[2])
 
                     new_style_path = os.path.join(tmp_dir, 'cr_' + layer[3] + '_' + layer[2] + '.qml')
 
-                    new_style_file = file(new_style_path, 'w')
+                    new_style_file = open(new_style_path, 'w')
                     new_style_file.write(style)
                     new_style_file.close()
 

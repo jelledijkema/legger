@@ -2,10 +2,10 @@ import datetime
 import logging
 
 from geoalchemy2.types import Geometry
-from sqlalchemy import (Column, DateTime, Float, ForeignKey, Integer, String, Boolean)
+from sqlalchemy import (Boolean, Column, DateTime, Float, ForeignKey, Integer, String)
 from sqlalchemy.ext.declarative import declarative_base
-from sqlalchemy.sql.expression import ClauseElement
 from sqlalchemy.orm import relationship
+from sqlalchemy.sql.expression import ClauseElement
 
 logger = logging.getLogger('legger.sql_models.legger')
 
@@ -54,7 +54,10 @@ class Waterdeel(Base):
     id = Column(Integer, primary_key=True, index=True)
     shape_length = Column(Float)
     shape_area = Column(Float)
-    geometry = Column("GEOMETRY", Geometry(geometry_type='MULTIPOLYGON', srid=28992))
+    geometry = Column(
+        "GEOMETRY",
+        Geometry(geometry_type='MULTIPOLYGON', srid=28992, spatial_index=True, management=True)
+    )
 
     def __str__(self):
         return u'Waterdeel {0}'.format(
@@ -81,7 +84,10 @@ class HydroObject(Base):
     extend_existing = True
 
     id = Column(Integer, primary_key=True, index=True)
-    geometry = Column("GEOMETRY", Geometry(geometry_type='MULTILINESTRING', srid=28992))
+    geometry = Column(
+        "GEOMETRY",
+        Geometry(geometry_type='MULTILINESTRING', srid=28992, spatial_index=True, management=True)
+    )
     code = Column(String(50), index=True)
     categorieoppwaterlichaam = Column(Integer)
     streefpeil = Column(Float)
@@ -172,7 +178,10 @@ class Profielpunten(Base):
     pro_pro_id = Column(Integer,
                         ForeignKey(Profielen.__tablename__ + '.pro_id'),
                         index=True)
-    geometry = Column("GEOMETRY", Geometry(geometry_type='POINT', srid=28992))
+    geometry = Column(
+        "GEOMETRY",
+        Geometry(geometry_type='POINT', srid=28992, spatial_index=True, management=True)
+    )
 
     profiel = relationship(
         "Profielen",
@@ -329,7 +338,10 @@ class DuikerSifonHevel(Base):
     extend_existing = True
 
     id = Column(Integer, primary_key=True, index=True)
-    geometry = Column("GEOMETRY", Geometry(geometry_type='MULTILINESTRING', srid=28992))
+    geometry = Column(
+        "GEOMETRY",
+        Geometry(geometry_type='MULTILINESTRING', srid=28992, spatial_index=True, management=True)
+    )
     code = Column(String(50), index=True)
     categorie = Column(Integer)
     lengte = Column(Float)

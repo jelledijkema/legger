@@ -9,9 +9,9 @@ from __future__ import division
 import logging
 import time
 
-from PyQt4 import QtCore, QtGui
-from PyQt4.QtCore import pyqtSignal
-from PyQt4.QtGui import QComboBox, QWidget
+from qgis.PyQt import QtCore, QtGui, QtWidgets
+from qgis.PyQt.QtCore import pyqtSignal
+from qgis.PyQt.QtWidgets import QComboBox, QWidget
 from legger.sql_models.legger import BegroeiingsVariant, HydroObject, get_or_create
 from legger.sql_models.legger_database import LeggerDatabase
 from legger.utils.profile_match_a import doe_profinprof, maaktabellen
@@ -19,26 +19,27 @@ from legger.utils.read_tdi_results import (get_timestamps, read_tdi_culvert_resu
                                            write_tdi_culvert_results_to_db, write_tdi_results_to_db)
 from legger.utils.redirect_flows_to_main_branches import redirect_flows
 from legger.utils.snap_points import snap_points
-from pyspatialite import dbapi2 as dbapi
+import sqlite3
+from legger.sql_models.legger_database import load_spatialite
 from legger.utils.theoretical_profiles import Kb, create_theoretical_profiles, write_theoretical_profile_results_to_db
 
 log = logging.getLogger(__name__)
 
-try:
-    _fromUtf8 = QtCore.QString.fromUtf8
-except AttributeError:
-    def _fromUtf8(s):
-        return s
-
-try:
-    _encoding = QtGui.QApplication.UnicodeUTF8
-
-
-    def _translate(context, text, disambig):
-        return QtGui.QApplication.translate(context, text, disambig, _encoding)
-except AttributeError:
-    def _translate(context, text, disambig):
-        return QtGui.QApplication.translate(context, text, disambig)
+# try:
+#     _fromUtf8 = QtCore.QString.fromUtf8
+# except AttributeError:
+#     def _fromUtf8(s):
+#         return s
+# 
+# try:
+#     _encoding = QtGui.QApplication.UnicodeUTF8
+# 
+# 
+#     def _translate(context, text, disambig):
+#         return QtGui.QApplication.translate(context, text, disambig, _encoding)
+# except AttributeError:
+#     def _translate(context, text, disambig):
+#         return QtGui.QApplication.translate(context, text, disambig)
 
 
 class ProfileCalculationWidget(QWidget):  # , FORM_CLASS):
@@ -152,8 +153,8 @@ class ProfileCalculationWidget(QWidget):  # , FORM_CLASS):
         Uitleg van stap 1
         """
         # detailed information on UPPER ROW groupbox
-        self.msg_upper_row = QtGui.QMessageBox(self)
-        self.msg_upper_row.setIcon(QtGui.QMessageBox.Information)
+        self.msg_upper_row = QtWidgets.QMessageBox(self)
+        self.msg_upper_row.setIcon(QtWidgets.QMessageBox.Information)
         self.msg_upper_row.setText("<b>Het selecteren van een tijdstap voor de leggerdatabase<b>")
         self.msg_upper_row.setInformativeText("In het netCDF bestand waar de 3di resultaten zijn opgeslagen is per "
                                               "'flowline' voor elke tijdstap informatie beschikbaar. Dit betekent dat "
@@ -204,8 +205,8 @@ class ProfileCalculationWidget(QWidget):  # , FORM_CLASS):
             )
             self.feedbackmessage += "\nDatabases zijn gekoppeld."
 
-        except Exception, e:
-            self.feedbackmessage += "\nDatabases zijn niet gekoppeld. melding: {0}\n".format(e.message)
+        except Exception as e:
+            self.feedbackmessage += "\nDatabases zijn niet gekoppeld. melding: {0}\n".format(e)
         finally:
             self.feedbacktext.setText(self.feedbackmessage)
 
@@ -258,8 +259,8 @@ class ProfileCalculationWidget(QWidget):  # , FORM_CLASS):
         Uitleg van stap 1
         """
         # detailed information on UPPER ROW groupbox
-        self.msg_middle_row = QtGui.QMessageBox(self)
-        self.msg_middle_row.setIcon(QtGui.QMessageBox.Information)
+        self.msg_middle_row = QtWidgets.QMessageBox(self)
+        self.msg_middle_row.setIcon(QtWidgets.QMessageBox.Information)
         self.msg_middle_row.setText("<b>Het berekenen van de varianten voor de leggerdatabase<b>")
         self.msg_middle_row.setInformativeText("Alle randvoorwaarden zijn nu bekend:\n"
                                                "breedte, diepte, Q, talud.\n"
@@ -312,7 +313,8 @@ class ProfileCalculationWidget(QWidget):  # , FORM_CLASS):
 
     def execute_step3(self):
 
-        con_legger = dbapi.connect(self.polder_datasource)
+        con_legger = load_spatialite(self.polder_datasource)
+
         maaktabellen(con_legger.cursor())
         con_legger.commit()
         resultaat = doe_profinprof(con_legger.cursor(), con_legger.cursor())
@@ -321,7 +323,8 @@ class ProfileCalculationWidget(QWidget):  # , FORM_CLASS):
         self.feedbacktext.setText("De fit % zijn berekend.")
 
     def execute_snap_points(self):
-        con_legger = dbapi.connect(self.polder_datasource)
+        con_legger = load_spatialite(self.polder_datasource)
+
         snap_points(con_legger.cursor())
 
         self.feedbacktext.setText("De punten zijn gesnapt.")
@@ -342,43 +345,43 @@ class ProfileCalculationWidget(QWidget):  # , FORM_CLASS):
         self.feedbacktext.setText("Alle taken uitgevoerd.")
 
     def setup_ui(self):
-        self.verticalLayout = QtGui.QVBoxLayout(self)
-        self.verticalLayout.setObjectName(_fromUtf8("verticalLayout"))
+        self.verticalLayout = QtWidgets.QVBoxLayout(self)
+        self.verticalLayout.setObjectName("verticalLayout")
 
-        self.information_row = QtGui.QHBoxLayout()
-        self.information_row.setObjectName(_fromUtf8("Information row"))
-        self.bottom_row = QtGui.QHBoxLayout()
-        self.bottom_row.setObjectName(_fromUtf8("Bottom row"))
-        self.feedback_row = QtGui.QHBoxLayout()
-        self.feedback_row.setObjectName(_fromUtf8("Feedback row"))
-        self.exit_row = QtGui.QHBoxLayout()
-        self.exit_row.setObjectName(_fromUtf8("Exit row"))
+        self.information_row = QtWidgets.QHBoxLayout()
+        self.information_row.setObjectName("Information row")
+        self.bottom_row = QtWidgets.QHBoxLayout()
+        self.bottom_row.setObjectName("Bottom row")
+        self.feedback_row = QtWidgets.QHBoxLayout()
+        self.feedback_row.setObjectName("Feedback row")
+        self.exit_row = QtWidgets.QHBoxLayout()
+        self.exit_row.setObjectName("Exit row")
 
         # Selected file name and location in INFORMATION ROW groupbox
-        self.polder_filename = QtGui.QLineEdit(self)
+        self.polder_filename = QtWidgets.QLineEdit(self)
         self.polder_filename.setText(self.polder_datasource)
-        self.polder_filename.setObjectName(_fromUtf8("polder legger filename"))
+        self.polder_filename.setObjectName("polder legger filename")
 
-        self.model_filename = QtGui.QLineEdit(self)
+        self.model_filename = QtWidgets.QLineEdit(self)
         self.model_filename.setText(self.path_model_db)
-        self.model_filename.setObjectName(_fromUtf8("model filename"))
+        self.model_filename.setObjectName("model filename")
 
-        self.result_filename = QtGui.QLineEdit(self)
+        self.result_filename = QtWidgets.QLineEdit(self)
         self.result_filename.setText(self.path_result_nc)
-        self.result_filename.setObjectName(_fromUtf8("result filename"))
+        self.result_filename.setObjectName("result filename")
 
-        self.connection_filename = QtGui.QLineEdit(self)
+        self.connection_filename = QtWidgets.QLineEdit(self)
         self.connection_filename.setText(self.path_result_db)
-        self.connection_filename.setObjectName(_fromUtf8("connection filename"))
+        self.connection_filename.setObjectName("connection filename")
 
         # Assembling INFORMATION ROW groubox
-        self.box_info = QtGui.QVBoxLayout()
+        self.box_info = QtWidgets.QVBoxLayout()
         self.box_info.addWidget(self.polder_filename)  # intro text toevoegen aan box.
         self.box_info.addWidget(self.model_filename)
         self.box_info.addWidget(self.result_filename)
         self.box_info.addWidget(self.connection_filename)
 
-        self.groupBox_info = QtGui.QGroupBox(self)
+        self.groupBox_info = QtWidgets.QGroupBox(self)
         self.groupBox_info.setTitle("Bestanden gekozen:")
         self.groupBox_info.setLayout(self.box_info)  # box toevoegen aan groupbox
         self.information_row.addWidget(self.groupBox_info)
@@ -387,31 +390,31 @@ class ProfileCalculationWidget(QWidget):  # , FORM_CLASS):
         self.timestep_combo_box = QComboBox(self)
 
         # Assembling step 0 row
-        self.snap_points_button = QtGui.QPushButton(self)
-        self.snap_points_button.setObjectName(_fromUtf8("Snap points"))
+        self.snap_points_button = QtWidgets.QPushButton(self)
+        self.snap_points_button.setObjectName("Snap points")
         self.snap_points_button.clicked.connect(self.execute_snap_points)
-        self.groupBox_snap_points = QtGui.QGroupBox(self)
+        self.groupBox_snap_points = QtWidgets.QGroupBox(self)
         self.groupBox_snap_points.setTitle("Stap 1: snap eindpunten")
-        self.box_snap_points = QtGui.QHBoxLayout()
+        self.box_snap_points = QtWidgets.QHBoxLayout()
         self.box_snap_points.addWidget(self.snap_points_button)
         self.groupBox_snap_points.setLayout(self.box_snap_points)  # box toevoegen aan groupbox
 
         # Assembling step 1 row
-        self.step1_button = QtGui.QPushButton(self)
-        self.step1_button.setObjectName(_fromUtf8("stap1"))
+        self.step1_button = QtWidgets.QPushButton(self)
+        self.step1_button.setObjectName("stap1")
         self.step1_button.clicked.connect(self.execute_step1)
-        self.step1_explanation_button = QtGui.QPushButton(self)
-        self.step1_explanation_button.setObjectName(_fromUtf8("uitleg_stap1"))
+        self.step1_explanation_button = QtWidgets.QPushButton(self)
+        self.step1_explanation_button.setObjectName("uitleg_stap1")
         self.step1_explanation_button.clicked.connect(self.explain_step1)
 
         # Assembling step 2 row
-        self.step_redirect_flow_button = QtGui.QPushButton(self)
-        self.step_redirect_flow_button.setObjectName(_fromUtf8("redirect_flow"))
+        self.step_redirect_flow_button = QtWidgets.QPushButton(self)
+        self.step_redirect_flow_button.setObjectName("redirect_flow")
         self.step_redirect_flow_button.clicked.connect(self.execute_redirect_flows)
 
-        self.groupBox_step1 = QtGui.QGroupBox(self)
+        self.groupBox_step1 = QtWidgets.QGroupBox(self)
         self.groupBox_step1.setTitle("stap 2: lees 3di resultaten")
-        self.box_step1 = QtGui.QVBoxLayout()
+        self.box_step1 = QtWidgets.QVBoxLayout()
         self.box_step1.addWidget(self.timestep_combo_box)
         self.box_step1.addWidget(self.step1_button)
         self.box_step1.addWidget(self.step_redirect_flow_button)
@@ -422,69 +425,69 @@ class ProfileCalculationWidget(QWidget):  # , FORM_CLASS):
         self.surge_combo_box = QComboBox(self)
 
         # Assembling step 2 row
-        self.step2_button = QtGui.QPushButton(self)
-        self.step2_button.setObjectName(_fromUtf8("stap2"))
+        self.step2_button = QtWidgets.QPushButton(self)
+        self.step2_button.setObjectName("stap2")
         self.step2_button.clicked.connect(self.execute_step2)
-        self.step2_explanation_button = QtGui.QPushButton(self)
-        self.step2_explanation_button.setObjectName(_fromUtf8("uitleg_stap2"))
+        self.step2_explanation_button = QtWidgets.QPushButton(self)
+        self.step2_explanation_button.setObjectName("uitleg_stap2")
         self.step2_explanation_button.clicked.connect(self.explain_step2)
 
-        self.groupBox_step2 = QtGui.QGroupBox(self)
+        self.groupBox_step2 = QtWidgets.QGroupBox(self)
         self.groupBox_step2.setTitle("stap 3: bereken varianten")
-        self.box_step2 = QtGui.QVBoxLayout()
+        self.box_step2 = QtWidgets.QVBoxLayout()
         self.box_step2.addWidget(self.surge_combo_box)
         self.box_step2.addWidget(self.step2_button)
         self.box_step2.addWidget(self.step2_explanation_button)
         self.groupBox_step2.setLayout(self.box_step2)  # box toevoegen aan groupbox
 
         # Assembling step 3 row
-        self.step3_button = QtGui.QPushButton(self)
-        self.step3_button.setObjectName(_fromUtf8("Stap 3"))
+        self.step3_button = QtWidgets.QPushButton(self)
+        self.step3_button.setObjectName("Stap 3")
         self.step3_button.clicked.connect(self.execute_step3)
-        self.groupBox_step3 = QtGui.QGroupBox(self)
+        self.groupBox_step3 = QtWidgets.QGroupBox(self)
         self.groupBox_step3.setTitle("Stap 3: bepaal scores")
-        self.box_step3 = QtGui.QHBoxLayout()
+        self.box_step3 = QtWidgets.QHBoxLayout()
         self.box_step3.addWidget(self.step3_button)
         self.groupBox_step3.setLayout(self.box_step3)  # box toevoegen aan groupbox
         self.bottom_row.addWidget(self.groupBox_step3)
 
         # Assembling step 5 row
-        self.pre_fill_button = QtGui.QPushButton(self)
-        self.pre_fill_button.setObjectName(_fromUtf8("pre fill profiles"))
+        self.pre_fill_button = QtWidgets.QPushButton(self)
+        self.pre_fill_button.setObjectName("pre fill profiles")
         self.pre_fill_button.clicked.connect(self.execute_pre_fill)
-        self.groupBox_pre_fill = QtGui.QGroupBox(self)
+        self.groupBox_pre_fill = QtWidgets.QGroupBox(self)
         self.groupBox_pre_fill.setTitle("Stap 4: invullen waar evident")
-        self.box_pre_fill = QtGui.QHBoxLayout()
+        self.box_pre_fill = QtWidgets.QHBoxLayout()
         self.box_pre_fill.addWidget(self.pre_fill_button)
         self.groupBox_pre_fill.setLayout(self.box_pre_fill)  # box toevoegen aan groupbox
         self.bottom_row.addWidget(self.groupBox_pre_fill)
 
         # Assembling run all
-        self.run_all_button = QtGui.QPushButton(self)
-        self.run_all_button.setObjectName(_fromUtf8("pre fill profiles"))
+        self.run_all_button = QtWidgets.QPushButton(self)
+        self.run_all_button.setObjectName("pre fill profiles")
         self.run_all_button.clicked.connect(self.run_all)
-        self.groupBox_run_all = QtGui.QGroupBox(self)
+        self.groupBox_run_all = QtWidgets.QGroupBox(self)
         self.groupBox_run_all.setTitle("Run alle (vergeet 3di resultaten niet te selecteren)")
-        self.box_run_all = QtGui.QHBoxLayout()
+        self.box_run_all = QtWidgets.QHBoxLayout()
         self.box_run_all.addWidget(self.run_all_button)
         self.groupBox_run_all.setLayout(self.box_run_all)  # box toevoegen aan groupbox
 
         # Assembling feedback row
-        self.feedbacktext = QtGui.QTextEdit(self)
+        self.feedbacktext = QtWidgets.QTextEdit(self)
         self.feedbackmessage = "Nog geen berekening uitgevoerd"
         self.feedbacktext.setText(self.feedbackmessage)
-        self.feedbacktext.setObjectName(_fromUtf8("feedback"))
+        self.feedbacktext.setObjectName("feedback")
 
         self.feedback_row.addWidget(self.feedbacktext)
 
         # Assembling exit row
-        self.cancel_button = QtGui.QPushButton(self)
-        self.cancel_button.setObjectName(_fromUtf8("Cancel"))
+        self.cancel_button = QtWidgets.QPushButton(self)
+        self.cancel_button.setObjectName("Cancel")
         self.cancel_button.clicked.connect(self.close)
         self.exit_row.addWidget(self.cancel_button)
 
-        self.save_button = QtGui.QPushButton(self)
-        self.save_button.setObjectName(_fromUtf8("Close"))
+        self.save_button = QtWidgets.QPushButton(self)
+        self.save_button.setObjectName("Close")
         self.save_button.clicked.connect(self.save_spatialite)
         self.exit_row.addWidget(self.save_button)
 
@@ -502,22 +505,18 @@ class ProfileCalculationWidget(QWidget):  # , FORM_CLASS):
         QtCore.QMetaObject.connectSlotsByName(self)
 
     def retranslateUi(self, Dialog):
-        Dialog.setWindowTitle(_translate("Dialog", "Bereken de profielvarianten van de polder",
-                                         None))  # todo: maak een merge met de poldernaam.
-        self.save_button.setText(_translate("Dialog", "Opslaan en sluiten", None))
-        self.step1_explanation_button.setText(_translate("Dialog", "Uitleg stap 1", None))
-        self.step1_button.setText(_translate("Dialog", "Verbindt resultaten van netCDF aan de hydro-objecten", None))
-        self.step_redirect_flow_button.setText(_translate("Dialog", "Herverdeel debieten naar primair", None))
-        self.step2_explanation_button.setText(_translate("Dialog", "Uitleg stap 2", None))
-        self.step2_button.setText(_translate("Dialog", "Bereken alle mogelijke leggerprofielen", None))
-        self.step3_button.setText(
-            _translate("Dialog", "Bereken de fit van de berekende profielen", None))
-        self.snap_points_button.setText(
-            _translate("Dialog", "Snap eindpunten van lijnen", None))
 
-        self.pre_fill_button.setText(
-            _translate("Dialog", "Vul profielen in waar duidelijk", None))
-        self.run_all_button.setText(
-            _translate("Dialog", "Run alle taken achter elkaar", None))
+        Dialog.setWindowTitle("Bereken de profielvarianten van de polder")
+        self.save_button.setText("Opslaan en sluiten")
+        self.step1_explanation_button.setText("Uitleg stap 1")
+        self.step1_button.setText("Verbindt resultaten van netCDF aan de hydro-objecten")
+        self.step_redirect_flow_button.setText("Herverdeel debieten naar primair")
+        self.step2_explanation_button.setText("Uitleg stap 2")
+        self.step2_button.setText("Bereken alle mogelijke leggerprofielen")
+        self.step3_button.setText("Bereken de fit van de berekende profielen")
+        self.snap_points_button.setText("Snap eindpunten van lijnen")
 
-        self.cancel_button.setText(_translate("Dialog", "Cancel", None))
+        self.pre_fill_button.setText("Vul profielen in waar duidelijk")
+        self.run_all_button.setText("Run alle taken achter elkaar")
+
+        self.cancel_button.setText("Cancel")

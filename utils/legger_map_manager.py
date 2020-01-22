@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 import os
-from PyQt4.QtCore import QVariant
-from qgis.core import QgsField, QgsVectorLayer, QgsDataSourceURI, QgsMapLayerRegistry
+from qgis.PyQt.QtCore import QVariant
+from qgis.core import QgsField, QgsVectorLayer, QgsDataSourceUri, QgsProject
 from legger.utils.map_layers import LayerManager
 
 
@@ -41,7 +41,7 @@ class LeggerMapManager(object):
         """
 
         def get_layer(spatialite_path, table_name, geom_column=''):
-            uri2 = QgsDataSourceURI()
+            uri2 = QgsDataSourceUri()
             uri2.setDatabase(spatialite_path)
             uri2.setDataSource('', table_name, geom_column)
 

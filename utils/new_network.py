@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 from legger.qt_models.legger_tree import LeggerTreeItem, hydrovak_class
 from qgis.core import QgsFeature, QgsFeatureRequest, QgsGeometry, QgsPoint
-from qgis.networkanalysis import QgsArcProperter, QgsDistanceArcProperter, QgsGraphBuilder
+from qgis.analysis import QgsNetworkStrategy, QgsNetworkDistanceStrategy, QgsGraphBuilder
 
 from .formats import make_type
 
@@ -19,7 +19,7 @@ def merge_dicts(x, y):
     return z
 
 
-class AttributeProperter(QgsArcProperter):
+class AttributeProperter(QgsNetworkStrategy):
     """custom properter which returns property of input layer"""
 
     def __init__(self, attribute, attribute_index):
@@ -27,7 +27,7 @@ class AttributeProperter(QgsArcProperter):
         attribute (str): field name. Provide 'feat_id' to get feature id (requested through feature.id())
         attribute_index (list of int): List of field indexes of fields used by property function
         """
-        QgsArcProperter.__init__(self)
+        QgsNetworkStrategy.__init__(self)
         self.attribute = attribute
         self.attribute_index = attribute_index
 
@@ -74,11 +74,11 @@ class NewNetwork(object):
         self.id_field = id_field
 
         # build graph for network
-        properter_1 = distance_properter or QgsDistanceArcProperter()
+        properter_1 = distance_properter or QgsNetworkDistanceStrategy()
         properter_2 = AttributeProperter(id_field, [line_layer.dataProvider().fieldNameIndex(id_field)])
 
-        self.director.addProperter(properter_1)
-        self.director.addProperter(properter_2)
+        self.director.addStrategy(properter_1)
+        self.director.addStrategy(properter_2)
 
         if not self.line_layer.isValid():
             raise AttributeError('Linelayer is not valid')
@@ -221,7 +221,7 @@ class NewNetwork(object):
 
                 # next for while loop
                 line = next(line_queue.itervalues())
-        except StopIteration, e:
+        except StopIteration as e:
             pass
 
         return output_islands

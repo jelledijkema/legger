@@ -1,15 +1,16 @@
 import logging
 import os.path
 
-from PyQt4.QtCore import (QSettings, QTranslator, qVersion, QCoreApplication, pyqtSignal,
+from qgis.PyQt.QtCore import (QSettings, QTranslator, qVersion, QCoreApplication, pyqtSignal,
                           QObject)
-from PyQt4.QtGui import QAction, QIcon
+from qgis.PyQt.QtGui import QIcon
+from qgis.PyQt.QtWidgets import QAction
 # Import the code of the tools
 from legger.tools.legger_network_tool import LeggerNetworkTool
 from legger.tools.sqlite_polder_selection import DatabaseSelection
 from legger.tools.profile_variant_calculations import ProfileCalculations
 from legger.tools.set_begroeiingsvariant import SetBegroeiingsvariant
-import resources  # can be essential for the tool pictograms
+from . import resources  # can be essential for the tool pictograms
 
 # Initialize Qt resources from file resources.py
 
@@ -31,6 +32,11 @@ class Legger(QObject):
 
         self.iface = iface
 
+        try:
+            import remote_debugger_settings
+        except ImportError:
+            pass
+
         # initialize plugin directory
         self.plugin_dir = os.path.join(
             os.path.dirname(__file__),
@@ -46,9 +52,7 @@ class Legger(QObject):
         if os.path.exists(locale_path):
             self.translator = QTranslator()
             self.translator.load(locale_path)
-
-            if qVersion() > '4.3.3':
-                QCoreApplication.installTranslator(self.translator)
+            QCoreApplication.installTranslator(self.translator)
 
         # self.polder_datasource = r'C:/tmp/wijdewormer/legger_wijdewormer.sqlite'
         self.polder_datasource = None

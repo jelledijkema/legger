@@ -3,12 +3,12 @@
     to change visible data in tree, modify the HORIZONTAL_HEADERS config
 """
 
-from PyQt4.QtCore import Qt
-from PyQt4.QtGui import QBrush, QColor, QIcon
 from legger import settings
 from legger.utils.formats import transform_none
-from tree import BaseTreeItem, BaseTreeModel, CHECKBOX_FIELD, INDICATION_HOVER
-from legger.utils.formats import transform_none
+from qgis.PyQt.QtCore import Qt
+from qgis.PyQt.QtGui import QBrush, QColor, QIcon
+
+from .tree import BaseTreeItem, BaseTreeModel, CHECKBOX_FIELD, INDICATION_HOVER
 
 # field and display config of 'hydrovakken'
 HORIZONTAL_HEADERS = (

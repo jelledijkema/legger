@@ -11,9 +11,9 @@ from legger.tests.utilities import get_qgis_app, TemporaryDirectory
 QGIS_APP = get_qgis_app()
 
 from random import shuffle
-from qgis.networkanalysis import (QgsLineVectorLayerDirector)
+from qgis.analysis import (QgsVectorLayerDirector)
 from legger.utils.new_network import NewNetwork, AttributeProperter
-from PyQt4.QtCore import QVariant
+from qgis.PyQt.QtCore import QVariant
 
 
 # @unittest.skipIf()
@@ -312,7 +312,7 @@ class TestTheoreticalNetwork(unittest.TestCase):
         line_layer.updateExtents()
         # setup director which is direction sensitive
         field_nr = line_layer.fieldNameIndex('direction')
-        director = QgsLineVectorLayerDirector(
+        director = QgsVectorLayerDirector(
             line_layer, field_nr, '2', '1', '3', 3)
 
         distance_properter = AttributeProperter('length', 0)

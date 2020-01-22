@@ -293,7 +293,7 @@ Gebruik deze functie om extra logica aan uw formulieren toe te voegen.
 Voer de naam van de functie in in het veld "Python Init functie".
 Een voorbeeld volgt:
 """
-from PyQt4.QtGui import QWidget
+from qgis.PyQt.QtGui import QWidget
 
 def my_form_open(dialog, layer, feature):
 	geom = feature.geometry()

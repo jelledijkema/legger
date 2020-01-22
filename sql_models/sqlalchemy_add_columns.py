@@ -100,4 +100,4 @@ def create_and_upgrade(engine, metadata):
 def _column_names(table):
     # Autoloaded columns return unicode column names - make sure we treat all
     # are equal
-    return set((unicode(i.name) for i in table.c))
+    return set((i.name for i in table.c))

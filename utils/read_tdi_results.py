@@ -7,20 +7,16 @@ import json
 import logging
 import math
 
-from qgis.core import QgsGeometry, QgsLineStringV2, QgsPoint
+from qgis.core import QgsGeometry, QgsPoint
 
-try:
-    from ThreeDiToolbox.datasource.netcdf_groundwater_h5py import \
-        NetcdfGroundwaterDataSourceH5py as NetcdfGroundwaterDataSource
-except ImportError:
-    from ThreeDiToolbox.datasource.netcdf_groundwater import NetcdfGroundwaterDataSource
+# todo: problems with h5py installation. Already tried to reinstall h5py....
+# from ThreeDiToolbox.datasource.threedi_results import ThreediResult
 
 from legger.utils.geom_collections.lines import LineCollection
-from legger.utils.geometries import LineString
-from legger.utils.geometries import shape
 from legger.sql_models.legger import DuikerSifonHevel, HydroObject
 from legger.sql_models.legger_database import LeggerDatabase
-from pyspatialite import dbapi2 as dbapi
+import sqlite3
+from legger.sql_models.legger_database import load_spatialite
 
 log = logging.getLogger(__name__)
 
@@ -68,16 +64,18 @@ def read_tdi_results(path_model_db, path_result_db,
     - functions of the ThreeDiToolbox qgis-plugin are used, so make sure this plugin is available
     """
 
-    con_model = dbapi.connect(path_model_db)
-    con_res = dbapi.connect(path_result_db)
-    con_legger = dbapi.connect(path_legger_db)
+    con_model = load_spatialite(path_model_db)
 
-    result_ds = NetcdfGroundwaterDataSource(path_result_nc)
+    con_res = load_spatialite(path_result_db)
+
+    con_legger = load_spatialite(path_legger_db)
+
+    result_ds = ThreediResult(path_result_nc)
 
     # make sure we got dictionaries returned
-    con_model.row_factory = dbapi.Row
-    con_res.row_factory = dbapi.Row
-    con_legger.row_factory = dbapi.Row
+    con_model.row_factory = sqlite3.Row
+    con_res.row_factory = sqlite3.Row
+    con_legger.row_factory = sqlite3.Row
 
     # read discharge of timestep. Returns numpy array with index number is idx.
     # to link to model channels, the id mapping is needed.
@@ -377,7 +375,7 @@ def write_tdi_results_to_db(hydroobject_results, path_legger_db):
 
 def read_tdi_culvert_results(path_model_db, path_result_db,
                              path_result_nc, path_legger_db,
-                             timestep):
+                             timestep=-1):
     """
 
     path_model_db (str): path to 3di modelspatialite
@@ -389,16 +387,18 @@ def read_tdi_culvert_results(path_model_db, path_result_db,
     """
 
     # open databases and netCDF
-    con_model = dbapi.connect(path_model_db)
-    con_result = dbapi.connect(path_result_db)
-    con_legger = dbapi.connect(path_legger_db)
+    con_model = load_spatialite(path_model_db)
 
-    result_ds = NetcdfGroundwaterDataSource(path_result_nc)
+    con_result = load_spatialite(path_result_db)
+
+    con_legger = load_spatialite(path_legger_db)
+
+    result_ds = ThreediResult(path_result_nc)
 
     # make sure we got dictionaries returned
-    con_model.row_factory = dbapi.Row
-    con_result.row_factory = dbapi.Row
-    con_legger.row_factory = dbapi.Row
+    con_model.row_factory = sqlite3.Row
+    con_result.row_factory = sqlite3.Row
+    con_legger.row_factory = sqlite3.Row
 
     # read discharge of  timestep. Returns numpy array with index number is idx.
     # to link to model channels, the id mapping is needed.
@@ -470,6 +470,6 @@ def get_timestamps(path_result_nc, parameter=None):
     parameter (str): parameter identification
     :return:
     """
-    result_ds = NetcdfGroundwaterDataSource(path_result_nc)
+    result_ds = ThreediResult(path_result_nc)
 
     return result_ds.get_timestamps(parameter=parameter)
