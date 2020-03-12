@@ -7,10 +7,9 @@ import json
 import logging
 import math
 
-from qgis.core import QgsGeometry, QgsPoint
+from qgis.core import QgsGeometry, QgsPointXY
 
-# todo: problems with h5py installation. Already tried to reinstall h5py....
-# from ThreeDiToolbox.datasource.threedi_results import ThreediResult
+from ThreeDiToolbox.datasource.threedi_results import ThreediResult
 
 from legger.utils.geom_collections.lines import LineCollection
 from legger.sql_models.legger import DuikerSifonHevel, HydroObject
@@ -31,14 +30,14 @@ def create_geom_line(coordinates, maincall=True):
         list_of_geoms = [create_geom_line(coord, False) for coord in coordinates]
 
         if maincall:
-            if type(list_of_geoms[0]) == QgsPoint:
-                return QgsGeometry.fromPolyline(list_of_geoms)
+            if type(list_of_geoms[0]) == QgsPointXY:
+                return QgsGeometry.fromPolylineXY(list_of_geoms)
             else:
-                return QgsGeometry.fromMultiPolyline(list_of_geoms)
+                return QgsGeometry.fromMultiPolylineXY(list_of_geoms)
         else:
             return list_of_geoms
     else:
-        return QgsPoint(coordinates[0], coordinates[1])
+        return QgsPointXY(coordinates[0], coordinates[1])
 
 
 def read_tdi_results(path_model_db, path_result_db,
@@ -180,7 +179,7 @@ def read_tdi_results(path_model_db, path_result_db,
         #     json.loads(hydroobject['geojson'])['coordinates'])
 
         bbox = line.boundingBox()
-        bbox = bbox.buffer(max_link_distance)
+        bbox = bbox.buffered(max_link_distance)
         bbox = [bbox.xMinimum(), bbox.yMinimum(), bbox.xMaximum(), bbox.yMaximum()]
         # with shapely
         # bbox = line.bounds
@@ -237,12 +236,12 @@ def read_tdi_results(path_model_db, path_result_db,
             # get orientation of hydroobject vs channel
             if line.isMultipart():
                 vertexes = line.asMultiPolyline()
-                d1, p1, v1 = geom_channel.closestSegmentWithContext(vertexes[0][0])
-                d2, p2, v2 = geom_channel.closestSegmentWithContext(vertexes[-1][-1])
+                d1, p1, v1, o1 = geom_channel.closestSegmentWithContext(vertexes[0][0])
+                d2, p2, v2, o2 = geom_channel.closestSegmentWithContext(vertexes[-1][-1])
             else:
                 vertexes = line.asPolyline()
-                d1, p1, v1 = geom_channel.closestSegmentWithContext(vertexes[0])
-                d2, p2, v2 = geom_channel.closestSegmentWithContext(vertexes[-1])
+                d1, p1, v1, o1 = geom_channel.closestSegmentWithContext(vertexes[0])
+                d2, p2, v2, o2 = geom_channel.closestSegmentWithContext(vertexes[-1])
 
             dist1 = geom_channel.distanceToVertex(v1) - math.sqrt(geom_channel.sqrDistToVertexAt(p1, v1))
             dist2 = geom_channel.distanceToVertex(v2) - math.sqrt(geom_channel.sqrDistToVertexAt(p2, v2))
@@ -321,12 +320,12 @@ def read_tdi_results(path_model_db, path_result_db,
                 # get orientation of hydroobject vs channel
                 if line.isMultipart():
                     vertexes = line.asMultiPolyline()
-                    d1, p1, v1 = geom_flowline.closestSegmentWithContext(vertexes[0][0])
-                    d2, p2, v2 = geom_flowline.closestSegmentWithContext(vertexes[-1][-1])
+                    d1, p1, v1, o1 = geom_flowline.closestSegmentWithContext(vertexes[0][0])
+                    d2, p2, v2, o2 = geom_flowline.closestSegmentWithContext(vertexes[-1][-1])
                 else:
                     vertexes = line.asPolyline()
-                    d1, p1, v1 = geom_flowline.closestSegmentWithContext(vertexes[0])
-                    d2, p2, v2 = geom_flowline.closestSegmentWithContext(vertexes[-1])
+                    d1, p1, v1, o1 = geom_flowline.closestSegmentWithContext(vertexes[0])
+                    d2, p2, v2, o2 = geom_flowline.closestSegmentWithContext(vertexes[-1])
 
                 dist1 = geom_flowline.distanceToVertex(v1) - math.sqrt(geom_flowline.sqrDistToVertexAt(p1, v1))
                 dist2 = geom_flowline.distanceToVertex(v2) - math.sqrt(geom_flowline.sqrDistToVertexAt(p2, v2))

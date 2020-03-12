@@ -3,7 +3,7 @@ try:
 except ImportError:
     import sys
 
-    sys.path.append('C:\\Program Files\\JetBrains\\PyCharm 2019.3\\debug-eggs\\pydevd-pycharm.egg')
+    # sys.path.append('C:\\Program Files\\JetBrains\\PyCharm 2019.3\\debug-eggs\\pydevd-pycharm.egg')
     import pydevd_pycharm
 
 

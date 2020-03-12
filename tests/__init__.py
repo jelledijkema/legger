@@ -1,0 +1,1 @@
+import qgis   # pylint: disable=W0611  # NOQA

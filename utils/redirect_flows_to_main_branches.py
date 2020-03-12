@@ -39,7 +39,7 @@ def redirect_flows(iface, path_legger_db):
     line_layer = layer_manager.get_line_layer(add_to_map=False)
     # init network
     line_direct = layer_manager.get_line_layer(geometry_col='line')
-    field_nr = line_direct.fieldNameIndex('direction')
+    field_nr = line_direct.fields().indexFromName('direction')
     director = QgsVectorLayerDirector(
         line_direct, field_nr, '2', '1', '3', 3)
 

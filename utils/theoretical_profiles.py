@@ -157,7 +157,7 @@ def calc_profile_variants_for_all(hydro_objects,
         else:
             to_depth = store_all_to_depth
 
-        to_depth = max(to_depth, row.DIEPTE * 1.2 if pd.notnull(row.DIEPTE) else None)
+        to_depth = max(to_depth, row.DIEPTE * 1.2 if pd.notna(row.DIEPTE) and pd.notnull(row.DIEPTE) else to_depth)
 
         try:
             variants_table = variants_table.append(

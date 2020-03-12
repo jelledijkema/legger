@@ -10,8 +10,9 @@ from legger.tools.legger_network_tool import LeggerNetworkTool
 from legger.tools.sqlite_polder_selection import DatabaseSelection
 from legger.tools.profile_variant_calculations import ProfileCalculations
 from legger.tools.set_begroeiingsvariant import SetBegroeiingsvariant
-from . import resources  # can be essential for the tool pictograms
+from legger import resources  # can be essential for the tool pictograms
 
+resources  # noqa
 # Initialize Qt resources from file resources.py
 
 log = logging.getLogger(__name__)
@@ -33,7 +34,7 @@ class Legger(QObject):
         self.iface = iface
 
         try:
-            import remote_debugger_settings
+            from . import remote_debugger_settings
         except ImportError:
             pass
 

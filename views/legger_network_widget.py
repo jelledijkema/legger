@@ -156,7 +156,7 @@ class LeggerWidget(QDockWidget):
 
         # init network
         line_direct = self.layer_manager.get_line_layer(geometry_col='line')
-        field_nr = line_direct.fieldNameIndex('direction')
+        field_nr = line_direct.fields().indexFromName('direction')
         director = QgsVectorLayerDirector(
             line_direct, field_nr, '2', '1', '3', 3)
 
@@ -565,7 +565,7 @@ class LeggerWidget(QDockWidget):
                 node = self.area_model.data(index, role=Qt.UserRole)
                 feat = QgsFeature()
 
-                feat.setGeometry(QgsGeometry.fromPoint(node.area.get('point')))
+                feat.setGeometry(QgsGeometry.fromPointXY(node.area.get('point')))
                 feat.setAttributes([
                     node.area.get('vertex_id')])
                 features.append(feat)
@@ -766,7 +766,7 @@ class LeggerWidget(QDockWidget):
                 'score': profile.figuren[0].t_fit if profile.figuren else None,
                 'over_depth': over_depth if over_depth is not None else None,
                 'over_width': over_width if over_depth is not None else None,
-                'over_width_color': [255, 0, 0] if over_width < 0 else [255, 255, 255],
+                'over_width_color': [100, 100, 100] if over_width is None else [255, 0, 0] if over_width < 0 else [255, 255, 255],
                 'verhang': profile.verhang,
                 'color': interpolated_color(value=profile.verhang, color_map=color_map,
                                             alpha=(255 if active else 80)),

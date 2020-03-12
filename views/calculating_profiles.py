@@ -4,7 +4,6 @@
 
 
 # -*- coding: utf-8 -*-
-from __future__ import division
 
 import logging
 import time
@@ -75,7 +74,7 @@ class ProfileCalculationWidget(QWidget):  # , FORM_CLASS):
             self.path_model_db = errormessage
 
         try:
-            self.path_result_db = self.ts_datasource.rows[0].spatialite_cache_filepath().replace('\\', '/')
+            self.path_result_db = self.ts_datasource.rows[0].datasource_layer_helper.sqlite_gridadmin_filepath.replace('\\', '/')
         except:
             self.path_result_db = errormessage
 
@@ -194,7 +193,7 @@ class ProfileCalculationWidget(QWidget):  # , FORM_CLASS):
         self.feedbackmessage = 'Neem tijdstap {0}'.format(timestamp)
 
         result = None
-        try:
+        if True:
             # read 3di channel results
             result = read_tdi_results(
                 self.path_model_db,
@@ -205,10 +204,10 @@ class ProfileCalculationWidget(QWidget):  # , FORM_CLASS):
             )
             self.feedbackmessage += "\nDatabases zijn gekoppeld."
 
-        except Exception as e:
-            self.feedbackmessage += "\nDatabases zijn niet gekoppeld. melding: {0}\n".format(e)
-        finally:
-            self.feedbacktext.setText(self.feedbackmessage)
+        # except Exception as e:
+        #     self.feedbackmessage += "\nDatabases zijn niet gekoppeld. melding: {0}\n".format(e)
+        # finally:
+        #     self.feedbacktext.setText(self.feedbackmessage)
 
         if result is not None:
             try:
@@ -295,19 +294,21 @@ class ProfileCalculationWidget(QWidget):  # , FORM_CLASS):
 
         for bv in session.query(BegroeiingsVariant).all():
 
-            if True:  # try:
+            try:
                 profiles = create_theoretical_profiles(self.polder_datasource, opstuw_norm, bv)
                 self.feedbackmessage = "Profielen zijn berekend."
-            # except:
-            #     self.feedbackmessage = "Fout, profielen konden niet worden berekend."
-            # finally:
-            #     self.feedbacktext.setText(self.feedbackmessage)
+            except Exception as e:
+                log.error(e)
+                self.feedbackmessage = "Fout, profielen konden niet worden berekend."
+            finally:
+                self.feedbacktext.setText(self.feedbackmessage)
 
             try:
                 write_theoretical_profile_results_to_db(session, profiles, opstuw_norm, bv)
                 self.feedbackmessage = self.feedbackmessage + ("\nProfielen opgeslagen in legger db.")
-            except:
-                self.feedbackmessage = self.feedbackmessage + ("\nFout, profielen niet opgeslagen in legger database.")
+            except Exception as e:
+                log.error(e)
+                self.feedbackmessage = self.feedbackmessage + ("\nFout, profielen niet opgeslagen in legger database. melding: {}")
             finally:
                 self.feedbacktext.setText(self.feedbackmessage)
 

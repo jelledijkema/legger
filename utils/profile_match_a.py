@@ -310,7 +310,7 @@ def prof_in_prof(profgem, proftheo, aantstap=100, delta=0.001, obdiepte=0.001, d
     fit = 0  # de verhouding maxopp / zoekopp (een goodness of fit)
     # logger.debug("wb_gem: %.2f, wb_theo: %.2f; stap: %.2f, zoekopp: %.3f",
     #          waterbreedte_gemeten, waterbreedte_theo, stap, zoekopp)
-    for i in xrange(aantstap):
+    for i in range(aantstap):
         profzoek = shapely.affinity.translate(profzoek, stap, 0.0, 0.0)
         inter = gemprof.intersection(profzoek)
         if abs(zoekopp - inter.area) < delta:  # opp intersectie == zoekopp dus past profzoek volledig in gemprof
@@ -510,7 +510,7 @@ def doe_profinprof(cur0, cur1, aantalstappen=200, precisie=0.0001, codevastebode
                         theo_data[2], theo_data[3], theo_data[4], gemetenprofielen[profielid]['peil'])
         cur0.execute('create index profielfiguren0 on profielfiguren(id_hydro)')
         cur0.execute('create index profielfiguren1 on profielfiguren(profid)')
-        cur0.execute('vacuum')
+        # cur0.execute('vacuum')
         resultaat = "klaar"
     # except ImportError:
     #    resultaat = "Niet correct, run evt opnieuw met debug = 1 om te onderzoeken"

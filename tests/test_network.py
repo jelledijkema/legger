@@ -1,19 +1,22 @@
+
+
+
 import unittest
 
-try:
-    from qgis.core import (
-        QgsVectorLayer, QgsFeature, QgsPoint, QgsField, QgsGeometry)
-except ImportError:
-    pass
-
-from legger.tests.utilities import get_qgis_app, TemporaryDirectory
-
+from legger.tests.utilities import get_qgis_app
 QGIS_APP = get_qgis_app()
 
+from PyQt5.QtCore import QVariant
+
+from qgis.core import (
+    QgsVectorLayer, QgsFeature, QgsPoint, QgsField, QgsGeometry)
+
+
+
 from random import shuffle
-from qgis.analysis import (QgsVectorLayerDirector)
+from qgis.analysis import QgsVectorLayerDirector
 from legger.utils.new_network import NewNetwork, AttributeProperter
-from qgis.PyQt.QtCore import QVariant
+
 
 
 # @unittest.skipIf()
@@ -311,7 +314,7 @@ class TestTheoreticalNetwork(unittest.TestCase):
         line_layer.dataProvider().addFeatures(features)
         line_layer.updateExtents()
         # setup director which is direction sensitive
-        field_nr = line_layer.fieldNameIndex('direction')
+        field_nr = line_layer.fields().indexFromName('direction')
         director = QgsVectorLayerDirector(
             line_layer, field_nr, '2', '1', '3', 3)
 

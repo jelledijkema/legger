@@ -3,7 +3,7 @@ import os.path
 from collections import OrderedDict
 import tempfile
 
-from qgis.core import (QgsDataSourceUri, QgsProject, QgsProject, QgsVectorLayer)
+from qgis.core import (QgsDataSourceUri, QgsProject, QgsProject, QgsVectorLayer, QgsLayerTreeNode)
 
 log = logging.getLogger(__name__)
 
@@ -38,8 +38,9 @@ class LayerManager():
             vector_layer,
             False)
         group.insertLayer(position, vector_layer)
-        legend = self.iface.legendInterface()
-        legend.setLayerVisible(vector_layer, visible)
+        QgsProject.instance().layerTreeRoot().findLayer(vector_layer).setItemVisibilityChecked(visible)
+        # legend = self.iface.legendInterface()
+        # legend.setLayerVisible(vector_layer, visible)
 
     def get_or_create_legger_root(self, clear=False):
         root = QgsProject.instance().layerTreeRoot()
@@ -103,8 +104,6 @@ class LayerManager():
         #     vector_layer,
         #     False)
         # stat_group.insertLayer(0, vector_layer)
-
-        legend = self.iface.legendInterface()
 
         tmp_dir = tempfile.gettempdir()
 

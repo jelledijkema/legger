@@ -61,14 +61,9 @@ class ProfileCalculations(QObject):
         """Run method that loads and starts the plugin"""
 
 
-        try:
-            import ThreeDiToolbox
-        except:
-            raise ImportError("For Leggertool the ThreeDiToolbox plugin must be installed, "
-                              "version xxx or higher")
 
         try:
-            ts_datasource = ThreeDiToolbox.ts_datasource
+            ts_datasource = plugins['ThreeDiToolbox'].ts_datasources
         except:
             ts_datasource = "Kies eerst 3Di output (model, simulatie (nc), sqlite1)"
 
