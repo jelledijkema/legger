@@ -117,7 +117,7 @@ class NewNetwork(object):
         def get_all_bidirectional_arcs(vertexes):
             arcs = []
             for vertex in vertexes:
-                arcs.extend([arc_nr for arc_nr in vertex.incomingEdges() if arc_dict[arc_nr]['direction'] == 3])
+                arcs.extend([arc_nr for arc_nr in vertex.outgoingEdges() if arc_dict[arc_nr]['direction'] == 3])
 
         arcs = []
 
@@ -170,8 +170,8 @@ class NewNetwork(object):
                     # basic information
                     'feat_id': feat_id,
                     'arc_nr': arc_nr,
-                    'in_vertex': arc.fromVertex(),
-                    'out_vertex': arc.toVertex(),
+                    'in_vertex': arc.toVertex(),
+                    'out_vertex': arc.fromVertex(),
                     'weight': (line_feature['debiet'] or 0) * arc.strategies()[DISTANCE_PROPERTER_NR],
                     # info need to be generated later
                     'downstream_arc': None,
@@ -201,10 +201,10 @@ class NewNetwork(object):
 
             bidirectional_line_island = [arc_nr]
 
-            connected_lines = self.graph.vertex(arc.toVertex()).outgoingEdges()
-            connected_lines += self.graph.vertex(arc.toVertex()).incomingEdges()
+            connected_lines = self.graph.vertex(arc.fromVertex()).incomingEdges()
             connected_lines += self.graph.vertex(arc.fromVertex()).outgoingEdges()
-            connected_lines += self.graph.vertex(arc.fromVertex()).incomingEdges()
+            connected_lines += self.graph.vertex(arc.toVertex()).incomingEdges()
+            connected_lines += self.graph.vertex(arc.toVertex()).outgoingEdges()
 
             for connected_line in connected_lines:
                 if connected_line in line_queue:
@@ -213,12 +213,12 @@ class NewNetwork(object):
             return bidirectional_line_island
 
         try:
-            line = next(line_queue.values())
+            line = next(iter(line_queue.values()))
             while line:
                 output_islands.append(find_connected_bidirectional_recursive(line['arc_nr']))
 
                 # next for while loop
-                line = next(line_queue.values())
+                line = next(iter(line_queue.values()))
         except StopIteration as e:
             pass
 
@@ -244,10 +244,10 @@ class NewNetwork(object):
                         continue
                     vertex = self.graph.vertex(vertex_nr)
                     inflow = sum(
-                        [abs(arc_tree[arc_nr]['flow_3di']) for arc_nr in vertex.incomingEdges()
+                        [abs(arc_tree[arc_nr]['flow_3di']) for arc_nr in vertex.outgoingEdges()
                          if arc_tree[arc_nr]['flow_3di'] is not None])
                     outflow = sum(
-                        [abs(arc_tree[arc_nr]['flow_3di']) for arc_nr in vertex.outgoingEdges()
+                        [abs(arc_tree[arc_nr]['flow_3di']) for arc_nr in vertex.incomingEdges()
                          if arc_tree[arc_nr]['flow_3di'] is not None])
 
                     vertexes[vertex_nr] = inflow - outflow
@@ -266,25 +266,24 @@ class NewNetwork(object):
         arc_tree = self.hydrovak_class_tree_with_data()
 
         # set initial vertex_queue on points with no upstream vertexes
-        vertex_queue = [i for i in range(self.graph.vertexCount()) if len(self.graph.vertex(i).incomingEdges()) == 0]
+        vertex_queue = [i for i in range(self.graph.vertexCount()) if len(self.graph.vertex(i).outgoingEdges()) == 0]
 
         current_vertex_nr = vertex_queue.pop()
         while current_vertex_nr is not None:
             current_vertex = self.graph.vertex(current_vertex_nr)
 
             modified_flow_in = sum(
-                [abs(arc_flow[arc_id]) for arc_id in current_vertex.incomingEdges() if arc_flow[arc_id] is not None])
+                [abs(arc_flow[arc_id]) for arc_id in current_vertex.outgoingEdges() if arc_flow[arc_id] is not None])
             original_flow_in = sum(
-                [abs(arc_tree[arc_nr]['flow_3di']) for arc_nr in current_vertex.incomingEdges() if
-                 arc_tree[arc_nr]['flow_3di'] is not None])
-            original_flow_out = sum(
                 [abs(arc_tree[arc_nr]['flow_3di']) for arc_nr in current_vertex.outgoingEdges() if
                  arc_tree[arc_nr]['flow_3di'] is not None])
+            original_flow_out = sum(
+                [abs(arc_tree[arc_nr]['flow_3di']) for arc_nr in current_vertex.incomingEdges() if
+                 arc_tree[arc_nr]['flow_3di'] is not None])
 
-            arcs = [arc_tree[arc_nr] for arc_nr in current_vertex.outgoingEdges()]
+            arcs = [arc_tree[arc_nr] for arc_nr in current_vertex.incomingEdges()]
             arcs = sorted(arcs, key=lambda a: a['flow'])
-            if 387746 in [arc['hydro_id'] for arc in arcs]:
-                a = 1
+
 
             # check if redistribution is required
             rerouting_required = False
@@ -332,7 +331,7 @@ class NewNetwork(object):
             for arc in arcs:
                 if not vertex_done[arc['out_vertex']]:
                     vertex = self.graph.vertex(arc['out_vertex'])
-                    complete = all([arc_flow[arc_nr] is not None for arc_nr in vertex.incomingEdges()])
+                    complete = all([arc_flow[arc_nr] is not None for arc_nr in vertex.outgoingEdges()])
                     if complete:
                         vertex_queue.append(arc['out_vertex'])
 
@@ -362,7 +361,7 @@ class NewNetwork(object):
             out_vertex = self.graph.vertex(arc['out_vertex'])
             # link arc with highest flow
             arc['downstream_arc'] = next(
-                iter(sorted(out_vertex.outgoingEdges(), key=lambda nr: arc_tree[nr]['flow'] if arc_tree[nr]['flow'] is not None else 0, reverse=True)), None)
+                iter(sorted(out_vertex.incomingEdges(), key=lambda nr: arc_tree[nr]['flow'] if arc_tree[nr]['flow'] is not None else 0, reverse=True)), None)
             if arc['downstream_arc'] is None:
                 start_arcs[arc_nr] = {
                     'arc_nr': arc_nr,
@@ -392,7 +391,7 @@ class NewNetwork(object):
         # streams are forced into a tree structure with no alternative paths to same point
         for arc_nr, arc in arc_tree.items():
             arc['upstream_arcs'] = [
-                nr for nr in self.graph.vertex(arc['in_vertex']).incomingEdges()
+                nr for nr in self.graph.vertex(arc['in_vertex']).outgoingEdges()
                 if arc_tree[nr]['downstream_arc'] == arc_nr]
 
         # order upstream arcs based on 'cum weight'. An (arbitrary) weight to select the long bigger flows as
@@ -639,7 +638,7 @@ class NewNetwork(object):
         """
         arc_nrs = []
         for vertex_nr in vertex_nrs:
-            arc_nrs.extend(self.graph.vertex(vertex_nr).incomingEdges())
+            arc_nrs.extend(self.graph.vertex(vertex_nr).outgoingEdges())
 
         return arc_nrs
 
@@ -651,7 +650,7 @@ class NewNetwork(object):
         """
         arc_nrs = []
         for vertex_nr in vertex_nrs:
-            arc_nrs.extend(self.graph.vertex(vertex_nr).outgoingEdges())
+            arc_nrs.extend(self.graph.vertex(vertex_nr).incomingEdges())
 
         return arc_nrs
 
