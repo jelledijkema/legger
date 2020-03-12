@@ -1,6 +1,5 @@
 
 
-
 import unittest
 
 from legger.tests.utilities import get_qgis_app
@@ -11,12 +10,9 @@ from PyQt5.QtCore import QVariant
 from qgis.core import (
     QgsVectorLayer, QgsFeature, QgsPoint, QgsField, QgsGeometry)
 
-
-
 from random import shuffle
 from qgis.analysis import QgsVectorLayerDirector
 from legger.utils.new_network import NewNetwork, AttributeProperter
-
 
 
 # @unittest.skipIf()
@@ -37,8 +33,10 @@ class TestTheoreticalNetwork(unittest.TestCase):
         network:
               o
               |
+              3
+              |
               v
-        o <-- o <-- o <-- o <-- o
+        o <-1- o <-2- o <-4- o <-5- o
         """
         line_layer, director, distance_properter = self.get_line_layer_and_director(self.one_simple_line_network)
 
@@ -54,8 +52,10 @@ class TestTheoreticalNetwork(unittest.TestCase):
         network:
               o
               |
+              3
+              |
               v
-        o <-- o <-- o <-- o --> o
+        o <-1- o <-2- o <-4- o -5-> o
         """
         layer_data = [row.copy() for row in self.one_simple_line_network]
         layer_data[4]['direction'] = 2
