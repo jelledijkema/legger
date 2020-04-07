@@ -3,7 +3,7 @@
 Toolset for assigning 'legger' profiles to channels (hydro objects), based on
 the water gradiant calculated with 3di model results
 
-Current version is tested for QGIS version 2.18.26 and ThreeDiToolbox version 1.6
+Current version is tested for QGIS version 3.4 and ThreeDiToolbox version 1.13
 
 ## Installation
 
