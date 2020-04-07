@@ -266,10 +266,10 @@ class CreateLeggerSpatialite(object):
     def add_default_settings(self):
         session = self.db.get_session()
         session.execute("INSERT INTO categorie(categorie, naam, variant_diepte_min, variant_diepte_max, default_talud) VALUES "
-                        "(1, 'primair', 0.3, 8, 1.5),"
-                        "(2, 'secundair', 0.3, 2.5, 1.5),"
-                        "(3, 'tertaire', 0.3, 1, 1.5),"
-                        "(4, 'overig', 0.3, 1, 1.5)")
+                        "(1, 'primair', 0.3, 5, 1.5),"
+                        "(2, 'secundair', 0.2, 2.5, 1.5),"
+                        "(3, 'tertaire', 0.2, 1, 1.5),"
+                        "(4, 'overig', 0.2, 1, 1.5)")
         session.commit()
 
 def main():
