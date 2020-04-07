@@ -252,7 +252,7 @@ def calc_profile_variants_for_hydro_object(
 
             # loop until gradient is lower than norm or profile gets wider than max_width
             # if first try is wider, this (to wide) profile is stored
-            if ditch_width + 0.05 > max_ditch_width:
+            if ditch_width + 0.0 > max_ditch_width:
                 break
 
         # store
