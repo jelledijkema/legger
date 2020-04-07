@@ -69,11 +69,13 @@ def read_spatialite(cursor):
 
 def calc_pitlo_griffioen(flow, ditch_bottom_width, water_depth, slope, friction_manning, friction_begroeiing,
                          begroeiingsdeel):
-    ditch_circumference = (ditch_bottom_width * np.sqrt(begroeiingsdeel) +
-                           (np.sqrt((water_depth * np.sqrt(begroeiingsdeel)) ** 2 +
-                                    (slope * water_depth * np.sqrt(begroeiingsdeel)) ** 2)) +
-                           (np.sqrt((water_depth * np.sqrt(begroeiingsdeel)) ** 2 +
-                                    (slope * water_depth * np.sqrt(begroeiingsdeel)) ** 2)))
+	
+    ditch_circumference = (ditch_bottom_width * np.sqrt(1 - begroeiingsdeel) +
+                           (np.sqrt((water_depth * np.sqrt(1 - begroeiingsdeel)) ** 2 +
+                                    (slope * water_depth * np.sqrt(1 - begroeiingsdeel)) ** 2)) +
+                           (np.sqrt((water_depth * np.sqrt(1 - begroeiingsdeel)) ** 2 +
+                                    (slope * water_depth * np.sqrt(1 - begroeiingsdeel)) ** 2)))
+	
     total_cross_section_area = (ditch_bottom_width + water_depth * slope) * water_depth
 
     A_1 = (1 - begroeiingsdeel) * total_cross_section_area
