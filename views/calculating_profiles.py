@@ -414,7 +414,7 @@ class ProfileCalculationWidget(QWidget):  # , FORM_CLASS):
         self.step_redirect_flow_button.clicked.connect(self.execute_redirect_flows)
 
         self.groupBox_step1 = QtWidgets.QGroupBox(self)
-        self.groupBox_step1.setTitle("stap 2: lees 3di resultaten")
+        self.groupBox_step1.setTitle("Stap 2: lees 3Di resultaten")
         self.box_step1 = QtWidgets.QVBoxLayout()
         self.box_step1.addWidget(self.timestep_combo_box)
         self.box_step1.addWidget(self.step1_button)
@@ -434,7 +434,7 @@ class ProfileCalculationWidget(QWidget):  # , FORM_CLASS):
         self.step2_explanation_button.clicked.connect(self.explain_step2)
 
         self.groupBox_step2 = QtWidgets.QGroupBox(self)
-        self.groupBox_step2.setTitle("stap 3: bereken varianten")
+        self.groupBox_step2.setTitle("Stap 3: bereken profielvarianten")
         self.box_step2 = QtWidgets.QVBoxLayout()
         self.box_step2.addWidget(self.surge_combo_box)
         self.box_step2.addWidget(self.step2_button)
@@ -446,7 +446,7 @@ class ProfileCalculationWidget(QWidget):  # , FORM_CLASS):
         self.step3_button.setObjectName("Stap 3")
         self.step3_button.clicked.connect(self.execute_step3)
         self.groupBox_step3 = QtWidgets.QGroupBox(self)
-        self.groupBox_step3.setTitle("Stap 3: bepaal scores")
+        self.groupBox_step3.setTitle("Stap 4: bepaal score per variant")
         self.box_step3 = QtWidgets.QHBoxLayout()
         self.box_step3.addWidget(self.step3_button)
         self.groupBox_step3.setLayout(self.box_step3)  # box toevoegen aan groupbox
@@ -457,7 +457,7 @@ class ProfileCalculationWidget(QWidget):  # , FORM_CLASS):
         self.pre_fill_button.setObjectName("pre fill profiles")
         self.pre_fill_button.clicked.connect(self.execute_pre_fill)
         self.groupBox_pre_fill = QtWidgets.QGroupBox(self)
-        self.groupBox_pre_fill.setTitle("Stap 4: invullen waar evident")
+        self.groupBox_pre_fill.setTitle("Stap 5: invullen waar evident	")
         self.box_pre_fill = QtWidgets.QHBoxLayout()
         self.box_pre_fill.addWidget(self.pre_fill_button)
         self.groupBox_pre_fill.setLayout(self.box_pre_fill)  # box toevoegen aan groupbox
@@ -509,10 +509,10 @@ class ProfileCalculationWidget(QWidget):  # , FORM_CLASS):
 
         Dialog.setWindowTitle("Bereken de profielvarianten van de polder")
         self.save_button.setText("Opslaan en sluiten")
-        self.step1_explanation_button.setText("Uitleg stap 1")
+        self.step1_explanation_button.setText("Uitleg stap 2")
         self.step1_button.setText("Verbindt resultaten van netCDF aan de hydro-objecten")
         self.step_redirect_flow_button.setText("Herverdeel debieten naar primair")
-        self.step2_explanation_button.setText("Uitleg stap 2")
+        self.step2_explanation_button.setText("Uitleg stap 3")
         self.step2_button.setText("Bereken alle mogelijke leggerprofielen")
         self.step3_button.setText("Bereken de fit van de berekende profielen")
         self.snap_points_button.setText("Snap eindpunten van lijnen")
