@@ -52,7 +52,7 @@ class LeggerMapManager(object):
 
         layer = get_layer(
             self.path_legger_db,
-            'Kenmerken per hydroobject',
+            'hydroobjects_kenmerken',
             geometry_col)
 
         # todo: remove this filter when bidirectional islands are supported
@@ -62,7 +62,7 @@ class LeggerMapManager(object):
             self.map_manager.add_layer_to_group(
                 self.network_layer_group,
                 layer,
-                os.path.join(self.style_path, 'hydroobjects_kenmerken.qml')
+                os.path.join(self.style_path, 'line.qml')
             )
 
         return layer
@@ -100,7 +100,7 @@ class LeggerMapManager(object):
             self.map_manager.add_layer_to_group(
                 self.network_layer_group,
                 self._virtual_tree_layer,
-                os.path.join(self.style_path, 'verbonden_hydrovakken.qml')
+                os.path.join(self.style_path, 'tree_classified.qml')
             )
         return self._virtual_tree_layer
 
@@ -118,7 +118,7 @@ class LeggerMapManager(object):
             crs = self.get_line_layer().crs().authid()
             self._endpoint_layer = QgsVectorLayer(
                 "point?crs={0}".format(crs),
-                "Eindpunten",
+                "endpoints",
                 "memory")
 
             self._endpoint_layer.dataProvider().addAttributes([
@@ -183,7 +183,7 @@ class LeggerMapManager(object):
             crs = self.get_line_layer().crs().authid()
             self._hover_layer = QgsVectorLayer(
                 "linestring?crs={0}".format(crs),
-                "Muisaanwijzer",
+                "hover",
                 "memory")
 
             self._hover_layer.dataProvider().addAttributes([
@@ -214,7 +214,7 @@ class LeggerMapManager(object):
             crs = self.get_line_layer().crs().authid()
             self._selected_layer = QgsVectorLayer(
                 "linestring?crs={0}".format(crs),
-                "Geselecteerd hydroobject",
+                "geselecteerd",
                 "memory")
 
             self._selected_layer.dataProvider().addAttributes([
@@ -245,7 +245,7 @@ class LeggerMapManager(object):
             crs = self.get_line_layer().crs().authid()
             self._hover_startpoint_layer = QgsVectorLayer(
                 "point?crs={0}".format(crs),
-                "Startpunt",
+                "start_point_hover",
                 "memory")
 
             self._hover_startpoint_layer.dataProvider().addAttributes([
