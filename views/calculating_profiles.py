@@ -165,8 +165,8 @@ class ProfileCalculationWidget(QWidget):  # , FORM_CLASS):
                                               "Tip: In de BWN studie rekenen we een som door van 1 dag droog, 5 "
                                               "dagen regen en weer 2 dagen droog. Voor het meest stationaire moment "
                                               "selecteer de tijdstap aan het einde van de bui. Standaard is dit de"
-											  "tijdstap net onder de waarde 518400, maar kan afwijken. De slider van"
-											  "de tijdstappen moet tussen ongeveer 2/3 en 3/4 van de grootste tijdstap")
+                                              "tijdstap net onder de waarde 518400, maar kan afwijken. De slider van"
+                                              "de tijdstappen moet tussen ongeveer 2/3 en 3/4 van de grootste tijdstap")
 
         self.box_step1.addWidget(self.msg_upper_row)
 
