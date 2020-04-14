@@ -74,6 +74,7 @@ class LayerManager():
                 # ('ruimte', 'ruimte_view', 'over_width', 'min_max_line', 'geometry', None),
             ]),
             ('gekozen legger', [
+                ('verhang', 'hydroobjects_selected_legger', '', 'verhang', 'geometry', None),
                 ('voortgang', 'hydroobjects_selected_legger', '', 'voortgang', 'geometry', None),
                 ('gekozen diepte [m]', 'hydroobjects_selected_legger', '', 'gekozen_diepte', 'geometry', None),
                 ('overdiepte [m]', 'hydroobjects_selected_legger', '', 'overdiepte', 'geometry', None),
@@ -84,7 +85,7 @@ class LayerManager():
                 ('gekozen overbreedte totaal [m]', 'hydroobjects_selected_legger', '', 'overbreedte_totaal', 'geometry',
                  None),
                 ('gekozen begroeiingsvariant', 'hydroobjects_selected_legger', 'geselecteerde_begroeiingsvariant',
-                 'begroeiingsvariant', 'geometry', None),
+                 'gekozen_begroeiingsvariant', 'geometry', None),
             ]),
             ('achtergrond', [
                 ('watervlakken', 'waterdeel', '', 'waterdeel', 'geometry', None),
