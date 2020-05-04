@@ -143,7 +143,8 @@ class LeggerWidget(QDockWidget):
         # create line layer and add to map
         self.layer_manager = LeggerMapManager(self.iface, self.path_legger_db)
 
-        self.line_layer = self.layer_manager.get_line_layer(add_to_map=True)
+        self.line_layer = self.layer_manager.get_line_layer(add_to_map=False)
+        self.layer_manager.get_line_layer(add_to_map=True)
         self.vl_tree_layer = self.layer_manager.get_virtual_tree_layer(add_to_map=True)
         self.vl_endpoint_layer = self.layer_manager.get_endpoint_layer(add_to_map=True)
         self.vl_track_layer = self.layer_manager.get_track_layer(add_to_map=True)

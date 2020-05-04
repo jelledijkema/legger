@@ -36,7 +36,7 @@ def redirect_flows(iface, path_legger_db):
 
     layer_manager = LeggerMapManager(iface, path_legger_db)
 
-    line_layer = layer_manager.get_line_layer(add_to_map=False)
+    line_layer = layer_manager.get_line_layer()
     # init network
     line_direct = layer_manager.get_line_layer(geometry_col='line')
     field_nr = line_direct.fields().indexFromName('direction')

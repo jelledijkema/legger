@@ -87,20 +87,29 @@ def create_legger_views(session):
 
     session.execute(
         """
+            INSERT INTO views_geometry_columns (view_name, view_geometry, view_rowid, f_table_name, 
+              f_geometry_column, read_only)
+            VALUES('hydroobjects_kenmerken', 'line', 'id', 'hydroobject', 'geometry', 1);         
+        """)
+
+    session.execute(
+        """
+            SELECT InvalidateLayerStatistics('hydroobject');
+        """)
+
+    session.execute(
+        """
             SELECT UpdateLayerStatistics('hydroobject');
         """)
+
+
 
     session.execute(
         """
             SELECT UpdateLayerStatistics('hydroobjects_kenmerken');
         """)
 
-    session.execute(
-        """
-            INSERT INTO views_geometry_columns (view_name, view_geometry, view_rowid, f_table_name, 
-              f_geometry_column, read_only)
-            VALUES('hydroobjects_kenmerken', 'line', 'id', 'hydroobject', 'geometry', 1);         
-        """)
+
 
     session.commit()
 
