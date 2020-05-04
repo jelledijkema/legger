@@ -77,6 +77,7 @@ class LayerManager():
             ]),
             ('gekozen legger', [
                 LayerDefinition('voortgang', 'hydroobjects_selected_legger', '', 'voortgang', 'geometry', None, True),
+                LayerDefinition('verhang', 'hydroobjects_selected_legger', '', 'verhang', 'geometry', None, True),
                 LayerDefinition('gekozen diepte [m]', 'hydroobjects_selected_legger', '', 'gekozen_diepte', 'geometry', None, True),
                 LayerDefinition('overdiepte [m]', 'hydroobjects_selected_legger', '', 'overdiepte', 'geometry', None, True),
                 LayerDefinition('gekozen bodembreedte [m]', 'hydroobjects_selected_legger', '', 'gekozen_bodembreedte', 'geometry',
