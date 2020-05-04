@@ -24,7 +24,7 @@ HORIZONTAL_HEADERS = (
     {'field': 'distance', 'header': 'afstand', 'show': False, 'column_width': 50},
     {'field': 'length', 'header': 'Lengte', 'round': 0, 'show': True, 'column_width': 50},
     {'field': 'category', 'header': 'cat', 'header_tooltip': 'categorie waterlichaam', 'column_width': 30},
-    {'field': 'begroeiingsvariant_id', 'header': 'beg', 'header_tooltip': 'gezette begroeiingsvariant id', 'column_width': 40},
+    {'field': 'begroeiingsvariant_id', 'header': 'vbeg', 'header_tooltip': 'vooraf gezette begroeiingsvariant id', 'column_width': 40},
     {'field': 'flow', 'header': 'debiet', 'round': 3, 'show': True, 'column_width': 50},
     {'field': 'target_level', 'show': False, 'column_width': 50},
     {'field': 'depth', 'header': 'diepte', 'show': False, 'column_width': 50},
