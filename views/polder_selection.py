@@ -225,9 +225,10 @@ class PolderSelectionWidget(QWidget):  # , FORM_CLASS):
         con_legger.execute("""
             INSERT INTO begroeiingsvariant(id, naam, is_default, friction_manning, friction_begroeiing, begroeiingsdeel) 
             VALUES 
-                (3, 'volledig begroeid', 1, 40, 65, 0.9),
-                (2, 'half vol', 0, 20, 30, 0.5),
-                (1, 'basis', 0, 20, 30, 0.25)
+                (1, 'vol 90', 1, 40, 65, 0.9),
+                (2, 'half 50', 0, 20, 30, 0.5),
+                (3, 'kwart 25', 0, 20, 30, 0.25),
+                (4, 'schoon 10', 0, 20, 30, 0.10)
             """)
 
         # con_legger.execute("""
