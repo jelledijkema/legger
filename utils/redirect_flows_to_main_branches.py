@@ -4,10 +4,9 @@
 
 
 import logging
-import sqlite3
-from legger.sql_models.legger_database import load_spatialite
 
 from legger.sql_models.legger_database import LeggerDatabase
+from legger.sql_models.legger_database import load_spatialite
 from legger.sql_models.legger_views import create_legger_views
 from legger.utils.legger_map_manager import LeggerMapManager
 from legger.utils.new_network import NewNetwork
@@ -44,14 +43,13 @@ def redirect_flows(iface, path_legger_db):
         line_direct, field_nr, '2', '1', '3', 3)
 
     network = NewNetwork(
-        line_direct, line_layer, director, None # self.vl_tree_layer, self.vl_endpoint_layer
+        line_direct, line_layer, director, None  # self.vl_tree_layer, self.vl_endpoint_layer
     )
     new_flows, arc_tree = network.re_distribute_flow()
 
     for arc in arc_tree.values():
         con_legger.execute("UPDATE hydroobject SET debiet = {0}, debiet_aangepast = {0} WHERE id = {1};".format(
             arc['flow_corrected'] if arc['flow_corrected'] is not None else 'NULL', arc['hydro_id']))
-
 
     log.info("Save redirecting flow result (update) to database ")
     con_legger.commit()

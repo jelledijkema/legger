@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 from legger.qt_models.legger_tree import LeggerTreeItem, hydrovak_class
-from qgis.core import QgsFeature, QgsFeatureRequest, QgsGeometry, QgsPointXY
 from qgis.analysis import QgsNetworkStrategy, QgsNetworkDistanceStrategy, QgsGraphBuilder
+from qgis.core import QgsFeature, QgsFeatureRequest, QgsGeometry, QgsPointXY
 
 from .formats import make_type
 
@@ -37,8 +37,6 @@ class AttributeProperter(QgsNetworkStrategy):
         else:
             value = feature[self.attribute]
         return value
-
-
 
 
 class NewNetwork(object):
