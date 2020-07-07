@@ -3,12 +3,12 @@
     to change visible data in tree, modify the HORIZONTAL_HEADERS config
 """
 
-from PyQt4.QtCore import Qt
-from PyQt4.QtGui import QBrush, QColor, QIcon
 from legger import settings
 from legger.utils.formats import transform_none
-from tree import BaseTreeItem, BaseTreeModel, CHECKBOX_FIELD, INDICATION_HOVER
-from legger.utils.formats import transform_none
+from qgis.PyQt.QtCore import Qt
+from qgis.PyQt.QtGui import QBrush, QColor, QIcon
+
+from .tree import BaseTreeItem, BaseTreeModel, CHECKBOX_FIELD, INDICATION_HOVER
 
 # field and display config of 'hydrovakken'
 HORIZONTAL_HEADERS = (
@@ -24,7 +24,7 @@ HORIZONTAL_HEADERS = (
     {'field': 'distance', 'header': 'afstand', 'show': False, 'column_width': 50},
     {'field': 'length', 'header': 'Lengte', 'round': 0, 'show': True, 'column_width': 50},
     {'field': 'category', 'header': 'cat', 'header_tooltip': 'categorie waterlichaam', 'column_width': 30},
-    {'field': 'begroeiingsvariant_id', 'header': 'beg', 'header_tooltip': 'gezette begroeiingsvariant id', 'column_width': 40},
+    {'field': 'begroeiingsvariant_id', 'header': 'vbeg', 'header_tooltip': 'vooraf gezette begroeiingsvariant id', 'column_width': 40},
     {'field': 'flow', 'header': 'debiet', 'round': 3, 'show': True, 'column_width': 50},
     {'field': 'target_level', 'show': False, 'column_width': 50},
     {'field': 'depth', 'header': 'diepte', 'show': False, 'column_width': 50},
@@ -76,7 +76,7 @@ class hydrovak_class(object):
             'variant_max_depth': 'max_diepte',
             'selected_depth': 'geselecteerd_diepte',
             'selected_width': 'geselecteerd_breedte',
-            'verhang': 'verhang',
+            'verhang': 'geselecteerd_verhang',
             'selected_variant_id': 'geselecteerde_variant',
             'begroeiingsvariant_id': 'begroeiingsvariant_id',
             'selected_begroeiingsvariant_id': 'geselecteerde_begroeiingsvariant',

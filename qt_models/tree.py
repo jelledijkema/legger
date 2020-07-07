@@ -1,9 +1,9 @@
 """ Base classes for QtTreeModel implementation """
 
-from PyQt4 import QtCore
+from qgis.PyQt import QtCore
 
-from PyQt4.QtCore import Qt
-from PyQt4.QtGui import QBrush
+from qgis.PyQt.QtCore import Qt
+from qgis.PyQt.QtGui import QBrush
 from legger.utils.formats import transform_none
 from legger.utils.formats import try_round
 

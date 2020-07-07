@@ -1,8 +1,8 @@
 import logging
 from collections import OrderedDict
 
-from PyQt4.QtCore import QMetaObject, QSize, Qt, pyqtSignal
-from PyQt4.QtGui import (QApplication, QComboBox, QDockWidget, QGroupBox, QHBoxLayout, QLabel, QPlainTextEdit,
+from qgis.PyQt.QtCore import QMetaObject, QSize, Qt, pyqtSignal
+from qgis.PyQt.QtWidgets import (QApplication, QComboBox, QDockWidget, QGroupBox, QHBoxLayout, QLabel, QPlainTextEdit,
                          QPushButton, QSizePolicy, QSpacerItem, QTabWidget, QVBoxLayout, QWidget)
 from legger.qt_models.area_tree import AreaTreeItem, AreaTreeModel, area_class
 from legger.qt_models.legger_tree import LeggerTreeItem, LeggerTreeModel
@@ -16,9 +16,9 @@ from legger.utils.network_utils import LeggerMapVisualisation
 from legger.utils.new_network import NewNetwork
 from legger.utils.user_message import messagebar_message
 from legger.views.input_widget import NewWindow
-from network_graph_widgets import LeggerPlotWidget, LeggerSideViewPlotWidget
-from qgis.core import QgsFeature, QgsGeometry, QgsMapLayerRegistry
-from qgis.networkanalysis import QgsLineVectorLayerDirector
+from .network_graph_widgets import LeggerPlotWidget, LeggerSideViewPlotWidget
+from qgis.core import QgsFeature, QgsGeometry, QgsProject
+from qgis.analysis import QgsVectorLayerDirector
 from sqlalchemy import and_, or_
 
 from .network_table_widgets import LeggerTreeWidget, StartpointTreeWidget, VariantenTable
@@ -143,7 +143,8 @@ class LeggerWidget(QDockWidget):
         # create line layer and add to map
         self.layer_manager = LeggerMapManager(self.iface, self.path_legger_db)
 
-        self.line_layer = self.layer_manager.get_line_layer(add_to_map=True)
+        self.line_layer = self.layer_manager.get_line_layer(add_to_map=False)
+        self.layer_manager.get_line_layer(add_to_map=True)
         self.vl_tree_layer = self.layer_manager.get_virtual_tree_layer(add_to_map=True)
         self.vl_endpoint_layer = self.layer_manager.get_endpoint_layer(add_to_map=True)
         self.vl_track_layer = self.layer_manager.get_track_layer(add_to_map=True)
@@ -156,8 +157,8 @@ class LeggerWidget(QDockWidget):
 
         # init network
         line_direct = self.layer_manager.get_line_layer(geometry_col='line')
-        field_nr = line_direct.fieldNameIndex('direction')
-        director = QgsLineVectorLayerDirector(
+        field_nr = line_direct.fields().indexFromName('direction')
+        director = QgsVectorLayerDirector(
             line_direct, field_nr, '2', '1', '3', 3)
 
         self.network = NewNetwork(
@@ -565,7 +566,7 @@ class LeggerWidget(QDockWidget):
                 node = self.area_model.data(index, role=Qt.UserRole)
                 feat = QgsFeature()
 
-                feat.setGeometry(QgsGeometry.fromPoint(node.area.get('point')))
+                feat.setGeometry(QgsGeometry.fromPointXY(node.area.get('point')))
                 feat.setAttributes([
                     node.area.get('vertex_id')])
                 features.append(feat)
@@ -766,7 +767,7 @@ class LeggerWidget(QDockWidget):
                 'score': profile.figuren[0].t_fit if profile.figuren else None,
                 'over_depth': over_depth if over_depth is not None else None,
                 'over_width': over_width if over_depth is not None else None,
-                'over_width_color': [255, 0, 0] if over_width < 0 else [255, 255, 255],
+                'over_width_color': [100, 100, 100] if over_width is None else [255, 0, 0] if over_width < 0 else [255, 255, 255],
                 'verhang': profile.verhang,
                 'color': interpolated_color(value=profile.verhang, color_map=color_map,
                                             alpha=(255 if active else 80)),
@@ -816,20 +817,20 @@ class LeggerWidget(QDockWidget):
         """
         self.save_remarks()
 
-        if self.vl_tree_layer in QgsMapLayerRegistry.instance().mapLayers().values():
-            QgsMapLayerRegistry.instance().removeMapLayer(self.vl_tree_layer)
-        if self.line_layer in QgsMapLayerRegistry.instance().mapLayers().values():
-            QgsMapLayerRegistry.instance().removeMapLayer(self.line_layer)
-        if self.vl_endpoint_layer in QgsMapLayerRegistry.instance().mapLayers().values():
-            QgsMapLayerRegistry.instance().removeMapLayer(self.vl_endpoint_layer)
-        if self.vl_track_layer in QgsMapLayerRegistry.instance().mapLayers().values():
-            QgsMapLayerRegistry.instance().removeMapLayer(self.vl_track_layer)
-        if self.vl_hover_layer in QgsMapLayerRegistry.instance().mapLayers().values():
-            QgsMapLayerRegistry.instance().removeMapLayer(self.vl_hover_layer)
-        if self.vl_selected_layer in QgsMapLayerRegistry.instance().mapLayers().values():
-            QgsMapLayerRegistry.instance().removeMapLayer(self.vl_selected_layer)
-        if self.vl_startpoint_hover_layer in QgsMapLayerRegistry.instance().mapLayers().values():
-            QgsMapLayerRegistry.instance().removeMapLayer(self.vl_startpoint_hover_layer)
+        if self.vl_tree_layer in QgsProject.instance().mapLayers().values():
+            QgsProject.instance().removeMapLayer(self.vl_tree_layer)
+        if self.line_layer in QgsProject.instance().mapLayers().values():
+            QgsProject.instance().removeMapLayer(self.line_layer)
+        if self.vl_endpoint_layer in QgsProject.instance().mapLayers().values():
+            QgsProject.instance().removeMapLayer(self.vl_endpoint_layer)
+        if self.vl_track_layer in QgsProject.instance().mapLayers().values():
+            QgsProject.instance().removeMapLayer(self.vl_track_layer)
+        if self.vl_hover_layer in QgsProject.instance().mapLayers().values():
+            QgsProject.instance().removeMapLayer(self.vl_hover_layer)
+        if self.vl_selected_layer in QgsProject.instance().mapLayers().values():
+            QgsProject.instance().removeMapLayer(self.vl_selected_layer)
+        if self.vl_startpoint_hover_layer in QgsProject.instance().mapLayers().values():
+            QgsProject.instance().removeMapLayer(self.vl_startpoint_hover_layer)
 
         self.category_combo.currentIndexChanged.disconnect(self.category_change)
         self.show_manual_input_button.clicked.disconnect(self.show_manual_input_window)

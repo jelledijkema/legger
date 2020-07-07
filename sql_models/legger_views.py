@@ -29,6 +29,7 @@ def create_legger_views(session):
                 geselecteerd_breedte,
                 geselecteerde_variant,
                 geselecteerde_begroeiingsvariant,
+                geselecteerd_verhang,
                 h.opmerkingen,
                 CASE 
                   WHEN h.debiet_3di >= 0 THEN "GEOMETRY"
@@ -66,7 +67,8 @@ def create_legger_views(session):
                 v.diepte as geselecteerd_diepte,
                 v.waterbreedte as geselecteerd_breedte,
                 v.id as geselecteerde_variant,
-                v.begroeiingsvariant_id as geselecteerde_begroeiingsvariant
+                v.begroeiingsvariant_id as geselecteerde_begroeiingsvariant,
+                v.verhang as geselecteerd_verhang
                 FROM geselecteerd g, varianten v
                 WHERE g.variant_id = v.id) as sel
                 ON sel.hydro_id = h.id       
@@ -87,20 +89,29 @@ def create_legger_views(session):
 
     session.execute(
         """
+            INSERT INTO views_geometry_columns (view_name, view_geometry, view_rowid, f_table_name, 
+              f_geometry_column, read_only)
+            VALUES('hydroobjects_kenmerken', 'line', 'id', 'hydroobject', 'geometry', 1);         
+        """)
+
+    session.execute(
+        """
+            SELECT InvalidateLayerStatistics('hydroobject');
+        """)
+
+    session.execute(
+        """
             SELECT UpdateLayerStatistics('hydroobject');
         """)
+
+
 
     session.execute(
         """
             SELECT UpdateLayerStatistics('hydroobjects_kenmerken');
         """)
 
-    session.execute(
-        """
-            INSERT INTO views_geometry_columns (view_name, view_geometry, view_rowid, f_table_name, 
-              f_geometry_column, read_only)
-            VALUES('hydroobjects_kenmerken', 'line', 'id', 'hydroobject', 'geometry', 1);         
-        """)
+
 
     session.commit()
 
@@ -129,6 +140,7 @@ def create_legger_views(session):
                 ST_LENGTH(h.geometry) as lengte,
                 h.geometry,
                 s.selected_on as geselecteerd_op,
+                s.tot_verhang as totaal_verhang,
                 --s.opmerkingen as selectie_opmerking,
                 v.diepte as geselecteerde_diepte,
                 v.waterbreedte as geselecteerd_waterbreedte,

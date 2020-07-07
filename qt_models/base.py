@@ -1,4 +1,4 @@
-from PyQt4.QtCore import QSize, Qt
+from qgis.PyQt.QtCore import QSize, Qt
 from ThreeDiToolbox.models.base import BaseModel, CHECKBOX_FIELD, COLOR_FIELD, VALUE_FIELD
 from ThreeDiToolbox.models.base_fields import ColorField as OrigColorField, ValueField as OrigValueField, CheckboxField as OrigCheckboxField
 

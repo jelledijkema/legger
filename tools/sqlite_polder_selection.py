@@ -5,7 +5,7 @@
 import logging
 import os
 
-from PyQt4.QtCore import Qt, QObject
+from qgis.PyQt.QtCore import Qt, QObject
 
 from legger.views.polder_selection import PolderSelectionWidget
 
@@ -76,7 +76,8 @@ class DatabaseSelection(QObject):
             # show the widget
             self.dialog.show()
         else:
-           self.dialog.setWindowState(
-               self.dialog.windowState() & ~Qt.WindowMinimized |
-               Qt.WindowActive)
+           # todo: fix this code for qgis3
+           # self.dialog.setWindowState(
+           #     self.dialog.windowState() & ~Qt.WindowMinimized |
+           #     Qt.WindowActive)
            self.dialog.raise_()

@@ -1,4 +1,4 @@
-from line import LineString
+from .line import LineString
 
 
 def shape(geometry):

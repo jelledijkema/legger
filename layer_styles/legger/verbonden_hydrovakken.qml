@@ -1,194 +1,165 @@
 <!DOCTYPE qgis PUBLIC 'http://mrcc.com/qgis.dtd' 'SYSTEM'>
-<qgis version="2.18.16" simplifyAlgorithm="0" minimumScale="0" maximumScale="1e+08" simplifyDrawingHints="1" minLabelScale="0" maxLabelScale="1e+08" simplifyDrawingTol="1" readOnly="0" simplifyMaxScale="1" hasScaleBasedVisibilityFlag="0" simplifyLocal="1" scaleBasedLabelVisibilityFlag="0">
+<qgis version="2.18.26" simplifyAlgorithm="0" minimumScale="0" maximumScale="1e+08" simplifyDrawingHints="1" minLabelScale="0" maxLabelScale="1e+08" simplifyDrawingTol="1" readOnly="0" simplifyMaxScale="1" hasScaleBasedVisibilityFlag="0" simplifyLocal="1" scaleBasedLabelVisibilityFlag="0">
   <edittypes>
-    <edittype widgetv2type="TextEdit" name="objectid">
+    <edittype widgetv2type="TextEdit" name="weight">
       <widgetv2config IsMultiline="0" fieldEditable="1" constraint="" UseHtml="0" labelOnTop="0" constraintDescription="" notNull="0"/>
     </edittype>
-    <edittype widgetv2type="TextEdit" name="id">
-      <widgetv2config IsMultiline="0" fieldEditable="1" constraint="" UseHtml="0" labelOnTop="0" constraintDescription="" notNull="0"/>
-    </edittype>
-    <edittype widgetv2type="TextEdit" name="code">
-      <widgetv2config IsMultiline="0" fieldEditable="1" constraint="" UseHtml="0" labelOnTop="0" constraintDescription="" notNull="0"/>
-    </edittype>
-    <edittype widgetv2type="TextEdit" name="categorieoppwaterlichaam">
-      <widgetv2config IsMultiline="0" fieldEditable="1" constraint="" UseHtml="0" labelOnTop="0" constraintDescription="" notNull="0"/>
-    </edittype>
-    <edittype widgetv2type="TextEdit" name="streefpeil">
-      <widgetv2config IsMultiline="0" fieldEditable="1" constraint="" UseHtml="0" labelOnTop="0" constraintDescription="" notNull="0"/>
-    </edittype>
-    <edittype widgetv2type="TextEdit" name="debiet">
-      <widgetv2config IsMultiline="0" fieldEditable="1" constraint="" UseHtml="0" labelOnTop="0" constraintDescription="" notNull="0"/>
-    </edittype>
-    <edittype widgetv2type="TextEdit" name="channel_id">
-      <widgetv2config IsMultiline="0" fieldEditable="1" constraint="" UseHtml="0" labelOnTop="0" constraintDescription="" notNull="0"/>
-    </edittype>
-    <edittype widgetv2type="TextEdit" name="flowline_id">
-      <widgetv2config IsMultiline="0" fieldEditable="1" constraint="" UseHtml="0" labelOnTop="0" constraintDescription="" notNull="0"/>
-    </edittype>
-    <edittype widgetv2type="TextEdit" name="shape_length">
-      <widgetv2config IsMultiline="0" fieldEditable="1" constraint="" UseHtml="0" labelOnTop="0" constraintDescription="" notNull="0"/>
-    </edittype>
-    <edittype widgetv2type="TextEdit" name="channnel_id">
-      <widgetv2config IsMultiline="0" fieldEditable="1" constraint="" UseHtml="0" labelOnTop="0" constraintDescription="" notNull="0"/>
-    </edittype>
-    <edittype widgetv2type="TextEdit" name="objectid:1">
-      <widgetv2config IsMultiline="0" fieldEditable="1" constraint="" UseHtml="0" labelOnTop="0" constraintDescription="" notNull="0"/>
-    </edittype>
-    <edittype widgetv2type="TextEdit" name="id:1">
-      <widgetv2config IsMultiline="0" fieldEditable="1" constraint="" UseHtml="0" labelOnTop="0" constraintDescription="" notNull="0"/>
-    </edittype>
-    <edittype widgetv2type="TextEdit" name="diepte">
-      <widgetv2config IsMultiline="0" fieldEditable="1" constraint="" UseHtml="0" labelOnTop="0" constraintDescription="" notNull="0"/>
-    </edittype>
-    <edittype widgetv2type="TextEdit" name="bron_diepte">
-      <widgetv2config IsMultiline="0" fieldEditable="1" constraint="" UseHtml="0" labelOnTop="0" constraintDescription="" notNull="0"/>
-    </edittype>
-    <edittype widgetv2type="TextEdit" name="bodemhoogte">
-      <widgetv2config IsMultiline="0" fieldEditable="1" constraint="" UseHtml="0" labelOnTop="0" constraintDescription="" notNull="0"/>
-    </edittype>
-    <edittype widgetv2type="TextEdit" name="breedte">
-      <widgetv2config IsMultiline="0" fieldEditable="1" constraint="" UseHtml="0" labelOnTop="0" constraintDescription="" notNull="0"/>
-    </edittype>
-    <edittype widgetv2type="TextEdit" name="bron_breedte">
-      <widgetv2config IsMultiline="0" fieldEditable="1" constraint="" UseHtml="0" labelOnTop="0" constraintDescription="" notNull="0"/>
-    </edittype>
-    <edittype widgetv2type="TextEdit" name="lengte">
-      <widgetv2config IsMultiline="0" fieldEditable="1" constraint="" UseHtml="0" labelOnTop="0" constraintDescription="" notNull="0"/>
-    </edittype>
-    <edittype widgetv2type="TextEdit" name="taludvoorkeur">
-      <widgetv2config IsMultiline="0" fieldEditable="1" constraint="" UseHtml="0" labelOnTop="0" constraintDescription="" notNull="0"/>
-    </edittype>
-    <edittype widgetv2type="TextEdit" name="steilste_talud">
-      <widgetv2config IsMultiline="0" fieldEditable="1" constraint="" UseHtml="0" labelOnTop="0" constraintDescription="" notNull="0"/>
-    </edittype>
-    <edittype widgetv2type="TextEdit" name="grondsoort">
-      <widgetv2config IsMultiline="0" fieldEditable="1" constraint="" UseHtml="0" labelOnTop="0" constraintDescription="" notNull="0"/>
-    </edittype>
-    <edittype widgetv2type="TextEdit" name="bron_grondsoort">
+    <edittype widgetv2type="TextEdit" name="line_id">
       <widgetv2config IsMultiline="0" fieldEditable="1" constraint="" UseHtml="0" labelOnTop="0" constraintDescription="" notNull="0"/>
     </edittype>
     <edittype widgetv2type="TextEdit" name="hydro_id">
       <widgetv2config IsMultiline="0" fieldEditable="1" constraint="" UseHtml="0" labelOnTop="0" constraintDescription="" notNull="0"/>
     </edittype>
-    <edittype widgetv2type="TextEdit" name="direction">
+    <edittype widgetv2type="TextEdit" name="min_depth">
+      <widgetv2config IsMultiline="0" fieldEditable="1" constraint="" UseHtml="0" labelOnTop="0" constraintDescription="" notNull="0"/>
+    </edittype>
+    <edittype widgetv2type="TextEdit" name="var_min_depth">
+      <widgetv2config IsMultiline="0" fieldEditable="1" constraint="" UseHtml="0" labelOnTop="0" constraintDescription="" notNull="0"/>
+    </edittype>
+    <edittype widgetv2type="TextEdit" name="var_max_depth">
+      <widgetv2config IsMultiline="0" fieldEditable="1" constraint="" UseHtml="0" labelOnTop="0" constraintDescription="" notNull="0"/>
+    </edittype>
+    <edittype widgetv2type="TextEdit" name="target_level">
+      <widgetv2config IsMultiline="0" fieldEditable="1" constraint="" UseHtml="0" labelOnTop="0" constraintDescription="" notNull="0"/>
+    </edittype>
+    <edittype widgetv2type="TextEdit" name="category">
       <widgetv2config IsMultiline="0" fieldEditable="1" constraint="" UseHtml="0" labelOnTop="0" constraintDescription="" notNull="0"/>
     </edittype>
   </edittypes>
-  <renderer-v2 forceraster="0" symbollevels="0" type="RuleRenderer" enableorderby="0">
-    <rules key="{ad033d4e-11b9-4235-ae0b-59badce81b80}">
-      <rule filter=" &quot;debiet&quot; > 0" key="{0fcbdc58-eae6-4a9c-a401-51df58155901}" symbol="0"/>
-      <rule filter="&quot;debiet&quot; &lt;= 0" key="{1e8e66d6-6e6b-4aa8-9536-aa1a6b1d21a4}" symbol="1"/>
-    </rules>
+  <renderer-v2 attr="case when  &quot;weight&quot;  is NULL then -999 else &quot;weight&quot; end" forceraster="0" symbollevels="0" type="graduatedSymbol" graduatedMethod="GraduatedColor" enableorderby="0">
+    <ranges>
+      <range render="true" symbol="0" lower="-inf" upper="0.000000000000000" label="fout"/>
+      <range render="true" symbol="1" lower="0.000000000000000" upper="inf" label="verbonden"/>
+    </ranges>
     <symbols>
       <symbol alpha="1" clip_to_extent="1" type="line" name="0">
-        <layer pass="0" class="SimpleLine" locked="0">
-          <prop k="capstyle" v="square"/>
-          <prop k="customdash" v="5;2"/>
-          <prop k="customdash_map_unit_scale" v="0,0,0,0,0,0"/>
-          <prop k="customdash_unit" v="MM"/>
-          <prop k="draw_inside_polygon" v="0"/>
-          <prop k="joinstyle" v="bevel"/>
-          <prop k="line_color" v="226,107,163,255"/>
-          <prop k="line_style" v="solid"/>
-          <prop k="line_width" v="0.26"/>
-          <prop k="line_width_unit" v="MM"/>
+        <layer pass="0" class="ArrowLine" locked="0">
+          <prop k="arrow_start_width" v="0.8"/>
+          <prop k="arrow_start_width_unit" v="MM"/>
+          <prop k="arrow_start_width_unit_scale" v="0,0,0,0,0,0"/>
+          <prop k="arrow_type" v="0"/>
+          <prop k="arrow_width" v="1"/>
+          <prop k="arrow_width_unit" v="MM"/>
+          <prop k="arrow_width_unit_scale" v="0,0,0,0,0,0"/>
+          <prop k="head_length" v="1.1"/>
+          <prop k="head_length_unit" v="MM"/>
+          <prop k="head_length_unit_scale" v="0,0,0,0,0,0"/>
+          <prop k="head_thickness" v="1.1"/>
+          <prop k="head_thickness_unit" v="MM"/>
+          <prop k="head_thickness_unit_scale" v="0,0,0,0,0,0"/>
+          <prop k="head_type" v="0"/>
+          <prop k="is_curved" v="0"/>
+          <prop k="is_repeated" v="0"/>
           <prop k="offset" v="0"/>
-          <prop k="offset_map_unit_scale" v="0,0,0,0,0,0"/>
           <prop k="offset_unit" v="MM"/>
-          <prop k="use_custom_dash" v="0"/>
-          <prop k="width_map_unit_scale" v="0,0,0,0,0,0"/>
-        </layer>
-        <layer pass="0" class="MarkerLine" locked="0">
-          <prop k="interval" v="3"/>
-          <prop k="interval_map_unit_scale" v="0,0,0,0,0,0"/>
-          <prop k="interval_unit" v="MM"/>
-          <prop k="offset" v="0"/>
-          <prop k="offset_along_line" v="0"/>
-          <prop k="offset_along_line_map_unit_scale" v="0,0,0,0,0,0"/>
-          <prop k="offset_along_line_unit" v="MM"/>
-          <prop k="offset_map_unit_scale" v="0,0,0,0,0,0"/>
-          <prop k="offset_unit" v="MM"/>
-          <prop k="placement" v="interval"/>
-          <prop k="rotate" v="1"/>
-          <symbol alpha="1" clip_to_extent="1" type="marker" name="@0@1">
-            <layer pass="0" class="SimpleMarker" locked="0">
-              <prop k="angle" v="0"/>
-              <prop k="color" v="255,127,0,255"/>
-              <prop k="horizontal_anchor_point" v="1"/>
+          <prop k="offset_unit_scale" v="0,0,0,0,0,0"/>
+          <symbol alpha="1" clip_to_extent="1" type="fill" name="@0@0">
+            <layer pass="0" class="SimpleFill" locked="0">
+              <prop k="border_width_map_unit_scale" v="0,0,0,0,0,0"/>
+              <prop k="color" v="188,188,188,255"/>
               <prop k="joinstyle" v="bevel"/>
-              <prop k="name" v="filled_arrowhead"/>
               <prop k="offset" v="0,0"/>
               <prop k="offset_map_unit_scale" v="0,0,0,0,0,0"/>
               <prop k="offset_unit" v="MM"/>
               <prop k="outline_color" v="0,0,0,255"/>
-              <prop k="outline_style" v="solid"/>
-              <prop k="outline_width" v="0"/>
-              <prop k="outline_width_map_unit_scale" v="0,0,0,0,0,0"/>
+              <prop k="outline_style" v="no"/>
+              <prop k="outline_width" v="0.26"/>
               <prop k="outline_width_unit" v="MM"/>
-              <prop k="scale_method" v="area"/>
-              <prop k="size" v="3.4"/>
-              <prop k="size_map_unit_scale" v="0,0,0,0,0,0"/>
-              <prop k="size_unit" v="MM"/>
-              <prop k="vertical_anchor_point" v="1"/>
+              <prop k="style" v="solid"/>
             </layer>
           </symbol>
         </layer>
       </symbol>
       <symbol alpha="1" clip_to_extent="1" type="line" name="1">
-        <layer pass="0" class="SimpleLine" locked="0">
-          <prop k="capstyle" v="square"/>
-          <prop k="customdash" v="5;2"/>
-          <prop k="customdash_map_unit_scale" v="0,0,0,0,0,0"/>
-          <prop k="customdash_unit" v="MM"/>
-          <prop k="draw_inside_polygon" v="0"/>
-          <prop k="joinstyle" v="bevel"/>
-          <prop k="line_color" v="255,192,0,255"/>
-          <prop k="line_style" v="solid"/>
-          <prop k="line_width" v="0.26"/>
-          <prop k="line_width_unit" v="MM"/>
+        <layer pass="0" class="ArrowLine" locked="0">
+          <prop k="arrow_start_width" v="1"/>
+          <prop k="arrow_start_width_unit" v="MM"/>
+          <prop k="arrow_start_width_unit_scale" v="0,0,0,0,0,0"/>
+          <prop k="arrow_type" v="0"/>
+          <prop k="arrow_width" v="1"/>
+          <prop k="arrow_width_unit" v="MM"/>
+          <prop k="arrow_width_unit_scale" v="0,0,0,0,0,0"/>
+          <prop k="head_length" v="1.1"/>
+          <prop k="head_length_unit" v="MM"/>
+          <prop k="head_length_unit_scale" v="0,0,0,0,0,0"/>
+          <prop k="head_thickness" v="1.1"/>
+          <prop k="head_thickness_unit" v="MM"/>
+          <prop k="head_thickness_unit_scale" v="0,0,0,0,0,0"/>
+          <prop k="head_type" v="0"/>
+          <prop k="is_curved" v="0"/>
+          <prop k="is_repeated" v="1"/>
           <prop k="offset" v="0"/>
-          <prop k="offset_map_unit_scale" v="0,0,0,0,0,0"/>
           <prop k="offset_unit" v="MM"/>
-          <prop k="use_custom_dash" v="0"/>
-          <prop k="width_map_unit_scale" v="0,0,0,0,0,0"/>
-        </layer>
-        <layer pass="0" class="MarkerLine" locked="0">
-          <prop k="interval" v="3"/>
-          <prop k="interval_map_unit_scale" v="0,0,0,0,0,0"/>
-          <prop k="interval_unit" v="MM"/>
-          <prop k="offset" v="0"/>
-          <prop k="offset_along_line" v="0"/>
-          <prop k="offset_along_line_map_unit_scale" v="0,0,0,0,0,0"/>
-          <prop k="offset_along_line_unit" v="MM"/>
-          <prop k="offset_map_unit_scale" v="0,0,0,0,0,0"/>
-          <prop k="offset_unit" v="MM"/>
-          <prop k="placement" v="interval"/>
-          <prop k="rotate" v="1"/>
-          <symbol alpha="1" clip_to_extent="1" type="marker" name="@1@1">
-            <layer pass="0" class="SimpleMarker" locked="0">
-              <prop k="angle" v="180"/>
-              <prop k="color" v="255,127,0,255"/>
-              <prop k="horizontal_anchor_point" v="1"/>
+          <prop k="offset_unit_scale" v="0,0,0,0,0,0"/>
+          <symbol alpha="1" clip_to_extent="1" type="fill" name="@1@0">
+            <layer pass="0" class="SimpleFill" locked="0">
+              <prop k="border_width_map_unit_scale" v="0,0,0,0,0,0"/>
+              <prop k="color" v="197,128,100,255"/>
               <prop k="joinstyle" v="bevel"/>
-              <prop k="name" v="filled_arrowhead"/>
               <prop k="offset" v="0,0"/>
               <prop k="offset_map_unit_scale" v="0,0,0,0,0,0"/>
               <prop k="offset_unit" v="MM"/>
               <prop k="outline_color" v="0,0,0,255"/>
-              <prop k="outline_style" v="solid"/>
-              <prop k="outline_width" v="0"/>
-              <prop k="outline_width_map_unit_scale" v="0,0,0,0,0,0"/>
+              <prop k="outline_style" v="no"/>
+              <prop k="outline_width" v="0.26"/>
               <prop k="outline_width_unit" v="MM"/>
-              <prop k="scale_method" v="area"/>
-              <prop k="size" v="3.4"/>
-              <prop k="size_map_unit_scale" v="0,0,0,0,0,0"/>
-              <prop k="size_unit" v="MM"/>
-              <prop k="vertical_anchor_point" v="1"/>
+              <prop k="style" v="solid"/>
             </layer>
           </symbol>
         </layer>
       </symbol>
     </symbols>
+    <source-symbol>
+      <symbol alpha="1" clip_to_extent="1" type="line" name="0">
+        <layer pass="0" class="ArrowLine" locked="0">
+          <prop k="arrow_start_width" v="1"/>
+          <prop k="arrow_start_width_unit" v="MM"/>
+          <prop k="arrow_start_width_unit_scale" v="0,0,0,0,0,0"/>
+          <prop k="arrow_type" v="0"/>
+          <prop k="arrow_width" v="1"/>
+          <prop k="arrow_width_unit" v="MM"/>
+          <prop k="arrow_width_unit_scale" v="0,0,0,0,0,0"/>
+          <prop k="head_length" v="1.5"/>
+          <prop k="head_length_unit" v="MM"/>
+          <prop k="head_length_unit_scale" v="0,0,0,0,0,0"/>
+          <prop k="head_thickness" v="1.5"/>
+          <prop k="head_thickness_unit" v="MM"/>
+          <prop k="head_thickness_unit_scale" v="0,0,0,0,0,0"/>
+          <prop k="head_type" v="0"/>
+          <prop k="is_curved" v="1"/>
+          <prop k="is_repeated" v="1"/>
+          <prop k="offset" v="0"/>
+          <prop k="offset_unit" v="MM"/>
+          <prop k="offset_unit_scale" v="0,0,0,0,0,0"/>
+          <symbol alpha="1" clip_to_extent="1" type="fill" name="@0@0">
+            <layer pass="0" class="SimpleFill" locked="0">
+              <prop k="border_width_map_unit_scale" v="0,0,0,0,0,0"/>
+              <prop k="color" v="105,161,239,255"/>
+              <prop k="joinstyle" v="bevel"/>
+              <prop k="offset" v="0,0"/>
+              <prop k="offset_map_unit_scale" v="0,0,0,0,0,0"/>
+              <prop k="offset_unit" v="MM"/>
+              <prop k="outline_color" v="0,0,0,255"/>
+              <prop k="outline_style" v="solid"/>
+              <prop k="outline_width" v="0.26"/>
+              <prop k="outline_width_unit" v="MM"/>
+              <prop k="style" v="solid"/>
+            </layer>
+          </symbol>
+        </layer>
+      </symbol>
+    </source-symbol>
+    <colorramp type="gradient" name="[source]">
+      <prop k="color1" v="255,245,235,255"/>
+      <prop k="color2" v="127,39,4,255"/>
+      <prop k="discrete" v="0"/>
+      <prop k="stops" v="0.13;254,230,206,255:0.26;253,208,162,255:0.39;253,174,107,255:0.52;253,141,60,255:0.65;241,105,19,255:0.78;217,72,1,255:0.9;166,54,3,255"/>
+    </colorramp>
+    <invertedcolorramp value="0"/>
+    <mode name="jenks"/>
+    <rotation/>
+    <sizescale scalemethod="diameter"/>
+    <labelformat format=" %1 - %2 " trimtrailingzeroes="true" decimalplaces="0"/>
   </renderer-v2>
   <labeling type="simple"/>
   <customproperties>
@@ -203,10 +174,12 @@
     <property key="labeling/bufferColorG" value="255"/>
     <property key="labeling/bufferColorR" value="255"/>
     <property key="labeling/bufferDraw" value="false"/>
-    <property key="labeling/bufferJoinStyle" value="128"/>
+    <property key="labeling/bufferJoinStyle" value="64"/>
     <property key="labeling/bufferNoFill" value="false"/>
     <property key="labeling/bufferSize" value="1"/>
     <property key="labeling/bufferSizeInMapUnits" value="false"/>
+    <property key="labeling/bufferSizeMapUnitMaxScale" value="0"/>
+    <property key="labeling/bufferSizeMapUnitMinScale" value="0"/>
     <property key="labeling/bufferSizeMapUnitScale" value="0,0,0,0,0,0"/>
     <property key="labeling/bufferTransp" value="0"/>
     <property key="labeling/centroidInside" value="false"/>
@@ -215,6 +188,8 @@
     <property key="labeling/displayAll" value="false"/>
     <property key="labeling/dist" value="0"/>
     <property key="labeling/distInMapUnits" value="false"/>
+    <property key="labeling/distMapUnitMaxScale" value="0"/>
+    <property key="labeling/distMapUnitMinScale" value="0"/>
     <property key="labeling/distMapUnitScale" value="0,0,0,0,0,0"/>
     <property key="labeling/drawLabels" value="false"/>
     <property key="labeling/enabled" value="false"/>
@@ -229,6 +204,8 @@
     <property key="labeling/fontMinPixelSize" value="3"/>
     <property key="labeling/fontSize" value="8.25"/>
     <property key="labeling/fontSizeInMapUnits" value="false"/>
+    <property key="labeling/fontSizeMapUnitMaxScale" value="0"/>
+    <property key="labeling/fontSizeMapUnitMinScale" value="0"/>
     <property key="labeling/fontSizeMapUnitScale" value="0,0,0,0,0,0"/>
     <property key="labeling/fontStrikeout" value="false"/>
     <property key="labeling/fontUnderline" value="false"/>
@@ -237,16 +214,18 @@
     <property key="labeling/formatNumbers" value="false"/>
     <property key="labeling/isExpression" value="true"/>
     <property key="labeling/labelOffsetInMapUnits" value="true"/>
+    <property key="labeling/labelOffsetMapUnitMaxScale" value="0"/>
+    <property key="labeling/labelOffsetMapUnitMinScale" value="0"/>
     <property key="labeling/labelOffsetMapUnitScale" value="0,0,0,0,0,0"/>
     <property key="labeling/labelPerPart" value="false"/>
     <property key="labeling/leftDirectionSymbol" value="&lt;"/>
     <property key="labeling/limitNumLabels" value="false"/>
-    <property key="labeling/maxCurvedCharAngleIn" value="25"/>
-    <property key="labeling/maxCurvedCharAngleOut" value="-25"/>
+    <property key="labeling/maxCurvedCharAngleIn" value="20"/>
+    <property key="labeling/maxCurvedCharAngleOut" value="-20"/>
     <property key="labeling/maxNumLabels" value="2000"/>
     <property key="labeling/mergeLines" value="false"/>
     <property key="labeling/minFeatureSize" value="0"/>
-    <property key="labeling/multilineAlign" value="4294967295"/>
+    <property key="labeling/multilineAlign" value="0"/>
     <property key="labeling/multilineHeight" value="1"/>
     <property key="labeling/namedStyle" value="Normal"/>
     <property key="labeling/obstacle" value="true"/>
@@ -263,6 +242,8 @@
     <property key="labeling/priority" value="5"/>
     <property key="labeling/quadOffset" value="4"/>
     <property key="labeling/repeatDistance" value="0"/>
+    <property key="labeling/repeatDistanceMapUnitMaxScale" value="0"/>
+    <property key="labeling/repeatDistanceMapUnitMinScale" value="0"/>
     <property key="labeling/repeatDistanceMapUnitScale" value="0,0,0,0,0,0"/>
     <property key="labeling/repeatDistanceUnit" value="1"/>
     <property key="labeling/reverseDirectionSymbol" value="false"/>
@@ -278,10 +259,14 @@
     <property key="labeling/shadowOffsetAngle" value="135"/>
     <property key="labeling/shadowOffsetDist" value="1"/>
     <property key="labeling/shadowOffsetGlobal" value="true"/>
+    <property key="labeling/shadowOffsetMapUnitMaxScale" value="0"/>
+    <property key="labeling/shadowOffsetMapUnitMinScale" value="0"/>
     <property key="labeling/shadowOffsetMapUnitScale" value="0,0,0,0,0,0"/>
     <property key="labeling/shadowOffsetUnits" value="1"/>
     <property key="labeling/shadowRadius" value="1.5"/>
     <property key="labeling/shadowRadiusAlphaOnly" value="false"/>
+    <property key="labeling/shadowRadiusMapUnitMaxScale" value="0"/>
+    <property key="labeling/shadowRadiusMapUnitMinScale" value="0"/>
     <property key="labeling/shadowRadiusMapUnitScale" value="0,0,0,0,0,0"/>
     <property key="labeling/shadowRadiusUnits" value="1"/>
     <property key="labeling/shadowScale" value="100"/>
@@ -293,6 +278,8 @@
     <property key="labeling/shapeBorderColorG" value="128"/>
     <property key="labeling/shapeBorderColorR" value="128"/>
     <property key="labeling/shapeBorderWidth" value="0"/>
+    <property key="labeling/shapeBorderWidthMapUnitMaxScale" value="0"/>
+    <property key="labeling/shapeBorderWidthMapUnitMinScale" value="0"/>
     <property key="labeling/shapeBorderWidthMapUnitScale" value="0,0,0,0,0,0"/>
     <property key="labeling/shapeBorderWidthUnits" value="1"/>
     <property key="labeling/shapeDraw" value="false"/>
@@ -301,10 +288,14 @@
     <property key="labeling/shapeFillColorG" value="255"/>
     <property key="labeling/shapeFillColorR" value="255"/>
     <property key="labeling/shapeJoinStyle" value="64"/>
+    <property key="labeling/shapeOffsetMapUnitMaxScale" value="0"/>
+    <property key="labeling/shapeOffsetMapUnitMinScale" value="0"/>
     <property key="labeling/shapeOffsetMapUnitScale" value="0,0,0,0,0,0"/>
     <property key="labeling/shapeOffsetUnits" value="1"/>
     <property key="labeling/shapeOffsetX" value="0"/>
     <property key="labeling/shapeOffsetY" value="0"/>
+    <property key="labeling/shapeRadiiMapUnitMaxScale" value="0"/>
+    <property key="labeling/shapeRadiiMapUnitMinScale" value="0"/>
     <property key="labeling/shapeRadiiMapUnitScale" value="0,0,0,0,0,0"/>
     <property key="labeling/shapeRadiiUnits" value="1"/>
     <property key="labeling/shapeRadiiX" value="0"/>
@@ -312,6 +303,8 @@
     <property key="labeling/shapeRotation" value="0"/>
     <property key="labeling/shapeRotationType" value="0"/>
     <property key="labeling/shapeSVGFile" value=""/>
+    <property key="labeling/shapeSizeMapUnitMaxScale" value="0"/>
+    <property key="labeling/shapeSizeMapUnitMinScale" value="0"/>
     <property key="labeling/shapeSizeMapUnitScale" value="0,0,0,0,0,0"/>
     <property key="labeling/shapeSizeType" value="0"/>
     <property key="labeling/shapeSizeUnits" value="1"/>
@@ -337,7 +330,7 @@
   <blendMode>0</blendMode>
   <featureBlendMode>0</featureBlendMode>
   <layerTransparency>0</layerTransparency>
-  <displayfield>OGC_FID</displayfield>
+  <displayfield>name</displayfield>
   <label>0</label>
   <labelattributes>
     <label fieldname="" text="Label"/>
@@ -359,7 +352,7 @@
     <multilineenabled fieldname="" on=""/>
     <selectedonly on=""/>
   </labelattributes>
-  <SingleCategoryDiagramRenderer diagramType="Histogram" sizeLegend="0" attributeLegend="1">
+  <SingleCategoryDiagramRenderer diagramType="Pie" sizeLegend="0" attributeLegend="1">
     <DiagramCategory penColor="#000000" labelPlacementMethod="XHeight" penWidth="0" diagramOrientation="Up" sizeScale="0,0,0,0,0,0" minimumSize="0" barWidth="5" penAlpha="255" maxScaleDenominator="1e+08" backgroundColor="#ffffff" transparency="0" width="15" scaleDependency="Area" backgroundAlpha="255" angleOffset="1440" scaleBasedVisibility="0" enabled="0" height="15" lineSizeScale="0,0,0,0,0,0" sizeType="MM" lineSizeType="MM" minScaleDenominator="inf">
       <fontProperties description="MS Shell Dlg 2,8.25,-1,5,50,0,0,0,0,0" style=""/>
       <attribute field="" color="#000000" label=""/>
@@ -387,64 +380,32 @@
       </layer>
     </symbol>
   </SingleCategoryDiagramRenderer>
-  <DiagramLayerSettings yPosColumn="-1" showColumn="-1" linePlacementFlags="10" placement="2" dist="0" xPosColumn="-1" priority="0" obstacle="0" zIndex="0" showAll="1"/>
+  <DiagramLayerSettings yPosColumn="-1" showColumn="0" linePlacementFlags="10" placement="2" dist="0" xPosColumn="-1" priority="0" obstacle="0" zIndex="0" showAll="1"/>
   <annotationform>.</annotationform>
   <aliases>
-    <alias field="objectid" index="0" name=""/>
-    <alias field="id" index="1" name=""/>
-    <alias field="code" index="2" name=""/>
-    <alias field="categorieoppwaterlichaam" index="3" name=""/>
-    <alias field="streefpeil" index="4" name=""/>
-    <alias field="debiet" index="5" name=""/>
-    <alias field="channel_id" index="6" name=""/>
-    <alias field="flowline_id" index="7" name=""/>
-    <alias field="shape_length" index="8" name=""/>
-    <alias field="channnel_id" index="9" name=""/>
-    <alias field="objectid:1" index="10" name=""/>
-    <alias field="id:1" index="11" name=""/>
-    <alias field="diepte" index="12" name=""/>
-    <alias field="bron_diepte" index="13" name=""/>
-    <alias field="bodemhoogte" index="14" name=""/>
-    <alias field="breedte" index="15" name=""/>
-    <alias field="bron_breedte" index="16" name=""/>
-    <alias field="lengte" index="17" name=""/>
-    <alias field="taludvoorkeur" index="18" name=""/>
-    <alias field="steilste_talud" index="19" name=""/>
-    <alias field="grondsoort" index="20" name=""/>
-    <alias field="bron_grondsoort" index="21" name=""/>
-    <alias field="hydro_id" index="22" name=""/>
-    <alias field="direction" index="23" name=""/>
+    <alias field="weight" index="0" name=""/>
+    <alias field="line_id" index="1" name=""/>
+    <alias field="hydro_id" index="2" name=""/>
+    <alias field="min_depth" index="3" name=""/>
+    <alias field="var_min_depth" index="4" name=""/>
+    <alias field="var_max_depth" index="5" name=""/>
+    <alias field="target_level" index="6" name=""/>
+    <alias field="category" index="7" name=""/>
   </aliases>
   <excludeAttributesWMS/>
   <excludeAttributesWFS/>
   <attributeactions default="-1"/>
-  <attributetableconfig actionWidgetStyle="dropDown" sortExpression="" sortOrder="0">
+  <attributetableconfig actionWidgetStyle="dropDown" sortExpression="&quot;value&quot;" sortOrder="0">
     <columns>
-      <column width="-1" hidden="0" type="field" name="objectid"/>
-      <column width="-1" hidden="0" type="field" name="code"/>
-      <column width="-1" hidden="0" type="field" name="categorieoppwaterlichaam"/>
-      <column width="-1" hidden="0" type="field" name="channel_id"/>
-      <column width="-1" hidden="0" type="field" name="flowline_id"/>
+      <column width="-1" hidden="0" type="field" name="weight"/>
+      <column width="-1" hidden="0" type="field" name="line_id"/>
       <column width="-1" hidden="1" type="actions"/>
-      <column width="-1" hidden="0" type="field" name="id"/>
-      <column width="-1" hidden="0" type="field" name="streefpeil"/>
-      <column width="-1" hidden="0" type="field" name="debiet"/>
-      <column width="-1" hidden="0" type="field" name="shape_length"/>
-      <column width="-1" hidden="0" type="field" name="channnel_id"/>
-      <column width="-1" hidden="0" type="field" name="objectid:1"/>
-      <column width="-1" hidden="0" type="field" name="id:1"/>
-      <column width="-1" hidden="0" type="field" name="diepte"/>
-      <column width="-1" hidden="0" type="field" name="bron_diepte"/>
-      <column width="-1" hidden="0" type="field" name="bodemhoogte"/>
-      <column width="-1" hidden="0" type="field" name="breedte"/>
-      <column width="-1" hidden="0" type="field" name="bron_breedte"/>
-      <column width="-1" hidden="0" type="field" name="lengte"/>
-      <column width="-1" hidden="0" type="field" name="taludvoorkeur"/>
-      <column width="-1" hidden="0" type="field" name="steilste_talud"/>
-      <column width="-1" hidden="0" type="field" name="grondsoort"/>
-      <column width="-1" hidden="0" type="field" name="bron_grondsoort"/>
+      <column width="-1" hidden="0" type="field" name="min_depth"/>
+      <column width="-1" hidden="0" type="field" name="var_min_depth"/>
+      <column width="-1" hidden="0" type="field" name="var_max_depth"/>
+      <column width="-1" hidden="0" type="field" name="target_level"/>
+      <column width="-1" hidden="0" type="field" name="category"/>
       <column width="-1" hidden="0" type="field" name="hydro_id"/>
-      <column width="-1" hidden="0" type="field" name="direction"/>
     </columns>
   </attributetableconfig>
   <editform>.</editform>
@@ -453,15 +414,14 @@
   <editforminitfilepath>.</editforminitfilepath>
   <editforminitcode><![CDATA[# -*- coding: utf-8 -*-
 """
-Formulieren van QGIS kunnen een functie voor Python hebben die wordt aangeroepen wanneer het formulier wordt geopend.
+Formulieren van QGIS mogen een functie van Python hebben die wordt aangeroepen wanneer het formulier wordt geopend.
 
 Gebruik deze functie om extra logica aan uw formulieren toe te voegen.
 
-Voer de naam van de functie in in het veld "Python Init function".
-
-Een voorbeeld volgt hieronder:
+Voer de naam van de functie in in het veld "Python Init functie".
+Een voorbeeld volgt:
 """
-from qgis.PyQt.QtWidgets import QWidget
+from PyQt4.QtGui import QWidget
 
 def my_form_open(dialog, layer, feature):
 	geom = feature.geometry()
@@ -475,31 +435,15 @@ def my_form_open(dialog, layer, feature):
     <fieldstyles/>
   </conditionalstyles>
   <defaults>
-    <default field="objectid" expression=""/>
-    <default field="id" expression=""/>
-    <default field="code" expression=""/>
-    <default field="categorieoppwaterlichaam" expression=""/>
-    <default field="streefpeil" expression=""/>
-    <default field="debiet" expression=""/>
-    <default field="channel_id" expression=""/>
-    <default field="flowline_id" expression=""/>
-    <default field="shape_length" expression=""/>
-    <default field="channnel_id" expression=""/>
-    <default field="objectid:1" expression=""/>
-    <default field="id:1" expression=""/>
-    <default field="diepte" expression=""/>
-    <default field="bron_diepte" expression=""/>
-    <default field="bodemhoogte" expression=""/>
-    <default field="breedte" expression=""/>
-    <default field="bron_breedte" expression=""/>
-    <default field="lengte" expression=""/>
-    <default field="taludvoorkeur" expression=""/>
-    <default field="steilste_talud" expression=""/>
-    <default field="grondsoort" expression=""/>
-    <default field="bron_grondsoort" expression=""/>
+    <default field="weight" expression=""/>
+    <default field="line_id" expression=""/>
     <default field="hydro_id" expression=""/>
-    <default field="direction" expression=""/>
+    <default field="min_depth" expression=""/>
+    <default field="var_min_depth" expression=""/>
+    <default field="var_max_depth" expression=""/>
+    <default field="target_level" expression=""/>
+    <default field="category" expression=""/>
   </defaults>
-  <previewExpression></previewExpression>
+  <previewExpression>COALESCE("name", '&lt;NULL>')</previewExpression>
   <layerGeometryType>1</layerGeometryType>
 </qgis>

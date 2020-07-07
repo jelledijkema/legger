@@ -16,6 +16,12 @@
     <edittype widgetv2type="TextEdit" name="debiet">
       <widgetv2config IsMultiline="0" fieldEditable="1" constraint="" UseHtml="0" labelOnTop="0" constraintDescription="" notNull="0"/>
     </edittype>
+    <edittype widgetv2type="TextEdit" name="debiet_3di">
+      <widgetv2config IsMultiline="0" fieldEditable="1" constraint="" UseHtml="0" labelOnTop="0" constraintDescription="" notNull="0"/>
+    </edittype>
+    <edittype widgetv2type="TextEdit" name="debiet_aangepast">
+      <widgetv2config IsMultiline="0" fieldEditable="1" constraint="" UseHtml="0" labelOnTop="0" constraintDescription="" notNull="0"/>
+    </edittype>
     <edittype widgetv2type="TextEdit" name="diepte">
       <widgetv2config IsMultiline="0" fieldEditable="1" constraint="" UseHtml="0" labelOnTop="0" constraintDescription="" notNull="0"/>
     </edittype>
@@ -74,7 +80,8 @@
       <rule filter=" &quot;geselecteerd_op&quot; IS NOT NULL AND&#xd;&quot;fit_score&quot; IS NULL" key="{100d625e-a3bd-493e-b902-d3a438ebc0c6}" symbol="1" label="gekozen, theror. profiel vergeleken"/>
       <rule filter=" &quot;geselecteerd_op&quot; IS NOT NULL AND&#xd;( to_real(&quot;fit_score&quot;) &lt; 0.999 AND to_real(&quot;fit_score&quot;) >= 0.95)" key="{71c74d0e-841f-4272-8549-7f1c4d9923e0}" symbol="2" label="gekozen, 95% fit"/>
       <rule filter=" &quot;geselecteerd_op&quot; IS NOT NULL AND&#xd;to_real(&quot;fit_score&quot;) &lt; 0.95" key="{a8564247-e44b-4a19-9f1e-65dd2823a1d8}" symbol="3" label="gekozen, lage fit"/>
-      <rule filter=" &quot;geselecteerd_op&quot; IS NULL " key="{291639cc-b940-4090-a62a-760512e5ea19}" symbol="4" label="nog kiezen"/>
+      <rule filter="&quot;geselecteerd_op&quot; IS NULL AND  &quot;debiet&quot;  IS NULL " key="{291639cc-b940-4090-a62a-760512e5ea19}" symbol="4" label="geen debiet"/>
+      <rule filter=" &quot;geselecteerd_op&quot; IS NULL " key="{11affb5d-b808-4d86-bdaa-bf99e4eb2860}" symbol="5" label="nog kiezen"/>
     </rules>
     <symbols>
       <symbol alpha="1" clip_to_extent="1" type="line" name="0">
@@ -171,6 +178,42 @@
         </layer>
       </symbol>
       <symbol alpha="1" clip_to_extent="1" type="line" name="4">
+        <layer pass="0" class="SimpleLine" locked="0">
+          <prop k="capstyle" v="round"/>
+          <prop k="customdash" v="5;2"/>
+          <prop k="customdash_map_unit_scale" v="0,0,0,0,0,0"/>
+          <prop k="customdash_unit" v="MM"/>
+          <prop k="draw_inside_polygon" v="0"/>
+          <prop k="joinstyle" v="round"/>
+          <prop k="line_color" v="188,188,188,255"/>
+          <prop k="line_style" v="solid"/>
+          <prop k="line_width" v="0.76"/>
+          <prop k="line_width_unit" v="MM"/>
+          <prop k="offset" v="0"/>
+          <prop k="offset_map_unit_scale" v="0,0,0,0,0,0"/>
+          <prop k="offset_unit" v="MM"/>
+          <prop k="use_custom_dash" v="0"/>
+          <prop k="width_map_unit_scale" v="0,0,0,0,0,0"/>
+        </layer>
+        <layer pass="0" class="SimpleLine" locked="1">
+          <prop k="capstyle" v="square"/>
+          <prop k="customdash" v="5;2"/>
+          <prop k="customdash_map_unit_scale" v="0,0,0,0,0,0"/>
+          <prop k="customdash_unit" v="MM"/>
+          <prop k="draw_inside_polygon" v="0"/>
+          <prop k="joinstyle" v="miter"/>
+          <prop k="line_color" v="0,0,0,255"/>
+          <prop k="line_style" v="dash"/>
+          <prop k="line_width" v="0.836923"/>
+          <prop k="line_width_unit" v="MM"/>
+          <prop k="offset" v="0"/>
+          <prop k="offset_map_unit_scale" v="0,0,0,0,0,0"/>
+          <prop k="offset_unit" v="MM"/>
+          <prop k="use_custom_dash" v="0"/>
+          <prop k="width_map_unit_scale" v="0,0,0,0,0,0"/>
+        </layer>
+      </symbol>
+      <symbol alpha="1" clip_to_extent="1" type="line" name="5">
         <layer pass="0" class="SimpleLine" locked="0">
           <prop k="capstyle" v="square"/>
           <prop k="customdash" v="5;2"/>
@@ -419,23 +462,25 @@
     <alias field="categorieoppwaterlichaam" index="2" name=""/>
     <alias field="streefpeil" index="3" name=""/>
     <alias field="debiet" index="4" name=""/>
-    <alias field="diepte" index="5" name=""/>
-    <alias field="breedte" index="6" name=""/>
-    <alias field="taludvoorkeur" index="7" name=""/>
-    <alias field="lengte" index="8" name=""/>
-    <alias field="geselecteerd_op" index="9" name=""/>
-    <alias field="geselecteerde_diepte" index="10" name=""/>
-    <alias field="geselecteerd_waterbreedte" index="11" name=""/>
-    <alias field="geselecteerde_bodembreedte" index="12" name=""/>
-    <alias field="geselecteerd_talud" index="13" name=""/>
-    <alias field="verhang" index="14" name=""/>
-    <alias field="profiel_opmerking" index="15" name=""/>
-    <alias field="geselecteerde_begroeiingsvariant" index="16" name=""/>
-    <alias field="fit_score" index="17" name=""/>
-    <alias field="offset" index="18" name=""/>
-    <alias field="overdiepte" index="19" name=""/>
-    <alias field="overbreedte_links" index="20" name=""/>
-    <alias field="overbreedte_rechts" index="21" name=""/>
+    <alias field="debiet_3di" index="5" name=""/>
+    <alias field="debiet_aangepast" index="6" name=""/>
+    <alias field="diepte" index="7" name=""/>
+    <alias field="breedte" index="8" name=""/>
+    <alias field="taludvoorkeur" index="9" name=""/>
+    <alias field="lengte" index="10" name=""/>
+    <alias field="geselecteerd_op" index="11" name=""/>
+    <alias field="geselecteerde_diepte" index="12" name=""/>
+    <alias field="geselecteerd_waterbreedte" index="13" name=""/>
+    <alias field="geselecteerde_bodembreedte" index="14" name=""/>
+    <alias field="geselecteerd_talud" index="15" name=""/>
+    <alias field="verhang" index="16" name=""/>
+    <alias field="profiel_opmerking" index="17" name=""/>
+    <alias field="geselecteerde_begroeiingsvariant" index="18" name=""/>
+    <alias field="fit_score" index="19" name=""/>
+    <alias field="offset" index="20" name=""/>
+    <alias field="overdiepte" index="21" name=""/>
+    <alias field="overbreedte_links" index="22" name=""/>
+    <alias field="overbreedte_rechts" index="23" name=""/>
   </aliases>
   <excludeAttributesWMS/>
   <excludeAttributesWFS/>
@@ -465,6 +510,8 @@
       <column width="-1" hidden="0" type="field" name="overbreedte_rechts"/>
       <column width="-1" hidden="1" type="actions"/>
       <column width="-1" hidden="0" type="field" name="geselecteerde_begroeiingsvariant"/>
+      <column width="-1" hidden="0" type="field" name="debiet_3di"/>
+      <column width="-1" hidden="0" type="field" name="debiet_aangepast"/>
     </columns>
   </attributetableconfig>
   <editform>.</editform>
@@ -499,6 +546,8 @@ def my_form_open(dialog, layer, feature):
     <default field="categorieoppwaterlichaam" expression=""/>
     <default field="streefpeil" expression=""/>
     <default field="debiet" expression=""/>
+    <default field="debiet_3di" expression=""/>
+    <default field="debiet_aangepast" expression=""/>
     <default field="diepte" expression=""/>
     <default field="breedte" expression=""/>
     <default field="taludvoorkeur" expression=""/>

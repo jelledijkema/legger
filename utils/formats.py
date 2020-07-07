@@ -64,7 +64,7 @@ def make_type(value, typ, default_value=None, round_digits=None, factor=1):
         else:
             return output
 
-    except TypeError:
+    except (TypeError, ValueError):
         return default_value
 
 

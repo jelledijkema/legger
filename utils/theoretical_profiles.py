@@ -1,10 +1,11 @@
-from pandas import DataFrame
-from pyspatialite import dbapi2 as sql
-
 import logging
+
 import numpy as np
 import pandas as pd
 from legger.sql_models.legger import Varianten, get_or_create
+from pandas import DataFrame
+import sqlite3
+from legger.sql_models.legger_database import load_spatialite
 
 log = logging.getLogger('legger.' + __name__)
 
@@ -15,7 +16,7 @@ Boundary Conditions
 Km = 25  # Manning coefficient in m**(1/3/s)
 Kb = 23  # Bos and Bijkerk coefficient in 1/s
 
-ini_waterdepth = 0.30  # Initial water depth (m).
+ini_waterdepth = 0.20  # Initial water depth (m).
 default_minimal_waterdepth = ini_waterdepth
 min_ditch_bottom_width = 0.5  # (m) Ditch bottom width can not be smaller dan 0,5m.
 default_minimal_bottom_width = min_ditch_bottom_width
@@ -68,11 +69,13 @@ def read_spatialite(cursor):
 
 def calc_pitlo_griffioen(flow, ditch_bottom_width, water_depth, slope, friction_manning, friction_begroeiing,
                          begroeiingsdeel):
-    ditch_circumference = (ditch_bottom_width * np.sqrt(begroeiingsdeel) +
-                           (np.sqrt((water_depth * np.sqrt(begroeiingsdeel)) ** 2 +
-                                    (slope * water_depth * np.sqrt(begroeiingsdeel)) ** 2)) +
-                           (np.sqrt((water_depth * np.sqrt(begroeiingsdeel)) ** 2 +
-                                    (slope * water_depth * np.sqrt(begroeiingsdeel)) ** 2)))
+	
+    ditch_circumference = (ditch_bottom_width * np.sqrt(1 - begroeiingsdeel) +
+                           (np.sqrt((water_depth * np.sqrt(1 - begroeiingsdeel)) ** 2 +
+                                    (slope * water_depth * np.sqrt(1 - begroeiingsdeel)) ** 2)) +
+                           (np.sqrt((water_depth * np.sqrt(1 - begroeiingsdeel)) ** 2 +
+                                    (slope * water_depth * np.sqrt(1 - begroeiingsdeel)) ** 2)))
+	
     total_cross_section_area = (ditch_bottom_width + water_depth * slope) * water_depth
 
     A_1 = (1 - begroeiingsdeel) * total_cross_section_area
@@ -156,7 +159,7 @@ def calc_profile_variants_for_all(hydro_objects,
         else:
             to_depth = store_all_to_depth
 
-        to_depth = max(to_depth, row.DIEPTE * 1.2 if pd.notnull(row.DIEPTE) else None)
+        to_depth = max(to_depth, row.DIEPTE * 1.2 if pd.notna(row.DIEPTE) and pd.notnull(row.DIEPTE) else to_depth)
 
         try:
             variants_table = variants_table.append(
@@ -249,7 +252,7 @@ def calc_profile_variants_for_hydro_object(
 
             # loop until gradient is lower than norm or profile gets wider than max_width
             # if first try is wider, this (to wide) profile is stored
-            if ditch_width + 0.05 > max_ditch_width:
+            if ditch_width + 0.0 > max_ditch_width:
                 break
 
         # store
@@ -292,8 +295,9 @@ def create_theoretical_profiles(legger_db_filepath, gradient_norm, bv):
     return: calculated profile variant
     """
 
-    conn = sql.connect(legger_db_filepath)
-    conn.row_factory = sql.Row
+    conn = load_spatialite(legger_db_filepath)
+
+    conn.row_factory = sqlite3.Row
     cursor = conn.cursor()
 
     # Part 1: read SpatiaLite

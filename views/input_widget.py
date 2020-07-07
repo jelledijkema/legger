@@ -2,28 +2,28 @@
     Interface for adding profiles
 """
 
-from PyQt4 import QtCore, QtGui
+from qgis.PyQt import QtCore, QtGui, QtWidgets
 
 import pyqtgraph as pg
 from legger.sql_models.legger import Varianten
 from legger.utils.theoretical_profiles import calc_pitlo_griffioen
 from legger.sql_models.legger import BegroeiingsVariant
 
-try:
-    _fromUtf8 = QtCore.QString.fromUtf8
-except AttributeError:
-    def _fromUtf8(s):
-        return s
-
-try:
-    _encoding = QtGui.QApplication.UnicodeUTF8
-
-
-    def _translate(context, text, disambig):
-        return QtGui.QApplication.translate(context, text, disambig, _encoding)
-except AttributeError:
-    def _translate(context, text, disambig):
-        return QtGui.QApplication.translate(context, text, disambig)
+# try:
+#     _fromUtf8 = QtCore.QString.fromUtf8
+# except AttributeError:
+#     def _fromUtf8(s):
+#         return s
+#
+# try:
+#     _encoding = QtGui.QApplication.UnicodeUTF8
+#
+#
+#     def _translate(context, text, disambig):
+#         return QtGui.QApplication.translate(context, text, disambig, _encoding)
+# except AttributeError:
+#     def _translate(context, text, disambig):
+#         return QtGui.QApplication.translate(context, text, disambig)
 
 
 class LeggerPlotWidget(pg.PlotWidget):
@@ -73,7 +73,7 @@ class LeggerPlotWidget(pg.PlotWidget):
         self.autoRange()
 
 
-class NewWindow(QtGui.QWidget):
+class NewWindow(QtWidgets.QWidget):
     def __init__(self, legger_item, db_session, callback_on_save=None):
         super(NewWindow, self).__init__()
         self._new_window = None
@@ -214,19 +214,19 @@ class NewWindow(QtGui.QWidget):
         #   - Onderste rij is ook en Horizontal Layout met 2 knoppen naast elkaar: Opslaan en Annuleren
 
         # Hoofd layout definieren
-        self.verticalLayout = QtGui.QVBoxLayout(self)
-        self.verticalLayout.setObjectName(_fromUtf8("verticalLayout"))
+        self.verticalLayout = QtWidgets.QVBoxLayout(self)
+        self.verticalLayout.setObjectName("verticalLayout")
 
         # Bovenste rij in hoofd layout definieren
-        self.upper_row = QtGui.QHBoxLayout()
-        self.upper_row.setObjectName(_fromUtf8("Upper row"))
+        self.upper_row = QtWidgets.QHBoxLayout()
+        self.upper_row.setObjectName("Upper row")
 
         # Linker kolom in bovenste rij definitie
-        self.left_column = QtGui.QVBoxLayout()
-        self.left_column.setObjectName(_fromUtf8("Left column"))
+        self.left_column = QtWidgets.QVBoxLayout()
+        self.left_column.setObjectName("Left column")
 
         # Intro text
-        self.intro_text = QtGui.QTextEdit(self)
+        self.intro_text = QtWidgets.QTextEdit(self)
         self.intro_text.setText("Hier kun je zelf een profiel definieren.\n"
                                 "Vul van boven naar beneden een waarde in voor:\n"
                                 "- Waterbreedte;\n"
@@ -235,60 +235,60 @@ class NewWindow(QtGui.QWidget):
                                 "Met de knop 'Bereken' kun je het nieuwe profiel doorrekenen.\n"
                                 "Als het profiel naar behoeven is, druk dan op 'Opslaan' om het profiel op te nemen in de database.\n"
                                 "Om het scherm te verlaten kan op 'Annuleren' gedrukt worden.")
-        self.intro_text.setObjectName(_fromUtf8("introductie_text"))
+        self.intro_text.setObjectName("introductie_text")
 
         self.left_column.addWidget(self.intro_text)  # introtext toevoegen aan linkerkolom
 
         # Middelste kolom in bovenste rij
-        self.middle_column = QtGui.QVBoxLayout()
-        self.middle_column.setObjectName(_fromUtf8("middelste_kolom"))
+        self.middle_column = QtWidgets.QVBoxLayout()
+        self.middle_column.setObjectName("middelste_kolom")
 
         # Invoer van parameters
         # Titel
-        self.input_label = QtGui.QLabel(self.tr("Invoer van parameters:"))
+        self.input_label = QtWidgets.QLabel(self.tr("Invoer van parameters:"))
         self.middle_column.addWidget(self.input_label)  # label toevoegen aan middenkolom
 
         # Spinbox waterbreedte
-        self.input_ditch_width = QtGui.QDoubleSpinBox(self)
+        self.input_ditch_width = QtWidgets.QDoubleSpinBox(self)
         self.input_ditch_width.setSuffix(" m")
         self.input_ditch_width.setSingleStep(0.1)
-        self.input_ditch_width.setObjectName(_fromUtf8("Invoer_waterbreedte"))
+        self.input_ditch_width.setObjectName("Invoer_waterbreedte")
 
-        self.groupBox_ditch_width = QtGui.QGroupBox(self)
+        self.groupBox_ditch_width = QtWidgets.QGroupBox(self)
         self.groupBox_ditch_width.setTitle("Waterbreedte")
 
-        self.vbox_ditch_width = QtGui.QVBoxLayout()
+        self.vbox_ditch_width = QtWidgets.QVBoxLayout()
         self.vbox_ditch_width.addWidget(self.input_ditch_width)
         self.groupBox_ditch_width.setLayout(self.vbox_ditch_width)
 
         self.middle_column.addWidget(self.groupBox_ditch_width)  # waterbreedte spinner toevoegen
 
         # Spinbox waterdiepte
-        self.input_waterdepth = QtGui.QDoubleSpinBox(self)
+        self.input_waterdepth = QtWidgets.QDoubleSpinBox(self)
         self.input_waterdepth.setSuffix(" m")
         self.input_waterdepth.setSingleStep(0.1)
-        self.input_waterdepth.setObjectName(_fromUtf8("Invoer_waterdiepte"))
+        self.input_waterdepth.setObjectName("Invoer_waterdiepte")
 
-        self.groupBox_waterdepth = QtGui.QGroupBox(self)
+        self.groupBox_waterdepth = QtWidgets.QGroupBox(self)
         self.groupBox_waterdepth.setTitle("Waterdiepte")
 
-        self.vbox_waterdepth = QtGui.QVBoxLayout()
+        self.vbox_waterdepth = QtWidgets.QVBoxLayout()
         self.vbox_waterdepth.addWidget(self.input_waterdepth)
         self.groupBox_waterdepth.setLayout(self.vbox_waterdepth)
 
         self.middle_column.addWidget(self.groupBox_waterdepth)  # waterdiepte spinner toevoegen aan midden kolom
 
         # Spinbox talud
-        self.input_ditch_slope = QtGui.QDoubleSpinBox(self)
+        self.input_ditch_slope = QtWidgets.QDoubleSpinBox(self)
         self.input_ditch_slope.setSuffix(" m breedte / m hoogteverschil")
         self.input_ditch_slope.setSingleStep(0.1)
         self.input_ditch_slope.setValue(1)  # initieel 1:1
-        self.input_ditch_slope.setObjectName(_fromUtf8("Invoer_talud"))
+        self.input_ditch_slope.setObjectName("Invoer_talud")
 
-        self.groupBox_ditch_slope = QtGui.QGroupBox(self)
+        self.groupBox_ditch_slope = QtWidgets.QGroupBox(self)
         self.groupBox_ditch_slope.setTitle("Talud")
 
-        self.vbox_ditch_slope = QtGui.QVBoxLayout()
+        self.vbox_ditch_slope = QtWidgets.QVBoxLayout()
         self.vbox_ditch_slope.addWidget(self.input_ditch_slope)
 
         self.groupBox_ditch_slope.setLayout(self.vbox_ditch_slope)
@@ -296,36 +296,36 @@ class NewWindow(QtGui.QWidget):
         self.middle_column.addWidget(self.groupBox_ditch_slope)  # talud spinner toevoegen aan midden kolom
 
         # begroeiings selection
-        self.begroeiings_combo = QtGui.QComboBox(self)
-        self.groupBox_begroeiing = QtGui.QGroupBox(self)
+        self.begroeiings_combo = QtWidgets.QComboBox(self)
+        self.groupBox_begroeiing = QtWidgets.QGroupBox(self)
         self.groupBox_begroeiing.setTitle("Begroeiingsgraad")
-        self.vbox_begroeiing = QtGui.QVBoxLayout()
+        self.vbox_begroeiing = QtWidgets.QVBoxLayout()
         self.vbox_begroeiing.addWidget(self.begroeiings_combo)
         self.groupBox_begroeiing.setLayout(self.vbox_begroeiing)
 
         self.middle_column.addWidget(self.groupBox_begroeiing)
 
         # Bereken
-        self.calc_button = QtGui.QPushButton()
-        self.calc_button.setObjectName(_fromUtf8("Bereken_knop"))
+        self.calc_button = QtWidgets.QPushButton()
+        self.calc_button.setObjectName("Bereken_knop")
         self.calc_button.clicked.connect(self.calculate)
         self.middle_column.addWidget(self.calc_button)  # bereken knop toevoegen aan midden kolom
 
         # Verticale Spacer om alles naar boven te drukken.
-        spacerItem_middle_column = QtGui.QSpacerItem(10, 40, QtGui.QSizePolicy.Minimum, QtGui.QSizePolicy.Expanding)
+        spacerItem_middle_column = QtWidgets.QSpacerItem(10, 40, QtWidgets.QSizePolicy.Minimum, QtWidgets.QSizePolicy.Expanding)
         self.middle_column.addItem(spacerItem_middle_column)
 
         # Rechterkolom
-        self.right_column = QtGui.QVBoxLayout()
-        self.right_column.setObjectName(_fromUtf8("Rechter Kolom"))
+        self.right_column = QtWidgets.QVBoxLayout()
+        self.right_column.setObjectName("Rechter Kolom")
 
-        self.output_info = QtGui.QTextEdit(self)
-        self.output_info.setObjectName(_fromUtf8("output_info"))
+        self.output_info = QtWidgets.QTextEdit(self)
+        self.output_info.setObjectName("output_info")
 
         self.right_column.addWidget(self.output_info)
 
-        self.comments = QtGui.QTextEdit(self)
-        self.comments.setObjectName(_fromUtf8("opmerkingen"))
+        self.comments = QtWidgets.QTextEdit(self)
+        self.comments.setObjectName("opmerkingen")
 
         self.right_column.addWidget(self.comments)
 
@@ -340,25 +340,25 @@ class NewWindow(QtGui.QWidget):
         # FIGUREN MAKEN
         # Figuur vlak aanmaken
         self.plot_widget = LeggerPlotWidget(self)
-        self.plot_widget.setObjectName(_fromUtf8("Figuur"))
+        self.plot_widget.setObjectName("Figuur")
 
         # Figuurvlak toevoegen in het MIDDEN van de HOOFD lay-out.
         self.verticalLayout.addWidget(self.plot_widget)
 
         # OPSLAAN / ANNULEREN KNOPPEN
         # Vlak maken voor de knoppen
-        self.bottom_row = QtGui.QHBoxLayout()  # knoppen komen naast elkaar dus een horizontal layout.
-        self.bottom_row.setObjectName(_fromUtf8("Bottom_row"))
+        self.bottom_row = QtWidgets.QHBoxLayout()  # knoppen komen naast elkaar dus een horizontal layout.
+        self.bottom_row.setObjectName("Bottom_row")
 
         # Sluiten knop
-        self.cancel_button = QtGui.QPushButton(self)
-        self.cancel_button.setObjectName(_fromUtf8("Sluiten"))
+        self.cancel_button = QtWidgets.QPushButton(self)
+        self.cancel_button.setObjectName("Sluiten")
         self.cancel_button.clicked.connect(self.cancel_application)
         self.bottom_row.addWidget(self.cancel_button)
 
         # Opslaan knop
-        self.save_button = QtGui.QPushButton(self)
-        self.save_button.setObjectName(_fromUtf8("Opslaan"))
+        self.save_button = QtWidgets.QPushButton(self)
+        self.save_button.setObjectName("Opslaan")
         self.save_button.clicked.connect(self.save_and_close)
         self.bottom_row.addWidget(self.save_button)
 
@@ -369,15 +369,10 @@ class NewWindow(QtGui.QWidget):
         QtCore.QMetaObject.connectSlotsByName(self)
 
     def retranslateUi(self, Dialog):
-        Dialog.setWindowTitle(_translate("Dialog", "Dialog", None))
+        Dialog.setWindowTitle("Dialog")
 
-        self.calc_button.setText(_translate("Dialog", "Berekenen", None))
-        self.save_button.setText(_translate("Dialog", "Opslaan en sluiten", None))
-        self.cancel_button.setText(_translate("Dialog", "Annuleer", None))
+        self.calc_button.setText("Berekenen")
+        self.save_button.setText("Opslaan en sluiten")
+        self.cancel_button.setText("Annuleer")
 
 
-if __name__ == '__main__':
-    app = QtGui.QApplication([])
-    gui = NewWindow()
-    gui.show()
-    app.exec_()

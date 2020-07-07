@@ -1,9 +1,6 @@
 <!DOCTYPE qgis PUBLIC 'http://mrcc.com/qgis.dtd' 'SYSTEM'>
-<qgis version="2.18.16" simplifyAlgorithm="0" minimumScale="0" maximumScale="1e+08" simplifyDrawingHints="1" minLabelScale="0" maxLabelScale="1e+08" simplifyDrawingTol="1" readOnly="0" simplifyMaxScale="1" hasScaleBasedVisibilityFlag="0" simplifyLocal="1" scaleBasedLabelVisibilityFlag="0">
+<qgis version="2.18.26" simplifyAlgorithm="0" minimumScale="0" maximumScale="1e+08" simplifyDrawingHints="1" minLabelScale="0" maxLabelScale="1e+08" simplifyDrawingTol="1" readOnly="0" simplifyMaxScale="1" hasScaleBasedVisibilityFlag="0" simplifyLocal="1" scaleBasedLabelVisibilityFlag="0">
   <edittypes>
-    <edittype widgetv2type="TextEdit" name="objectid">
-      <widgetv2config IsMultiline="0" fieldEditable="1" constraint="" UseHtml="0" labelOnTop="0" constraintDescription="" notNull="0"/>
-    </edittype>
     <edittype widgetv2type="TextEdit" name="id">
       <widgetv2config IsMultiline="0" fieldEditable="1" constraint="" UseHtml="0" labelOnTop="0" constraintDescription="" notNull="0"/>
     </edittype>
@@ -19,58 +16,61 @@
     <edittype widgetv2type="TextEdit" name="debiet">
       <widgetv2config IsMultiline="0" fieldEditable="1" constraint="" UseHtml="0" labelOnTop="0" constraintDescription="" notNull="0"/>
     </edittype>
-    <edittype widgetv2type="TextEdit" name="channel_id">
+    <edittype widgetv2type="TextEdit" name="debiet_3di">
       <widgetv2config IsMultiline="0" fieldEditable="1" constraint="" UseHtml="0" labelOnTop="0" constraintDescription="" notNull="0"/>
     </edittype>
-    <edittype widgetv2type="TextEdit" name="flowline_id">
-      <widgetv2config IsMultiline="0" fieldEditable="1" constraint="" UseHtml="0" labelOnTop="0" constraintDescription="" notNull="0"/>
-    </edittype>
-    <edittype widgetv2type="TextEdit" name="shape_length">
-      <widgetv2config IsMultiline="0" fieldEditable="1" constraint="" UseHtml="0" labelOnTop="0" constraintDescription="" notNull="0"/>
-    </edittype>
-    <edittype widgetv2type="TextEdit" name="channnel_id">
-      <widgetv2config IsMultiline="0" fieldEditable="1" constraint="" UseHtml="0" labelOnTop="0" constraintDescription="" notNull="0"/>
-    </edittype>
-    <edittype widgetv2type="TextEdit" name="objectid:1">
-      <widgetv2config IsMultiline="0" fieldEditable="1" constraint="" UseHtml="0" labelOnTop="0" constraintDescription="" notNull="0"/>
-    </edittype>
-    <edittype widgetv2type="TextEdit" name="id:1">
+    <edittype widgetv2type="TextEdit" name="debiet_aangepast">
       <widgetv2config IsMultiline="0" fieldEditable="1" constraint="" UseHtml="0" labelOnTop="0" constraintDescription="" notNull="0"/>
     </edittype>
     <edittype widgetv2type="TextEdit" name="diepte">
       <widgetv2config IsMultiline="0" fieldEditable="1" constraint="" UseHtml="0" labelOnTop="0" constraintDescription="" notNull="0"/>
     </edittype>
-    <edittype widgetv2type="TextEdit" name="bron_diepte">
-      <widgetv2config IsMultiline="0" fieldEditable="1" constraint="" UseHtml="0" labelOnTop="0" constraintDescription="" notNull="0"/>
-    </edittype>
-    <edittype widgetv2type="TextEdit" name="bodemhoogte">
-      <widgetv2config IsMultiline="0" fieldEditable="1" constraint="" UseHtml="0" labelOnTop="0" constraintDescription="" notNull="0"/>
-    </edittype>
     <edittype widgetv2type="TextEdit" name="breedte">
-      <widgetv2config IsMultiline="0" fieldEditable="1" constraint="" UseHtml="0" labelOnTop="0" constraintDescription="" notNull="0"/>
-    </edittype>
-    <edittype widgetv2type="TextEdit" name="bron_breedte">
-      <widgetv2config IsMultiline="0" fieldEditable="1" constraint="" UseHtml="0" labelOnTop="0" constraintDescription="" notNull="0"/>
-    </edittype>
-    <edittype widgetv2type="TextEdit" name="lengte">
       <widgetv2config IsMultiline="0" fieldEditable="1" constraint="" UseHtml="0" labelOnTop="0" constraintDescription="" notNull="0"/>
     </edittype>
     <edittype widgetv2type="TextEdit" name="taludvoorkeur">
       <widgetv2config IsMultiline="0" fieldEditable="1" constraint="" UseHtml="0" labelOnTop="0" constraintDescription="" notNull="0"/>
     </edittype>
-    <edittype widgetv2type="TextEdit" name="steilste_talud">
+    <edittype widgetv2type="TextEdit" name="begroeiingsvariant_id">
       <widgetv2config IsMultiline="0" fieldEditable="1" constraint="" UseHtml="0" labelOnTop="0" constraintDescription="" notNull="0"/>
     </edittype>
-    <edittype widgetv2type="TextEdit" name="grondsoort">
+    <edittype widgetv2type="TextEdit" name="min_diepte">
       <widgetv2config IsMultiline="0" fieldEditable="1" constraint="" UseHtml="0" labelOnTop="0" constraintDescription="" notNull="0"/>
     </edittype>
-    <edittype widgetv2type="TextEdit" name="bron_grondsoort">
+    <edittype widgetv2type="TextEdit" name="max_diepte">
       <widgetv2config IsMultiline="0" fieldEditable="1" constraint="" UseHtml="0" labelOnTop="0" constraintDescription="" notNull="0"/>
     </edittype>
-    <edittype widgetv2type="TextEdit" name="hydro_id">
+    <edittype widgetv2type="TextEdit" name="min_breedte">
+      <widgetv2config IsMultiline="0" fieldEditable="1" constraint="" UseHtml="0" labelOnTop="0" constraintDescription="" notNull="0"/>
+    </edittype>
+    <edittype widgetv2type="TextEdit" name="max_breedte">
+      <widgetv2config IsMultiline="0" fieldEditable="1" constraint="" UseHtml="0" labelOnTop="0" constraintDescription="" notNull="0"/>
+    </edittype>
+    <edittype widgetv2type="TextEdit" name="lengte">
+      <widgetv2config IsMultiline="0" fieldEditable="1" constraint="" UseHtml="0" labelOnTop="0" constraintDescription="" notNull="0"/>
+    </edittype>
+    <edittype widgetv2type="TextEdit" name="geselecteerd_diepte">
+      <widgetv2config IsMultiline="0" fieldEditable="1" constraint="" UseHtml="0" labelOnTop="0" constraintDescription="" notNull="0"/>
+    </edittype>
+    <edittype widgetv2type="TextEdit" name="geselecteerd_breedte">
+      <widgetv2config IsMultiline="0" fieldEditable="1" constraint="" UseHtml="0" labelOnTop="0" constraintDescription="" notNull="0"/>
+    </edittype>
+    <edittype widgetv2type="TextEdit" name="geselecteerde_variant">
+      <widgetv2config IsMultiline="0" fieldEditable="1" constraint="" UseHtml="0" labelOnTop="0" constraintDescription="" notNull="0"/>
+    </edittype>
+    <edittype widgetv2type="TextEdit" name="geselecteerde_begroeiingsvariant">
+      <widgetv2config IsMultiline="0" fieldEditable="1" constraint="" UseHtml="0" labelOnTop="0" constraintDescription="" notNull="0"/>
+    </edittype>
+    <edittype widgetv2type="TextEdit" name="opmerkingen">
+      <widgetv2config IsMultiline="0" fieldEditable="1" constraint="" UseHtml="0" labelOnTop="0" constraintDescription="" notNull="0"/>
+    </edittype>
+    <edittype widgetv2type="TextEdit" name="line">
       <widgetv2config IsMultiline="0" fieldEditable="1" constraint="" UseHtml="0" labelOnTop="0" constraintDescription="" notNull="0"/>
     </edittype>
     <edittype widgetv2type="TextEdit" name="direction">
+      <widgetv2config IsMultiline="0" fieldEditable="1" constraint="" UseHtml="0" labelOnTop="0" constraintDescription="" notNull="0"/>
+    </edittype>
+    <edittype widgetv2type="TextEdit" name="reversed">
       <widgetv2config IsMultiline="0" fieldEditable="1" constraint="" UseHtml="0" labelOnTop="0" constraintDescription="" notNull="0"/>
     </edittype>
   </edittypes>
@@ -111,7 +111,7 @@
     <property key="labeling/bufferColorB" value="255"/>
     <property key="labeling/bufferColorG" value="255"/>
     <property key="labeling/bufferColorR" value="255"/>
-    <property key="labeling/bufferDraw" value="false"/>
+    <property key="labeling/bufferDraw" value="true"/>
     <property key="labeling/bufferJoinStyle" value="128"/>
     <property key="labeling/bufferNoFill" value="false"/>
     <property key="labeling/bufferSize" value="1"/>
@@ -125,9 +125,9 @@
     <property key="labeling/dist" value="0"/>
     <property key="labeling/distInMapUnits" value="false"/>
     <property key="labeling/distMapUnitScale" value="0,0,0,0,0,0"/>
-    <property key="labeling/drawLabels" value="false"/>
-    <property key="labeling/enabled" value="false"/>
-    <property key="labeling/fieldName" value=""/>
+    <property key="labeling/drawLabels" value="true"/>
+    <property key="labeling/enabled" value="true"/>
+    <property key="labeling/fieldName" value="'legg.dpt/wbr:' ||  &quot;diepte&quot;  || '/' ||  &quot;breedte&quot; "/>
     <property key="labeling/fitInPolygonOnly" value="false"/>
     <property key="labeling/fontCapitals" value="0"/>
     <property key="labeling/fontFamily" value="MS Shell Dlg 2"/>
@@ -164,7 +164,7 @@
     <property key="labeling/offsetType" value="0"/>
     <property key="labeling/placeDirectionSymbol" value="0"/>
     <property key="labeling/placement" value="2"/>
-    <property key="labeling/placementFlags" value="10"/>
+    <property key="labeling/placementFlags" value="15"/>
     <property key="labeling/plussign" value="false"/>
     <property key="labeling/predefinedPositionOrder" value="TR,TL,BR,BL,R,L,TSR,BSR"/>
     <property key="labeling/preserveRotation" value="true"/>
@@ -176,9 +176,9 @@
     <property key="labeling/repeatDistanceUnit" value="1"/>
     <property key="labeling/reverseDirectionSymbol" value="false"/>
     <property key="labeling/rightDirectionSymbol" value=">"/>
-    <property key="labeling/scaleMax" value="10000000"/>
+    <property key="labeling/scaleMax" value="5000"/>
     <property key="labeling/scaleMin" value="1"/>
-    <property key="labeling/scaleVisibility" value="false"/>
+    <property key="labeling/scaleVisibility" value="true"/>
     <property key="labeling/shadowBlendMode" value="6"/>
     <property key="labeling/shadowColorB" value="0"/>
     <property key="labeling/shadowColorG" value="0"/>
@@ -299,61 +299,61 @@
   <DiagramLayerSettings yPosColumn="-1" showColumn="-1" linePlacementFlags="10" placement="2" dist="0" xPosColumn="-1" priority="0" obstacle="0" zIndex="0" showAll="1"/>
   <annotationform>.</annotationform>
   <aliases>
-    <alias field="objectid" index="0" name=""/>
-    <alias field="id" index="1" name=""/>
-    <alias field="code" index="2" name=""/>
-    <alias field="categorieoppwaterlichaam" index="3" name=""/>
-    <alias field="streefpeil" index="4" name=""/>
-    <alias field="debiet" index="5" name=""/>
-    <alias field="channel_id" index="6" name=""/>
-    <alias field="flowline_id" index="7" name=""/>
-    <alias field="shape_length" index="8" name=""/>
-    <alias field="channnel_id" index="9" name=""/>
-    <alias field="objectid:1" index="10" name=""/>
-    <alias field="id:1" index="11" name=""/>
-    <alias field="diepte" index="12" name=""/>
-    <alias field="bron_diepte" index="13" name=""/>
-    <alias field="bodemhoogte" index="14" name=""/>
-    <alias field="breedte" index="15" name=""/>
-    <alias field="bron_breedte" index="16" name=""/>
-    <alias field="lengte" index="17" name=""/>
-    <alias field="taludvoorkeur" index="18" name=""/>
-    <alias field="steilste_talud" index="19" name=""/>
-    <alias field="grondsoort" index="20" name=""/>
-    <alias field="bron_grondsoort" index="21" name=""/>
-    <alias field="hydro_id" index="22" name=""/>
-    <alias field="direction" index="23" name=""/>
+    <alias field="id" index="0" name=""/>
+    <alias field="code" index="1" name=""/>
+    <alias field="categorieoppwaterlichaam" index="2" name=""/>
+    <alias field="streefpeil" index="3" name=""/>
+    <alias field="debiet" index="4" name=""/>
+    <alias field="debiet_3di" index="5" name=""/>
+    <alias field="debiet_aangepast" index="6" name=""/>
+    <alias field="diepte" index="7" name=""/>
+    <alias field="breedte" index="8" name=""/>
+    <alias field="taludvoorkeur" index="9" name=""/>
+    <alias field="begroeiingsvariant_id" index="10" name=""/>
+    <alias field="min_diepte" index="11" name=""/>
+    <alias field="max_diepte" index="12" name=""/>
+    <alias field="min_breedte" index="13" name=""/>
+    <alias field="max_breedte" index="14" name=""/>
+    <alias field="lengte" index="15" name=""/>
+    <alias field="geselecteerd_diepte" index="16" name=""/>
+    <alias field="geselecteerd_breedte" index="17" name=""/>
+    <alias field="geselecteerde_variant" index="18" name=""/>
+    <alias field="geselecteerde_begroeiingsvariant" index="19" name=""/>
+    <alias field="opmerkingen" index="20" name=""/>
+    <alias field="line" index="21" name=""/>
+    <alias field="direction" index="22" name=""/>
+    <alias field="reversed" index="23" name=""/>
   </aliases>
   <excludeAttributesWMS/>
   <excludeAttributesWFS/>
   <attributeactions default="-1"/>
   <attributetableconfig actionWidgetStyle="dropDown" sortExpression="" sortOrder="0">
     <columns>
-      <column width="-1" hidden="0" type="field" name="objectid"/>
       <column width="-1" hidden="0" type="field" name="code"/>
       <column width="-1" hidden="0" type="field" name="categorieoppwaterlichaam"/>
-      <column width="-1" hidden="0" type="field" name="channel_id"/>
-      <column width="-1" hidden="0" type="field" name="flowline_id"/>
       <column width="-1" hidden="1" type="actions"/>
       <column width="-1" hidden="0" type="field" name="id"/>
       <column width="-1" hidden="0" type="field" name="streefpeil"/>
       <column width="-1" hidden="0" type="field" name="debiet"/>
-      <column width="-1" hidden="0" type="field" name="shape_length"/>
-      <column width="-1" hidden="0" type="field" name="channnel_id"/>
-      <column width="-1" hidden="0" type="field" name="objectid:1"/>
-      <column width="-1" hidden="0" type="field" name="id:1"/>
       <column width="-1" hidden="0" type="field" name="diepte"/>
-      <column width="-1" hidden="0" type="field" name="bron_diepte"/>
-      <column width="-1" hidden="0" type="field" name="bodemhoogte"/>
       <column width="-1" hidden="0" type="field" name="breedte"/>
-      <column width="-1" hidden="0" type="field" name="bron_breedte"/>
       <column width="-1" hidden="0" type="field" name="lengte"/>
       <column width="-1" hidden="0" type="field" name="taludvoorkeur"/>
-      <column width="-1" hidden="0" type="field" name="steilste_talud"/>
-      <column width="-1" hidden="0" type="field" name="grondsoort"/>
-      <column width="-1" hidden="0" type="field" name="bron_grondsoort"/>
-      <column width="-1" hidden="0" type="field" name="hydro_id"/>
       <column width="-1" hidden="0" type="field" name="direction"/>
+      <column width="-1" hidden="0" type="field" name="debiet_3di"/>
+      <column width="-1" hidden="0" type="field" name="debiet_aangepast"/>
+      <column width="-1" hidden="0" type="field" name="begroeiingsvariant_id"/>
+      <column width="-1" hidden="0" type="field" name="min_diepte"/>
+      <column width="-1" hidden="0" type="field" name="max_diepte"/>
+      <column width="-1" hidden="0" type="field" name="min_breedte"/>
+      <column width="-1" hidden="0" type="field" name="max_breedte"/>
+      <column width="-1" hidden="0" type="field" name="geselecteerd_diepte"/>
+      <column width="-1" hidden="0" type="field" name="geselecteerd_breedte"/>
+      <column width="-1" hidden="0" type="field" name="geselecteerde_variant"/>
+      <column width="-1" hidden="0" type="field" name="geselecteerde_begroeiingsvariant"/>
+      <column width="-1" hidden="0" type="field" name="opmerkingen"/>
+      <column width="-1" hidden="0" type="field" name="line"/>
+      <column width="-1" hidden="0" type="field" name="reversed"/>
     </columns>
   </attributetableconfig>
   <editform>.</editform>
@@ -384,31 +384,31 @@ def my_form_open(dialog, layer, feature):
     <fieldstyles/>
   </conditionalstyles>
   <defaults>
-    <default field="objectid" expression=""/>
     <default field="id" expression=""/>
     <default field="code" expression=""/>
     <default field="categorieoppwaterlichaam" expression=""/>
     <default field="streefpeil" expression=""/>
     <default field="debiet" expression=""/>
-    <default field="channel_id" expression=""/>
-    <default field="flowline_id" expression=""/>
-    <default field="shape_length" expression=""/>
-    <default field="channnel_id" expression=""/>
-    <default field="objectid:1" expression=""/>
-    <default field="id:1" expression=""/>
+    <default field="debiet_3di" expression=""/>
+    <default field="debiet_aangepast" expression=""/>
     <default field="diepte" expression=""/>
-    <default field="bron_diepte" expression=""/>
-    <default field="bodemhoogte" expression=""/>
     <default field="breedte" expression=""/>
-    <default field="bron_breedte" expression=""/>
-    <default field="lengte" expression=""/>
     <default field="taludvoorkeur" expression=""/>
-    <default field="steilste_talud" expression=""/>
-    <default field="grondsoort" expression=""/>
-    <default field="bron_grondsoort" expression=""/>
-    <default field="hydro_id" expression=""/>
+    <default field="begroeiingsvariant_id" expression=""/>
+    <default field="min_diepte" expression=""/>
+    <default field="max_diepte" expression=""/>
+    <default field="min_breedte" expression=""/>
+    <default field="max_breedte" expression=""/>
+    <default field="lengte" expression=""/>
+    <default field="geselecteerd_diepte" expression=""/>
+    <default field="geselecteerd_breedte" expression=""/>
+    <default field="geselecteerde_variant" expression=""/>
+    <default field="geselecteerde_begroeiingsvariant" expression=""/>
+    <default field="opmerkingen" expression=""/>
+    <default field="line" expression=""/>
     <default field="direction" expression=""/>
+    <default field="reversed" expression=""/>
   </defaults>
-  <previewExpression></previewExpression>
+  <previewExpression>COALESCE("OGC_FID", '&lt;NULL>')</previewExpression>
   <layerGeometryType>1</layerGeometryType>
 </qgis>

@@ -1,4 +1,4 @@
-from base import BaseCollection
+from .base import BaseCollection
 
 LINESTRING = 'linestring'
 
