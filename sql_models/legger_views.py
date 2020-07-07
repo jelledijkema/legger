@@ -29,6 +29,7 @@ def create_legger_views(session):
                 geselecteerd_breedte,
                 geselecteerde_variant,
                 geselecteerde_begroeiingsvariant,
+                geselecteerd_verhang,
                 h.opmerkingen,
                 CASE 
                   WHEN h.debiet_3di >= 0 THEN "GEOMETRY"
@@ -66,7 +67,8 @@ def create_legger_views(session):
                 v.diepte as geselecteerd_diepte,
                 v.waterbreedte as geselecteerd_breedte,
                 v.id as geselecteerde_variant,
-                v.begroeiingsvariant_id as geselecteerde_begroeiingsvariant
+                v.begroeiingsvariant_id as geselecteerde_begroeiingsvariant,
+                v.verhang as geselecteerd_verhang
                 FROM geselecteerd g, varianten v
                 WHERE g.variant_id = v.id) as sel
                 ON sel.hydro_id = h.id       
@@ -138,6 +140,7 @@ def create_legger_views(session):
                 ST_LENGTH(h.geometry) as lengte,
                 h.geometry,
                 s.selected_on as geselecteerd_op,
+                s.tot_verhang as totaal_verhang,
                 --s.opmerkingen as selectie_opmerking,
                 v.diepte as geselecteerde_diepte,
                 v.waterbreedte as geselecteerd_waterbreedte,

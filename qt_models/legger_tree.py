@@ -76,7 +76,7 @@ class hydrovak_class(object):
             'variant_max_depth': 'max_diepte',
             'selected_depth': 'geselecteerd_diepte',
             'selected_width': 'geselecteerd_breedte',
-            'verhang': 'verhang',
+            'verhang': 'geselecteerd_verhang',
             'selected_variant_id': 'geselecteerde_variant',
             'begroeiingsvariant_id': 'begroeiingsvariant_id',
             'selected_begroeiingsvariant_id': 'geselecteerde_begroeiingsvariant',
