@@ -8,7 +8,9 @@ from collections import namedtuple
 
 log = logging.getLogger(__name__)
 
-LayerDefinition = namedtuple('LayerDefinition', ('name', 'layer_name', 'field', 'style', 'geometry_field', 'range', 'is_view'))
+LayerDefinition = namedtuple('LayerDefinition',
+                             ('name', 'layer_name', 'field', 'style', 'geometry_field', 'range', 'is_view'))
+
 
 class LayerManager():
 
@@ -62,32 +64,56 @@ class LayerManager():
         styled_layers = OrderedDict([
             ('basisgegevens', [
                 LayerDefinition('debiet', 'hydroobject', 'debiet', 'debiet', 'geometry', 'min_max_line', False),
-                LayerDefinition('categorie', 'hydroobject', 'categorieoppwaterlichaam', 'category', 'geometry', 'min_max_line', False),
+                LayerDefinition('categorie', 'hydroobject', 'categorieoppwaterlichaam', 'category', 'geometry',
+                                'min_max_line', False),
                 # ('du debiet', 'duikersifonhevel', 'debiet', 'debiet', 'geometry', 'min_max_line'),
             ]),
             ('afgeleid', [
             ]),
             ('tbv begroeiingsgraad', [
-                LayerDefinition('aanwijzen', 'hydroobject', 'begroeiingsvariant_id', 'begroeiingsvariant', 'geometry', None, False),
-                LayerDefinition('begroeiingsadvies', 'begroeiingsadvies', 'advies_id', 'begroeiingsvariant', 'geometry', None, True),
+                LayerDefinition('aanwijzen', 'hydroobject', 'begroeiingsvariant_id', 'begroeiingsvariant', 'geometry',
+                                None, False),
+                LayerDefinition('begroeiingsadvies', 'begroeiingsadvies', 'advies_id', 'begroeiingsvariant', 'geometry',
+                                None, True),
                 LayerDefinition('begroeiingsvariant', 'begroeiingsadvies', 'aangew_bv_id', 'begroeiingsvariant',
-                 'geometry', None, True),
+                                'geometry', None, True),
                 # ('sterk min profiel', 'ruimte_view', 'ruim', 'min_max_line', 'geometry', None),
                 # ('ruimte', 'ruimte_view', 'over_width', 'min_max_line', 'geometry', None),
             ]),
             ('gekozen legger', [
                 LayerDefinition('voortgang', 'hydroobjects_selected_legger', '', 'voortgang', 'geometry', None, True),
                 LayerDefinition('verhang', 'hydroobjects_selected_legger', '', 'verhang', 'geometry', None, True),
-                LayerDefinition('gekozen diepte [m]', 'hydroobjects_selected_legger', '', 'gekozen_diepte', 'geometry', None, True),
-                LayerDefinition('overdiepte [m]', 'hydroobjects_selected_legger', '', 'overdiepte', 'geometry', None, True),
-                LayerDefinition('gekozen bodembreedte [m]', 'hydroobjects_selected_legger', '', 'gekozen_bodembreedte', 'geometry',
-                 None, True),
-                LayerDefinition('gekozen waterbreedte [m]', 'hydroobjects_selected_legger', '', 'gekozen_waterbreedte', 'geometry',
-                 None, True),
-                LayerDefinition('gekozen overbreedte totaal [m]', 'hydroobjects_selected_legger', '', 'overbreedte_totaal', 'geometry',
-                 None, True),
-                LayerDefinition('gekozen begroeiingsvariant', 'hydroobjects_selected_legger', 'geselecteerde_begroeiingsvariant',
-                 'begroeiingsvariant', 'geometry', None, True),
+                LayerDefinition('gekozen diepte [m]', 'hydroobjects_selected_legger', '', 'gekozen_diepte', 'geometry',
+                                None, True),
+                LayerDefinition('overdiepte [m]', 'hydroobjects_selected_legger', '', 'overdiepte', 'geometry', None,
+                                True),
+                LayerDefinition('gekozen bodembreedte [m]', 'hydroobjects_selected_legger', '', 'gekozen_bodembreedte',
+                                'geometry',
+                                None, True),
+                LayerDefinition('gekozen waterbreedte [m]', 'hydroobjects_selected_legger', '', 'gekozen_waterbreedte',
+                                'geometry',
+                                None, True),
+                LayerDefinition('gekozen overbreedte totaal [m]', 'hydroobjects_selected_legger', '',
+                                'overbreedte_totaal', 'geometry',
+                                None, True),
+                LayerDefinition('gekozen begroeiingsvariant', 'hydroobjects_selected_legger',
+                                'geselecteerde_begroeiingsvariant',
+                                'begroeiingsvariant', 'geometry', None, True),
+            ]),
+            ('herverdelingcheck', [
+
+                LayerDefinition('punten balans - herverdeling tov origineel', 'graph_nodes', '', 'punt_wb_diff',
+                                'geometry', None, True),
+                LayerDefinition('punten balans - gekop. 3di resultaten', 'graph_nodes', '', 'punt_wb_edi',
+                                'geometry', None, True),
+                LayerDefinition('koppelpunten', 'graph_nodes', '', 'koppelpunten',
+                                'geometry', None, True),
+                LayerDefinition('gewogen afstand vanaf eindpunt', 'hydroobject', '', 'gewogen_afstand',
+                                'geometry', None, True),
+                LayerDefinition('debiet aangepast', 'hydroobject', '', 'debiet_aangepast',
+                                'geometry', None, True),
+                LayerDefinition('debiet verhouding', 'hydroobject', '', 'debiet_aangepast_verhouding',
+                                'geometry', None, True),
             ]),
             ('achtergrond', [
                 LayerDefinition('watervlakken', 'waterdeel', '', 'waterdeel', 'geometry', None, False),

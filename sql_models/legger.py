@@ -101,6 +101,10 @@ class HydroObject(Base):
                                    ForeignKey(BegroeiingsVariant.__tablename__ + ".id"),
                                    index=True)
     opmerkingen = Column(String())
+    eindpunt_potentieel = Column(Boolean)
+    eindpunt_geselecteerd = Column(Boolean)
+    geforceerd_omgedraaid = Column(Boolean)
+    routing_gewicht = Column(Float)
     # shape_length = Column(Float)
 
     # profielen = relationship("Profielen",

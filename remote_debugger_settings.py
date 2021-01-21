@@ -7,8 +7,8 @@ except ImportError:
     import pydevd_pycharm
 
 
-pydevd_pycharm.settrace('localhost',
-                        port=5555,
-                        stdoutToServer=True,
-                        stderrToServer=True,
-                        suspend=False) #, trace_only_current_thread=True
+# pydevd_pycharm.settrace('localhost',
+#                         port=5555,
+#                         stdoutToServer=True,
+#                         stderrToServer=True,
+#                         suspend=False) #, trace_only_current_thread=True
