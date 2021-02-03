@@ -273,9 +273,6 @@ class TestTheoreticalComplexerNetwork(unittest.TestCase):
     #         one_simple_line_network_for_redistrubution)
     #
     #     network = NewNetwork(line_layer, line_layer, director, distance_properter, id_field='id')
-    #     bidirectional_islands = network.get_bidirectional_islands()
-    #
-    #     self.assertEqual(len(bidirectional_islands), 2)
     #
     #     # line_layer_updates = network.fill_bidirectional_gaps(bidirectional_islands)
 

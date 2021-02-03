@@ -105,6 +105,11 @@ class HydroObject(Base):
     eindpunt_geselecteerd = Column(Boolean)
     geforceerd_omgedraaid = Column(Boolean)
     routing_gewicht = Column(Float)
+
+    kijkp_breedte = Column(Float)
+    kijkp_diepte = Column(Float)
+    kijkp_talud = Column(Float)
+    kijkp_reden = Column(String(30))
     # shape_length = Column(Float)
 
     # profielen = relationship("Profielen",

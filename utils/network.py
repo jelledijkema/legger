@@ -104,10 +104,15 @@ class Line(Definitions):
             return self.debiet_3di
 
     def set_debiet_modified(self, debiet):
-        if debiet is not None and self.debiet_3di is not None and self.debiet_3di < 0 and not self.forced_direction:
-            self.debiet_modified = -debiet
-        else:
+        if self.id == 140870:
+            a = 1
+
+        if debiet is None:
             self.debiet_modified = debiet
+        elif self.debiet_3di is not None and self.debiet_3di < 0 and not self.forced_direction:
+            self.debiet_modified = -abs(debiet)
+        else:
+            self.debiet_modified = abs(debiet)
 
     def inflow_node(self, modus=Definitions.DEBIET_3DI):
         if self.debiet(modus) is None or self.debiet(modus) >= 0 or (
@@ -349,10 +354,12 @@ class Network(object):
                 eindpunt_potentieel=?,
                 geforceerd_omgedraaid=?,
                 routing_gewicht=?,
-                debiet_aangepast=?
+                debiet_aangepast=?,
+                debiet=?
             WHERE 
                 id=?      
         """, [(l.outflow_node().id in start_nodes, l.forced_direction, l.extra_data.get('weight'),
+               -l.debiet_modified if l.debiet_modified is not None and l.reversed else l.debiet_modified,
                -l.debiet_modified if l.debiet_modified is not None and l.reversed else l.debiet_modified,
                l.id) for l in self.graph.lines])
 
@@ -686,23 +693,13 @@ class Network(object):
             # if node == last_added_node:
             #     break
 
-            if 340156 in [l.id for l in node.outflow(modus=Definitions.FORCED)]:
+            if 140870 in [l.id for l in node.outflow(modus=Definitions.FORCED)]:
                 a = 1
 
             flow = node.flow(modus=Definitions.FORCED)
             flow_3di = node.flow(modus=Definitions.DEBIET_3DI)
             added_flow_on_point = flow_3di['outflow_debiet'] - flow_3di['inflow_debiet']
-            if flow['inflow_nr'] == 0:
-                node_done[node.nr] = True
-                for line in node.outflow(modus=Definitions.FORCED):
-                    line.set_debiet_modified(max(min_flow,
-                                                 added_flow_on_point) if line.debiet_3di is not None else min_flow)
-                    add_node = line.outflow_node(modus=Definitions.FORCED)
-                    if not node_done[add_node.nr]:
-                        node_queue[add_node.id] = add_node
-                if len(node_queue) > 0:
-                    last_node = [*node_queue.values()][-1]
-            elif flow['outflow_nr'] == 0:
+            if flow['outflow_nr'] == 0:
                 # end, ready
                 node_done[node.nr] = True
                 if len(node_queue) > 0:
@@ -710,16 +707,22 @@ class Network(object):
             else:
                 all_inflows_not_known = len(
                     [l for l in node.inflow(modus=Definitions.FORCED) if l.debiet_modified is None])
-                if 1084919 in [l.id for l in node.inflow(modus=Definitions.FORCED)] and all_inflows_not_known == 0:
+                if 140870 in [l.id for l in node.outflow(modus=Definitions.FORCED)] and all_inflows_not_known == 0:
                     a = 1
 
                 if all_inflows_not_known == 0:
                     # all inflows are known, so we can process this node
                     modified_flow_in = sum(
                         [abs(l.debiet_modified) for l in node.inflow(modus=Definitions.FORCED)]) + added_flow_on_point
+                    # for forced points
+                    modified_flow_out = sum(
+                        [abs(l.debiet_modified) for l in node.outflow(modus=Definitions.FORCED) if l.debiet_modified is not None])
+
+                    modified_flow_in = modified_flow_in - modified_flow_out
                     if modified_flow_in < 0:
-                        # this can not happen
+                        # this could happen with forced outflow
                         modified_flow_in = 0
+                        logger.warning('water created in point %i', node.id)
                     primary_out = [l for l in node.outflow(modus=Definitions.FORCED) if
                                    l.category == 1 and l.debiet_modified is None]
                     other_out = [l for l in node.outflow(modus=Definitions.FORCED) if
@@ -778,19 +781,30 @@ class Network(object):
                     node_queue[node.id] = node
                     if node == last_node:
                         print(node.nr)
+                        category = 1
+                        if c_last_repeated <= 15:
+                            category = 3
+                        elif c_last_repeated <= 30:
+                            category = 2
 
                         for node in [*node_queue.values()]:
                             # for circulars set tree end parts in current endnode list to minflow
                             for line in node.inflow(modus=Definitions.FORCED):
-                                if line.extra_data.get('tree_end'):
-                                    line.set_debiet_modified(min_flow)
+                                if line.extra_data.get('tree_end') and \
+                                        line.debiet_modified is None and \
+                                        line.category == category:
+                                    line.set_debiet_modified(
+                                        line.debiet_3di if line.debiet_3di is not None else min_flow)
 
-                        if c_last_repeated in [25, 40]:
+                        if c_last_repeated in [15, 30, 40]:
                             # for larger circulars set all tree end parts to minflow and add these endpoints to the queue
 
                             for line in self.graph.lines:
-                                if line.extra_data.get('tree_end') and line.debiet_modified is None:
-                                    line.set_debiet_modified(min_flow)
+                                if line.extra_data.get('tree_end') and \
+                                        line.debiet_modified is None and \
+                                        line.category == category:
+                                    line.set_debiet_modified(
+                                        line.debiet_3di if line.debiet_3di is not None else min_flow)
                                     add_node = line.outflow_node(modus=Definitions.FORCED)
                                     if not node_done[add_node.nr]:
                                         node_queue[add_node.id] = add_node
