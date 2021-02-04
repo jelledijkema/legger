@@ -35,22 +35,20 @@ def create_legger_views(session: sqlite3.Connection):
                 kijkp_talud,
                 kijkp_reden,
                 CASE 
-                  WHEN h.debiet_3di >= 0 THEN "GEOMETRY"
-                  WHEN h.debiet_3di THEN ST_REVERSE("GEOMETRY")
+                  WHEN h.debiet_aangepast >= 0 THEN "GEOMETRY"
+                  WHEN h.debiet_aangepast THEN ST_REVERSE("GEOMETRY")
                     ELSE "GEOMETRY" 
                 END AS "GEOMETRY",
                 CASE 
-                  WHEN h.debiet_3di >= 0 THEN MakeLine(StartPoint("GEOMETRY"), EndPoint("GEOMETRY"))
-                  WHEN h.debiet_3di THEN MakeLine(EndPoint("GEOMETRY"), StartPoint("GEOMETRY"))
+                  WHEN h.debiet_aangepast >= 0 THEN MakeLine(StartPoint("GEOMETRY"), EndPoint("GEOMETRY"))
+                  WHEN h.debiet_aangepast THEN MakeLine(EndPoint("GEOMETRY"), StartPoint("GEOMETRY"))
                     ELSE MakeLine(StartPoint("GEOMETRY"), EndPoint("GEOMETRY"))
                 END AS line,
-                CASE WHEN h.debiet_3di > 0 THEN 1
-                    WHEN h.debiet_3di  THEN 1
+                CASE WHEN h.debiet_aangepast >= 0 or h.debiet_aangepast is null  THEN 1
                     ELSE 3 
                 END AS direction,
-                CASE WHEN h.debiet_3di >= 0 THEN CAST(0 AS BIT)
-                    WHEN h.debiet_3di  THEN CAST(1 AS BIT)
-                    ELSE null 
+                CASE WHEN h.debiet_aangepast >= 0 or h.debiet_aangepast is null THEN CAST(0 AS BIT)
+                    ELSE CAST(1 AS BIT)
                 END AS reversed
             FROM hydroobject h 
             JOIN kenmerken k ON h.id = k.hydro_id 
@@ -77,8 +75,8 @@ def create_legger_views(session: sqlite3.Connection):
                 ON sel.hydro_id = h.id;
          
         --DELETE FROM views_geometry_columns WHERE view_name = 'hydroobjects_kenmerken';
-        SELECT RecoverGeometryColumn( 'hydroobjects_kenmerken' , 'geometry' , 28992 , 'POINT');
-        SELECT RecoverGeometryColumn( 'hydroobjects_kenmerken' , 'line' , 28992 , 'POINT');
+        SELECT RecoverGeometryColumn( 'hydroobjects_kenmerken' , 'geometry' , 28992 , 'LINESTRING');
+        SELECT RecoverGeometryColumn( 'hydroobjects_kenmerken' , 'line' , 28992 , 'LINESTRING');
         
         SELECT InvalidateLayerStatistics('hydroobject');
         SELECT UpdateLayerStatistics('hydroobject');

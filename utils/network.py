@@ -4,6 +4,10 @@ import sqlite3
 from collections import OrderedDict
 from typing import List
 
+from qgis._core import QgsFeatureRequest, QgsFeature, QgsGeometry, QgsPointXY
+from legger.qt_models.legger_tree import hydrovak_class, LeggerTreeItem
+from legger.utils.formats import make_type
+
 DISTANCE_PROPERTER_NR = 0
 FEAT_ID_PROPERTER_NR = 1
 
@@ -83,6 +87,7 @@ class Line(Definitions):
         self.length = length
         self.debiet_3di = debiet_3di
         self.debiet_modified = debiet_modified
+        self.surplus = None
 
         self.reversed = False
         self.forced_direction = False
@@ -103,10 +108,11 @@ class Line(Definitions):
         else:
             return self.debiet_3di
 
-    def set_debiet_modified(self, debiet):
+    def set_debiet_modified(self, debiet, surplus=None):
         if self.id == 140870:
             a = 1
 
+        self.surplus = surplus
         if debiet is None:
             self.debiet_modified = debiet
         elif self.debiet_3di is not None and self.debiet_3di < 0 and not self.forced_direction:
@@ -179,6 +185,9 @@ class Node(Definitions):
 
         self.incoming_nrs = []
         self.outgoing_nrs = []
+
+    def point(self):
+        return (0, 0)
 
     def incoming(self):
         return [self.graph.line(nr) for nr in self.incoming_nrs]
@@ -281,10 +290,10 @@ class Graph(Definitions):
                 self.manual_startnodes.append(line.outflow_node())
         self.manual_startnodes = list(set(self.manual_startnodes))
 
-    def node(self, nr):
+    def node(self, nr) -> Node:
         return self.nodes[nr]
 
-    def line(self, nr):
+    def line(self, nr) -> Line:
         return self.lines[nr]
 
     def correct_direction_on_debiet_3di(self):
@@ -319,13 +328,22 @@ class Network(object):
     """Network class for providing network functions and direrequired for Legger tool"""
 
     # todo:
-    #     - better support bidirectional islands (if needed and exmaples popup in tests/ usage)
     #     - move virtual_layer and endpoint_layer outside this class
     #     - set endpoints on 90% or 10 meter before endpoint of hydrovak
 
-    def __init__(self, spatialite_path, graph=None):
+    def __init__(self, spatialite_path, graph=None,
+        full_line_layer = None, virtual_tree_layer=None, endpoint_layer=None, id_field="feat_id"
+                 ):
         """
         spatialite_path (str): path to spatialite
+        line_layer (QgsVectorLayer): input vector layer, with as geometry straight lines without in between vertexes
+        full_line_layer (QgsVectorLayer): input vector layer, with original geometry (with in between vertexes)
+        director (QgsLineVectorLayerDirector):
+        distance_properter (Qgs Properter type): properter to get distance. used for shortest path at bidirectional
+                islands
+        virtual_tree_layer (QgsVectorLayer): layer used to visualize active tree
+        endpoint_layer (QgsVectorLayer): layer used ot visualize endpoints of tree
+        id_field (str): field used by features to identification field
         """
 
         self.spatialite_path = spatialite_path
@@ -338,6 +356,11 @@ class Network(object):
         self.start_arcs = None  # list of dicts with arc_nr, point (x, y), list childs, parent
         self.start_arc_tree = None
 
+        self.full_line_layer = full_line_layer
+        self._virtual_tree_layer = virtual_tree_layer
+        self._endpoint_layer = endpoint_layer
+        self.id_field = id_field
+
     @property
     def db_cursor(self):
         if not self._cursor:
@@ -348,6 +371,22 @@ class Network(object):
 
     def save_network_values(self):
         start_nodes = [n.id for n in self.graph.get_startnodes(modus=Definitions.DEBIET_3DI)]
+
+        def final_debiet(line):
+            is_positive = line.debiet_modified is None or \
+                          (line.reversed and line.debiet_modified < 0) or \
+                          (not line.reversed and line.debiet_modified >= 0)
+
+            if is_positive:
+                if line.category == 1:
+                    return max(abs(line.debiet_3di or 0), line.debiet_modified or 0)
+                else:
+                    return abs(line.debiet_modified)
+            else:
+                if line.category == 1:
+                    return -max(abs(line.debiet_3di or 0), line.debiet_modified or 0)
+                else:
+                    return -abs(line.debiet_modified)
 
         self.db_cursor.executemany("""
             UPDATE hydroobject SET
@@ -360,7 +399,7 @@ class Network(object):
                 id=?      
         """, [(l.outflow_node().id in start_nodes, l.forced_direction, l.extra_data.get('weight'),
                -l.debiet_modified if l.debiet_modified is not None and l.reversed else l.debiet_modified,
-               -l.debiet_modified if l.debiet_modified is not None and l.reversed else l.debiet_modified,
+               final_debiet(l),
                l.id) for l in self.graph.lines])
 
         self.db_cursor.executemany("""
@@ -714,26 +753,33 @@ class Network(object):
                     # all inflows are known, so we can process this node
                     modified_flow_in = sum(
                         [abs(l.debiet_modified) for l in node.inflow(modus=Definitions.FORCED)]) + added_flow_on_point
+                    modified_surplus_in = sum(
+                        [l.surplus for l in node.inflow(modus=Definitions.FORCED) if l.surplus is not None])
                     # for forced points
                     modified_flow_out = sum(
                         [abs(l.debiet_modified) for l in node.outflow(modus=Definitions.FORCED) if l.debiet_modified is not None])
 
-                    modified_flow_in = modified_flow_in - modified_flow_out
-                    if modified_flow_in < 0:
-                        # this could happen with forced outflow
-                        modified_flow_in = 0
-                        logger.warning('water created in point %i', node.id)
+                    modified_flow_in = modified_flow_in - modified_flow_out - modified_surplus_in
+
                     primary_out = [l for l in node.outflow(modus=Definitions.FORCED) if
                                    l.category == 1 and l.debiet_modified is None]
                     other_out = [l for l in node.outflow(modus=Definitions.FORCED) if
                                  l.category != 1 and l.debiet_modified is None]
+
+                    min_flow_out = (len(primary_out) + len(other_out)) * min_flow
+                    if modified_flow_in < min_flow_out:
+                        surplus = abs(modified_flow_in - min_flow_out)
+                        modified_flow_in = 0
+                    else:
+                        surplus = 0
+
                     if len(primary_out) == 1:
-                        primary_out[0].set_debiet_modified(max(modified_flow_in, min_flow))
+                        primary_out[0].set_debiet_modified(max(modified_flow_in, min_flow), surplus)
                         for line in other_out:
-                            line.set_debiet_modified(min_flow)
+                            line.set_debiet_modified(min_flow, 0)
                     elif len(primary_out) == 0:
                         if len(other_out) == 1:
-                            other_out[0].set_debiet_modified(max(modified_flow_in, min_flow))
+                            other_out[0].set_debiet_modified(max(modified_flow_in, min_flow), surplus)
                         else:
                             # multiple other.....
                             # filter out None values and zet minimum to min_flow (for example when direction is forced)
@@ -745,10 +791,10 @@ class Network(object):
                                 factor = None
                             for line in other_out:
                                 if factor is None:
-                                    line.set_debiet_modified(min_flow)
+                                    line.set_debiet_modified(min_flow, surplus / len(other_out))
                                 else:
                                     flow = max(min_flow, abs(line.debiet_3di) if line.debiet_3di else min_flow)
-                                    line.set_debiet_modified(flow * factor if flow != min_flow else min_flow)
+                                    line.set_debiet_modified(flow * factor if flow != min_flow else min_flow, surplus * factor)
                     else:
                         # multiple primary.....
                         # filter out None values and zet minimum to min_flow (for example when direction is forced)
@@ -760,13 +806,13 @@ class Network(object):
                             factor = None
                         for line in primary_out:
                             if factor is None:
-                                line.set_debiet_modified(min_flow)
+                                line.set_debiet_modified(min_flow, surplus / len(primary_out))
                             else:
                                 flow = max(min_flow, abs(line.debiet_3di) if line.debiet_3di else min_flow)
-                                line.set_debiet_modified(flow * factor if flow != min_flow else min_flow)
+                                line.set_debiet_modified(flow * factor if flow != min_flow else min_flow, factor * surplus)
 
                         for line in other_out:
-                            line.set_debiet_modified(min_flow)
+                            line.set_debiet_modified(min_flow, 0)
 
                     node_done[node.nr] = True
                     for line in primary_out + other_out:
@@ -794,7 +840,7 @@ class Network(object):
                                         line.debiet_modified is None and \
                                         line.category == category:
                                     line.set_debiet_modified(
-                                        line.debiet_3di if line.debiet_3di is not None else min_flow)
+                                        line.debiet_3di if line.debiet_3di is not None else min_flow, 0)
 
                         if c_last_repeated in [15, 30, 40]:
                             # for larger circulars set all tree end parts to minflow and add these endpoints to the queue
@@ -804,7 +850,7 @@ class Network(object):
                                         line.debiet_modified is None and \
                                         line.category == category:
                                     line.set_debiet_modified(
-                                        line.debiet_3di if line.debiet_3di is not None else min_flow)
+                                        line.debiet_3di if line.debiet_3di is not None else min_flow, 0)
                                     add_node = line.outflow_node(modus=Definitions.FORCED)
                                     if not node_done[add_node.nr]:
                                         node_queue[add_node.id] = add_node
