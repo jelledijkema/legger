@@ -1,23 +1,28 @@
 import logging
 from collections import OrderedDict
 
-from qgis.PyQt.QtCore import QMetaObject, QSize, Qt, pyqtSignal
+from qgis.PyQt import QtWidgets
+from qgis.PyQt.QtCore import QMetaObject, QSize, Qt, pyqtSignal, QVariant
 from qgis.PyQt.QtWidgets import (QApplication, QComboBox, QDockWidget, QGroupBox, QHBoxLayout, QLabel, QPlainTextEdit,
-                         QPushButton, QSizePolicy, QSpacerItem, QTabWidget, QVBoxLayout, QWidget)
+                                 QPushButton, QSizePolicy, QSpacerItem, QTabWidget, QVBoxLayout, QWidget)
 from legger.qt_models.area_tree import AreaTreeItem, AreaTreeModel, area_class
 from legger.qt_models.legger_tree import LeggerTreeItem, LeggerTreeModel
 from legger.qt_models.profile import ProfileModel
 from legger.sql_models.legger import (BegroeiingsVariant, GeselecteerdeProfielen, HydroObject, Kenmerken,
                                       ProfielFiguren, Varianten)
-from legger.sql_models.legger_database import LeggerDatabase
+from legger.sql_models.legger_database import LeggerDatabase, load_spatialite
 from legger.utils.formats import try_round
 from legger.utils.legger_map_manager import LeggerMapManager
 from legger.utils.network_utils import LeggerMapVisualisation
 from legger.utils.new_network import NewNetwork
 from legger.utils.user_message import messagebar_message
 from legger.views.input_widget import NewWindow
+from legger.views.kijk_legger_popup import KijkProfielPopup
+from qgis._core import QgsFields
+from legger.sql_models.legger_views import create_legger_views
+
 from .network_graph_widgets import LeggerPlotWidget, LeggerSideViewPlotWidget
-from qgis.core import QgsFeature, QgsGeometry, QgsProject
+from qgis.core import QgsFeature, QgsGeometry, QgsProject, QgsField
 from qgis.analysis import QgsVectorLayerDirector
 from sqlalchemy import and_, or_
 
@@ -73,6 +78,9 @@ class LeggerWidget(QDockWidget):
         # store arguments
         self.iface = iface
         self.path_legger_db = path_legger_db
+
+        con_legger = load_spatialite(path_legger_db)
+        create_legger_views(con_legger)
 
         # init parameters
         self.measured_model = ProfileModel()
@@ -176,6 +184,8 @@ class LeggerWidget(QDockWidget):
             self.set_next_endpoint)
         self.begroeiings_combo.currentIndexChanged.connect(self.onSelectBegroeiingsVariant)
 
+        self.kijk_variant_knop.clicked.connect(self.open_kijkprofiel_dialog)
+
         # self.begroeiings_strategy_combo.currentIndexChanged.connect(self.onSelectBegroeiingsVariantStrategy)
 
         # create and init startpoint (AreaTree) model
@@ -196,6 +206,22 @@ class LeggerWidget(QDockWidget):
         # initial, select first area
         first_area = root.child(0)
         self.area_model.setDataItemKey(first_area, 'selected', True)
+
+        self.track_nodes = []
+        self._kijkprofiel_popup = None
+
+        self.init_width = 1.0
+        self.init_depth = 0.8
+        self.init_talud = 2
+        self.init_reason = ''
+
+    def open_kijkprofiel_dialog(self):
+
+        self._kijkprofiel_popup = KijkProfielPopup(
+            self,
+            self.iface,
+            self)
+        self._kijkprofiel_popup.show()
 
     def category_change(self, nr):
         """
@@ -480,6 +506,9 @@ class LeggerWidget(QDockWidget):
         elif self.legger_model.columns[index.column()].get('field') in ['ep', 'sp']:
             # clear current track
             if self.legger_model.sp is None or self.legger_model.ep is None:
+                self.kijk_variant_knop.setDisabled(True)
+                self.track_nodes = []
+
                 ids = [feat.id() for feat in self.vl_track_layer.getFeatures()]
                 self.vl_track_layer.dataProvider().deleteFeatures(ids)
                 self.vl_track_layer.commitChanges()
@@ -491,24 +520,30 @@ class LeggerWidget(QDockWidget):
                     self.legger_model.setDataItemKey(node.younger()[1], 'sp', Qt.Checked)
             elif self.legger_model.sp and self.legger_model.ep:
                 features = []
+                nodes = []
+
+                fields = QgsFields()
+                fields.append(QgsField("id", QVariant.Int))
+                self.kijk_variant_knop.setDisabled(False)
 
                 def loop_rec(node):
                     if node.hydrovak.get('tak'):
                         node = node.older()
                     else:
-                        feat = QgsFeature()
+                        feat = QgsFeature(fields)
                         feat.setGeometry(node.hydrovak.get('feature').geometry())
 
-                        feat.setAttributes([
-                            node.hydrovak.get('feature')['id']])
+                        feat.setAttributes([node.hydrovak.get('feature')['id']])
 
                         features.append(feat)
+                        nodes.append(node)
 
                     if node != self.legger_model.sp:
                         loop_rec(node.older())
 
                 loop_rec(self.legger_model.ep)
 
+                self.track_nodes = nodes
                 self.vl_track_layer.dataProvider().addFeatures(features)
                 self.vl_track_layer.commitChanges()
                 self.vl_track_layer.updateExtents()
@@ -704,15 +739,27 @@ class LeggerWidget(QDockWidget):
 
     def save_remarks(self):
         if self.selected_hydrovak:
-            if self.selected_hydrovak_db:
-                self.selected_hydrovak_db.opmerkingen = self.selected_variant_remark.toPlainText()
-                self.session.add(self.selected_hydrovak_db)
-                self.session.commit()
+            session = load_spatialite(self.path_legger_db)
 
-                self.legger_model.setDataItemKey(
-                    self.selected_hydrovak,
-                    'selected_remarks',
-                    self.selected_variant_remark.toPlainText())
+            # save to database
+            session.execute(
+                """
+                UPDATE 
+                  hydroobject 
+                SET
+                  opmerkingen = ?
+                WHERE 
+                  id = ?
+            """,
+                [self.selected_variant_remark.toPlainText(),
+                 self.selected_hydrovak.hydrovak['id']]
+            )
+
+            # update tree
+            self.legger_model.setDataItemKey(
+                self.selected_hydrovak,
+                'selected_remarks',
+                self.selected_variant_remark.toPlainText())
 
     def update_available_variants(self):
 
@@ -754,9 +801,11 @@ class LeggerWidget(QDockWidget):
                 over_width = profile.figuren[0].t_overbreedte_l + profile.figuren[0].t_overbreedte_r
                 over_depth = profile.figuren[0].t_overdiepte
             else:
-                if profile.hydro.kenmerken and profile.hydro.kenmerken[0].diepte is not None and profile.diepte is not None:
+                if profile.hydro.kenmerken and profile.hydro.kenmerken[
+                    0].diepte is not None and profile.diepte is not None:
                     over_depth = profile.hydro.kenmerken[0].diepte - profile.diepte
-                if profile.hydro.kenmerken and profile.hydro.kenmerken[0].breedte is not None and profile.waterbreedte is not None:
+                if profile.hydro.kenmerken and profile.hydro.kenmerken[
+                    0].breedte is not None and profile.waterbreedte is not None:
                     over_width = profile.hydro.kenmerken[0].breedte - profile.waterbreedte
 
             profs.append({
@@ -767,7 +816,9 @@ class LeggerWidget(QDockWidget):
                 'score': profile.figuren[0].t_fit if profile.figuren else None,
                 'over_depth': over_depth if over_depth is not None else None,
                 'over_width': over_width if over_depth is not None else None,
-                'over_width_color': [100, 100, 100] if over_width is None else [255, 0, 0] if over_width < 0 else [255, 255, 255],
+                'over_width_color': [100, 100, 100] if over_width is None else [255, 0, 0] if over_width < 0 else [255,
+                                                                                                                   255,
+                                                                                                                   255],
                 'verhang': profile.verhang,
                 'color': interpolated_color(value=profile.verhang, color_map=color_map,
                                             alpha=(255 if active else 80)),
@@ -816,6 +867,8 @@ class LeggerWidget(QDockWidget):
         return: None
         """
         self.save_remarks()
+        if self._kijkprofiel_popup:
+            self._kijkprofiel_popup.close()
 
         if self.vl_tree_layer in QgsProject.instance().mapLayers().values():
             QgsProject.instance().removeMapLayer(self.vl_tree_layer)
@@ -839,6 +892,7 @@ class LeggerWidget(QDockWidget):
         self.legger_model.dataChanged.disconnect(self.data_changed_legger_tree)
         self.area_model.dataChanged.disconnect(self.data_changed_area_model)
         self.begroeiings_combo.currentIndexChanged.disconnect(self.onSelectBegroeiingsVariant)
+        self.kijk_variant_knop.clicked.disconnect(self.open_kijkprofiel_dialog)
 
         self.legger_model.setTreeWidget(None)
 
@@ -874,6 +928,14 @@ class LeggerWidget(QDockWidget):
         self.next_endpoint_button = QPushButton(self)
         self.button_bar_hlayout.addWidget(self.next_endpoint_button)
         self.next_endpoint_button.setDisabled(True)
+
+        self.search_hydrovak = QtWidgets.QLineEdit(self)
+        self.search_hydrovak.setFixedWidth(200)
+        self.button_bar_hlayout.addWidget(self.search_hydrovak)
+
+        self.search_hydrovak_botton = QPushButton(self)
+        self.button_bar_hlayout.addWidget(self.search_hydrovak_botton)
+        self.search_hydrovak_botton.setDisabled(True)
 
         self.child_selection_strategy_combo = QComboBox(self)
         self.button_bar_hlayout.addWidget(QLabel("doortrekken tot:"))
@@ -985,8 +1047,11 @@ class LeggerWidget(QDockWidget):
         self.selected_variant_remark = QPlainTextEdit(self)
         self.selected_variant_remark.setFixedHeight(100)
         self.selected_variant_remark.setDisabled(True)
-
         self.rightVstack.addWidget(self.selected_variant_remark)
+
+        self.kijk_variant_knop = QPushButton(self)
+        self.kijk_variant_knop.setDisabled(True)
+        self.rightVstack.addWidget(self.kijk_variant_knop)
 
         self.contentLayout.addLayout(self.rightVstack, 0)
 
@@ -1005,3 +1070,7 @@ class LeggerWidget(QDockWidget):
             "DockWidget", "Voeg profiel toe", None))
         self.next_endpoint_button.setText(_translate(
             "DockWidget", "Volgend eindpunt", None))
+        self.kijk_variant_knop.setText(_translate(
+            "DockWidget", "Definieer kijkprofiel", None))
+        self.search_hydrovak_botton.setText(_translate(
+            "DockWidget", "ga", None))
