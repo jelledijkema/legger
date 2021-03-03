@@ -19,7 +19,7 @@ def to_string(value):
         return '-'
 
 def kijkprofiel_function(item, column_index):
-    return "diepte: {} m\nbreedte: {} m\ntalud: {}\nreden: {} m".format(
+    return "diepte: {} m\nwaterbreedte: {} m\ntalud: {}\nreden: {}".format(
         to_string(item.hydrovak.get('kijkp_diepte')),
         to_string(item.hydrovak.get('kijkp_breedte')),
         to_string(item.hydrovak.get('kijkp_talud')),
@@ -44,7 +44,7 @@ HORIZONTAL_HEADERS = (
     {'field': 'flow', 'header': 'debiet', 'round': 3, 'show': True, 'column_width': 50},
     {'field': 'target_level', 'show': False, 'column_width': 50},
     {'field': 'depth', 'header': 'diepte', 'show': False, 'column_width': 50},
-    {'field': 'width', 'header': 'breedte', 'show': False, 'column_width': 50},
+    {'field': 'width', 'header': 'breedte', 'show': True, 'column_width': 50},
     {'field': 'variant_min_depth', 'show': False, 'column_width': 60},
     {'field': 'variant_max_depth', 'show': False, 'column_width': 60},
     {'field': 'selected_depth_tmp', 'header': 'sel d', 'header_tooltip': 'geselecteerde diepte tijdens hover over varianten', 'column_width': 60},

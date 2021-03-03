@@ -130,7 +130,6 @@ class NewNetwork(object):
 
         return arc_tree
 
-
     def build_tree(self):
         """
         function that analyses tree and creates tree structure of network.
@@ -149,7 +148,7 @@ class NewNetwork(object):
             out_vertex = self.graph.vertex(arc['out_vertex'])
             # link arc with highest flow
             arc['downstream_arc'] = next(
-                iter(sorted(out_vertex.incomingEdges(), key=lambda nr: arc_tree[nr]['flow'] if arc_tree[nr]['flow'] is not None else 0, reverse=True)), None)
+                iter(sorted(out_vertex.incomingEdges(), key=lambda nr: abs(arc_tree[nr]['flow']) if arc_tree[nr]['flow'] is not None else 0, reverse=True)), None)
             if arc['downstream_arc'] is None:
                 start_arcs[arc_nr] = {
                     'arc_nr': arc_nr,

@@ -4,7 +4,7 @@ import sqlite3
 from collections import OrderedDict
 from typing import List
 
-from qgis._core import QgsFeatureRequest, QgsFeature, QgsGeometry, QgsPointXY
+from qgis._core import QgsFeatureRequest, QgsFeature, QgsGeometry, QgsPointXY, QgsExpression
 from legger.qt_models.legger_tree import hydrovak_class, LeggerTreeItem
 from legger.utils.formats import make_type
 
@@ -68,12 +68,13 @@ class Definitions(object):
     DEBIET_3DI = '3di'
     DEBIET_CORRECTED = 'corrected'
     FORCED = 'forced'
+    DEBIET_DB = 'db'
 
 
 class Line(Definitions):
 
     def __init__(self, oid, startnode_id, endnode_id, category, length,
-                 debiet_3di, debiet_modified, has_startnode=False, **extra):
+                 debiet_3di, debiet, debiet_modified, target_level, has_startnode=False, **extra):
         self.graph = None
         self.nr = None
         self.id = oid
@@ -85,7 +86,9 @@ class Line(Definitions):
 
         self.category = category
         self.length = length
+        self.target_level = target_level
         self.debiet_3di = debiet_3di
+        self.debiet_db = debiet
         self.debiet_modified = debiet_modified
         self.surplus = None
 
@@ -105,6 +108,8 @@ class Line(Definitions):
     def debiet(self, modus=Definitions.DEBIET_3DI):
         if modus == Definitions.DEBIET_CORRECTED:
             return self.debiet_modified
+        elif modus == Definitions.DEBIET_DB:
+            return self.debiet_db
         else:
             return self.debiet_3di
 
@@ -156,6 +161,8 @@ class Line(Definitions):
             self.debiet_3di = -self.debiet_3di
         if self.debiet_modified is not None:
             self.debiet_modified = -self.debiet_modified
+        if self.debiet_db is not None:
+            self.debiet_db = -self.debiet_db
 
         start_node = self.start_node()
         end_node = self.end_node()
@@ -176,18 +183,17 @@ class Line(Definitions):
 
 class Node(Definitions):
 
-    def __init__(self, oid, **extra):
+    def __init__(self, oid, point, **extra):
         self.graph = None
         self.nr = None
         self.id = oid
 
         self.min_category = 999
 
+        self.point = point
+
         self.incoming_nrs = []
         self.outgoing_nrs = []
-
-    def point(self):
-        return (0, 0)
 
     def incoming(self):
         return [self.graph.line(nr) for nr in self.incoming_nrs]
@@ -332,8 +338,7 @@ class Network(object):
     #     - set endpoints on 90% or 10 meter before endpoint of hydrovak
 
     def __init__(self, spatialite_path, graph=None,
-        full_line_layer = None, virtual_tree_layer=None, endpoint_layer=None, id_field="feat_id"
-                 ):
+        full_line_layer = None, virtual_tree_layer=None, endpoint_layer=None, id_field="id"):
         """
         spatialite_path (str): path to spatialite
         line_layer (QgsVectorLayer): input vector layer, with as geometry straight lines without in between vertexes
@@ -355,6 +360,8 @@ class Network(object):
         # init class attributes
         self.start_arcs = None  # list of dicts with arc_nr, point (x, y), list childs, parent
         self.start_arc_tree = None
+        self.arc_tree = None  # dictionary with tree data in format {[arc_nr]: {**arc_data}}
+
 
         self.full_line_layer = full_line_layer
         self._virtual_tree_layer = virtual_tree_layer
@@ -397,7 +404,9 @@ class Network(object):
                 debiet=?
             WHERE 
                 id=?      
-        """, [(l.outflow_node().id in start_nodes, l.forced_direction, l.extra_data.get('weight'),
+        """, [(l.outflow_node().id in start_nodes,
+               l.forced_direction,
+               l.extra_data.get('weight'),
                -l.debiet_modified if l.debiet_modified is not None and l.reversed else l.debiet_modified,
                final_debiet(l),
                l.id) for l in self.graph.lines])
@@ -467,7 +476,15 @@ class Network(object):
 
             CREATE TABLE graph_lines AS
             SELECT 
-            ho.id as hydro_id, gns.id as startnode_id, gns.tmp_line_node_ids, gne.id as endnode_id, gne.tmp_line_node_ids
+                ho.id as hydro_id, 
+                gns.id as startnode_id, 
+                gns.tmp_line_node_ids, 
+                gne.id as endnode_id, 
+                gne.tmp_line_node_ids,
+                ST_X(gns.geometry) as startx,
+                ST_Y(gns.geometry) as starty,
+                ST_X(gne.geometry) as endx,
+                ST_Y(gne.geometry) as endy
             FROM
             hydroobject ho
             INNER JOIN tmp_line_nodes tlns ON tlns.hydro_id =  ho.id AND tlns.type = 'start'
@@ -488,20 +505,23 @@ class Network(object):
     def graph(self):
         if self._graph is None:
             self.db_cursor.execute("""
-                SELECT id FROM graph_nodes
+                SELECT id, ST_X(geometry), ST_Y(geometry) FROM graph_nodes
             """)
 
-            nodes = [Node(nr=nr, oid=r[0]) for nr, r in enumerate(self.db_cursor.fetchall())]
+            nodes = [Node(nr=nr, oid=r[0], point=(r[1], r[2])) for nr, r in enumerate(self.db_cursor.fetchall())]
 
             self.db_cursor.execute("""
-                SELECT gl.hydro_id as hydro_id, gl.startnode_id, gl.endnode_id, ho.categorieoppwaterlichaam, ST_LENGTH(ho.geometry), ho.debiet_3di, ho.eindpunt_geselecteerd
+                SELECT gl.hydro_id as hydro_id, gl.startnode_id, gl.endnode_id, ho.categorieoppwaterlichaam, 
+                ST_LENGTH(ho.geometry), ho.debiet_3di, ho.debiet, ho.streefpeil, ho.eindpunt_geselecteerd
                 FROM 
                     graph_lines gl
                 INNER JOIN hydroobject ho ON ho.id = gl.hydro_id
             """)
             lines = [
                 Line(nr=nr, oid=r[0], startnode_id=r[1], endnode_id=r[2], category=r[3], length=r[4], debiet_3di=r[5],
-                     debiet_modified=None, has_startnode=r[6]) for nr, r in enumerate(self.db_cursor.fetchall())]
+                     debiet=r[6], debiet_modified=None, target_level=r[7],
+                     has_startnode=r[8])
+                for nr, r in enumerate(self.db_cursor.fetchall())]
 
             self._graph = Graph(
                 lines=lines,
@@ -509,12 +529,14 @@ class Network(object):
             )
         return self._graph
 
-    def force_direction(self):
+    def force_direction(self, mode=Definitions.DEBIET_3DI, do_reverse=True, ignore_manual_startnodes=False,
+                        start_min_category=1):
         # line_nr, weight, freeze
         tree = [[None, float("inf"), False, n.min_category] for n in self.graph.nodes]
 
         # node, tot_weight
-        primary_start_nodes = [[n, 0] for n in self.graph.get_startnodes() if n.min_category == 1]
+        primary_start_nodes = [[n, 0] for n in self.graph.get_startnodes(mode, ignore_manual=ignore_manual_startnodes)
+                               if n.min_category == start_min_category]
 
         queue = primary_start_nodes
 
@@ -522,11 +544,14 @@ class Network(object):
         # primary weight is length and in case of none debiet 2x length
         while len(queue) > 0:
             node, tot_weight = queue.pop()
-            for line in node.inflow(include_nones=True):
+            for line in node.inflow(mode, include_nones=True):
+                if line.id in [474252, 140888]:
+                    a = 1
+
                 line: Line
                 if line.category == 1:
-                    to_node = line.inflow_node()
-                    if line.debiet_3di is None:
+                    to_node = line.inflow_node(mode)
+                    if line.debiet(mode) is None:
                         factor = 2
                     else:
                         factor = 1
@@ -554,9 +579,9 @@ class Network(object):
                     if tree[to_node.nr][2]:
                         # freezed, so skip
                         continue
-                    if line.debiet_3di is None:
+                    if line.debiet(mode) is None:
                         factor = 2
-                    elif line.debiet_3di >= 0:
+                    elif line.debiet(mode) >= 0:
                         factor = 1
                     else:
                         factor = 3
@@ -573,9 +598,9 @@ class Network(object):
                     if tree[to_node.nr][2]:
                         # freezed, so skip
                         continue
-                    if line.debiet_3di is None:
+                    if line.debiet(mode) is None:
                         factor = 2
-                    elif line.debiet_3di <= 0:
+                    elif line.debiet(mode) <= 0:
                         factor = 1
                     else:
                         factor = 3
@@ -600,14 +625,14 @@ class Network(object):
             if node.id == 113:
                 a = 1
 
-            for line in node.inflow(include_nones=True):
+            for line in node.inflow(mode, include_nones=True):
                 line: Line
-                to_node = line.inflow_node()
+                to_node = line.inflow_node(mode)
                 if tree[to_node.nr][2]:
                     # freezed, so skip
                     continue
 
-                if line.debiet_3di is None:
+                if line.debiet(mode) is None:
                     factor = 2
                 else:
                     factor = 1
@@ -642,9 +667,9 @@ class Network(object):
                 if tree[to_node.nr][2]:
                     # freezed, so skip
                     continue
-                if line.debiet_3di is None:
+                if line.debiet(mode) is None:
                     factor = 2
-                elif line.debiet_3di >= 0:
+                elif line.debiet(mode) >= 0:
                     factor = 1
                 else:
                     factor = 3
@@ -666,9 +691,9 @@ class Network(object):
                 if tree[to_node.nr][2]:
                     # freezed, so skip
                     continue
-                if line.debiet_3di is None:
+                if line.debiet(mode) is None:
                     factor = 2
-                elif line.debiet_3di <= 0:
+                elif line.debiet(mode) <= 0:
                     factor = 1
                 else:
                     factor = 3
@@ -691,27 +716,30 @@ class Network(object):
                     a = 1
 
                 line.extra_data['weight'] = weight
-                if line.inflow_node().nr != node_nr:
-                    if line.debiet_3di is None or line.debiet_3di > 0:
-                        line.reverse()
+                if line.inflow_node(mode).nr != node_nr:
+                    if line.debiet(mode) is None or line.debiet(mode) > 0:
+                        if do_reverse:
+                            line.reverse()
                     line.forced_direction = True
+
         for line in self.graph.lines:
             if line.extra_data.get('weight') is None:
-                if line.id == 1084919:
+                if line.id == 377326:
                     a = 1
-                weight_inflow = tree[line.inflow_node().nr][1]
-                weight_outflow = tree[line.outflow_node().nr][1]
+                weight_inflow = tree[line.inflow_node(mode).nr][1]
+                weight_outflow = tree[line.outflow_node(mode).nr][1]
                 if weight_inflow is not None and weight_outflow is not None:
-                    if True and line.debiet_3di is not None:
+                    if True and line.debiet(mode) is not None:
                         line.extra_data['weight'] = weight_outflow
                     elif weight_inflow < weight_outflow:
                         line.extra_data['weight'] = weight_outflow
-                        if line.debiet_3di is None or line.debiet_3di > 0:
-                            line.reverse()
+                        if line.debiet(mode) is None or line.debiet(mode) > 0:
+                            if do_reverse:
+                                line.reverse()
                         line.forced_direction = True
                     else:
                         line.extra_data['weight'] = weight_inflow
-                    line.extra_data['tree_end'] = True
+                line.extra_data['tree_end'] = True
 
         return tree
 
@@ -866,6 +894,51 @@ class Network(object):
 
         return True, []
 
+
+    def hydrovak_class_tree_with_data(self):
+
+        line_tree = {}
+        tree = self.force_direction(mode=Definitions.DEBIET_DB, do_reverse=False, ignore_manual_startnodes=True)
+        # create dicts with lines (arcs), required information and mark vertexes in bi-directional islands
+        for line in self.graph.lines:
+            ids = line.id
+            exp = QgsExpression('"id" = {}'.format(ids))
+            request = QgsFeatureRequest(exp)
+            line_feature = None
+            try:
+                line_feature = next(self.full_line_layer.getFeatures(request))
+            except StopIteration:
+                logger.warning('no line feature for %i', ids)
+                pass
+
+            inflow_node = line.inflow_node(Definitions.DEBIET_DB)
+            outflow_node = line.outflow_node(Definitions.DEBIET_DB)
+
+            line_tree[line.nr] = hydrovak_class(
+                data_dict={
+                    # basic information
+                    'feat_id': line_feature.id(),  # feat_id,
+                    'id': ids,
+                    'line_nr': line.nr,
+                    'in_node': inflow_node.nr,
+                    'out_node': outflow_node.nr,
+                    'weight': line.length,
+                    'category': line.category,
+                    'tree_end': line.extra_data.get('tree_end'),
+                    # info need to be generated later
+                    'downstream_line_nr': tree[outflow_node.nr][0],
+                    'upstream_line_nrs': None,
+                    'min_category_in_path': 4,
+                    'modified_flow': None,
+                    'cum_weight': 0,
+                    'area_start_line_nr': None,
+                },
+                feature=line_feature,
+            )
+
+        return line_tree
+
+
     def build_tree(self):
         """
         function that analyses tree and creates tree structure of network.
@@ -873,5 +946,332 @@ class Network(object):
 
         returns (tuple): tuple with dictionary of arc_tree en list of start arc_nrs
         """
+        line_tree = self.hydrovak_class_tree_with_data()
+        start_lines = {}
+        in_between_lines = {}
 
-        pass
+        # for each arc, set downstream arc. When multiple, select one with highest flow.
+        # also identify start arcs and inbetween arcs (areas are group of arcs with same targetlevel). Inbetween arcs
+        # are arcs after a target_level change
+        for line_nr, hline in line_tree.items():
+            out_node = self.graph.node(hline['out_node'])
+            # link line with highest flow
+            downstream_line_old = next(iter(sorted(out_node.outflow(Definitions.DEBIET_DB),
+                                                key=lambda l: (abs(l.debiet_db) if l.debiet_db is not None else 0) + (0 if (l.target_level is None or hline['target_level'] is None or hline['target_level'] < l.target_level) else 1000), reverse=True)), None)
+            # hline['downstream_line_nr'] = downstream_line.nr if downstream_line else None
+            downstream_line = self.graph.lines[hline['downstream_line_nr']] if hline['downstream_line_nr'] is not None else None
+
+            if hline.get('id') in [474252, 140888]:
+                a = 1
+
+            if hline['downstream_line_nr'] is None or not downstream_line_old:
+                a = 1
+
+                start_lines[line_nr] = {
+                    'line_nr': line_nr,
+                    'point': out_node.point,
+                    'children': [],
+                    'parent': None,
+                    # attributes to be filled later
+                    'target_level': None,
+                    'distance': None,
+                    'cum_weight': None,
+                    'min_category_in_path': None
+                }
+            elif (downstream_line.target_level is not None and
+                  hline.get('target_level') is not None and
+                  downstream_line.target_level != hline.get('target_level')):
+                in_between_lines[line_nr] = {
+                    'line_nr': line_nr,
+                    'point': out_node.point,  # out_vertex.point()
+                    'children': [],
+                    'parent': None,
+                    # attributes to be filled later
+                    'target_level': None,
+                    'distance': None,
+                    'cum_weight': None,
+                    'min_category_in_path': None
+                }
+
+        # for all lines, set upstream arcs. Set only the one, who has the current arc as downstream arc (so joining
+        # streams are forced into a tree structure with no alternative paths to same point
+        for line_nr, hline in line_tree.items():
+            if hline.get('id') in [474252, 140888]:
+                a = 1
+
+            if hline.get('tree_end'):
+                hline['upstream_line_nrs'] = []
+            else:
+                hline['upstream_line_nrs'] = [
+                    line.nr for line in self.graph.node(hline['in_node']).inflow(Definitions.DEBIET_DB)]
+
+        # order upstream arcs based on 'cum weight'. An (arbitrary) weight to select the long bigger flows as
+        # main branch
+        def get_cum_weight_min_category(hline):
+            """sub-function for recursive weight calculation"""
+            line_cum_weight = hline['weight']
+            line_min_category = 4 if hline['category'] is None else hline['category']
+            for upstream_line_nr in hline['upstream_line_nrs']:
+                cum_weight, min_category = get_cum_weight_min_category(line_tree[upstream_line_nr])
+                line_cum_weight += cum_weight
+                line_min_category = min(line_min_category, min_category)
+            hline['cum_weight'] = max(hline['cum_weight'], line_cum_weight)
+            hline['min_category_in_path'] = min(hline['min_category_in_path'], line_min_category)
+            return line_cum_weight, line_min_category
+
+        # get cum_weight and sort upstream_arcs
+        for start_sline in start_lines.values():
+            start_sline['cum_weight'], start_sline['min_category_in_path'] = get_cum_weight_min_category(
+                line_tree[start_sline['line_nr']])
+            start_sline['target_level'] = line_tree[start_sline['line_nr']]['target_level']
+            start_sline['weight'] = start_sline['cum_weight']
+            # todo: set distance correct
+            # start_arc['distance'] = start_arc['distance']
+
+        # get cum_weight and sort upstream_arcs
+        for start_bline in in_between_lines.values():
+            start_bline['cum_weight'], start_bline['min_category_in_path'] = get_cum_weight_min_category(
+                line_tree[start_bline['line_nr']])
+            start_bline['target_level'] = line_tree[start_bline['line_nr']]['target_level']
+            start_bline['weight'] = start_bline['cum_weight']
+            # todo: set distance correct
+            # start_arc['distance'] = start_arc['distance']
+
+        for hline in line_tree.values():
+            hline['upstream_line_nrs'].sort(key=lambda nr: line_tree[nr]['cum_weight'], reverse=True)
+
+        # link arcs to start and inbetween arcs to get area structure
+        def loop(start_line_nr, line_nr):
+            hline = line_tree[line_nr]
+            hline['area_start_line_nr'] = start_line_nr
+            if line_nr in in_between_lines:
+                start_line_nr = line_nr
+            for upstream_line_nr in hline['upstream_line_nrs']:
+                loop(start_line_nr, upstream_line_nr)
+
+        for start_line_nr in start_lines.keys():
+            loop(start_line_nr, start_line_nr)
+        # for in_between_arc in start_arcs.keys():
+        #     loop(in_between_arc, in_between_arc)
+
+        # make start arc tree structure to link upstream areas to start arcs
+        for inbetween_line_nr, in_between_item in in_between_lines.items():
+            hline = line_tree[inbetween_line_nr]
+            downstream_area_line_nr = line_tree[hline['downstream_line_nr']]['area_start_line_nr']
+            if downstream_area_line_nr in start_lines:
+                start_lines[downstream_area_line_nr]['children'].append(in_between_item)
+            elif downstream_area_line_nr in in_between_lines:
+                in_between_lines[downstream_area_line_nr]['children'].append(in_between_item)
+            else:
+                # this should not happen!
+                pass
+
+        # sort area start arcs and nested (inbetween) area arcs
+        start_lines = sorted(start_lines.values(), key=lambda start_l: start_l['cum_weight'], reverse=True)
+
+        def sort_line_list_on_weight(area_line):
+            area_line['children'].sort(key=lambda arc_d: arc_d['cum_weight'], reverse=True)
+            for arc_child in area_line['children']:
+                sort_line_list_on_weight(arc_child)
+
+        for start_line in start_lines:
+            sort_line_list_on_weight(start_line)
+
+        # store tree and start points
+        self.arc_tree = line_tree
+        self.start_arcs = start_lines
+
+        return line_tree, start_lines
+
+    def get_tree_data(self, root_node, category=4):
+        # todo: move part outside of this class?
+        # called when startpoint has been selected
+        # get layers and make them empty
+        if self.start_arc_tree is None:
+            return
+
+        if self.arc_tree is None:
+            self.build_tree()
+
+        ids = [feat.id() for feat in self._virtual_tree_layer.getFeatures()]
+        self._virtual_tree_layer.dataProvider().deleteFeatures(ids)
+
+        ids = [feat.id() for feat in self._endpoint_layer.getFeatures()]
+        self._endpoint_layer.dataProvider().deleteFeatures(ids)
+
+        features = []
+        points = []
+
+        def add_line(hydrovak):
+            feat = QgsFeature()
+            feat.setGeometry(hydrovak['feature'].geometry())
+
+            feat.setAttributes([
+                hydrovak['length'],
+                int(hydrovak.get('feat_id')),
+                int(hydrovak.get('hydro_id')),
+                make_type(hydrovak.get('depth'), float),
+                make_type(hydrovak.get('variant_min_depth'), float),
+                make_type(hydrovak.get('variant_max_depth'), float),
+                make_type(hydrovak.get('target_level'), float),
+                make_type(hydrovak.get('category'), int),
+            ])
+            features.append(feat)
+            return feat
+
+        def add_point(feat_id, typ, node_nr):
+            """create endpoint and add to addpoint layer"""
+            p = self.graph.node(node_nr).point
+            feat = QgsFeature()
+            feat.setGeometry(QgsGeometry.fromPointXY(QgsPointXY(p[0], p[1])))
+            feat.setAttributes([
+                int(feat_id),
+                str(feat_id),
+                typ,
+                node_nr])
+            points.append(feat)
+            return feat
+
+        def get_stat(branch_value, recursive_value, func=min):
+            branch_value = make_type(branch_value, float, None)
+            if recursive_value is None and branch_value is None:
+                new_value = None
+            else:
+                new_value = func([val for val in [recursive_value, branch_value] if val is not None])
+            return new_value
+
+        def loop_upstream_arcs(hydrovak, parent_tree_item, tree_item, target_level, distance):
+            hydrovak['end_arc_type'] = ''
+
+            for i, upstream_line_nr in enumerate(hydrovak['upstream_line_nrs']):
+                new_parent_tree_item = None
+                upstream_hydrovak = self.arc_tree[upstream_line_nr]
+
+                if upstream_hydrovak['target_level'] is not None and \
+                        upstream_hydrovak['target_level'] != target_level:
+                    # do something with keeping last target_level
+                    endpoint_feature = add_point(hydrovak['feat_id'], 'target', hydrovak['in_node'])
+                    # stop for this branch
+                    hydrovak['end_arc_type'] = 'target'
+                    continue
+                elif upstream_hydrovak['min_category_in_path'] > category:
+                    continue
+
+                upstream_hydrovak.update({
+                    'new_depth': get_stat(upstream_hydrovak['depth'], hydrovak['new_depth'], min),
+                    'new_variant_min_depth': get_stat(upstream_hydrovak['variant_min_depth'],
+                                                      hydrovak['new_variant_min_depth'], max),
+                    'new_variant_max_depth': get_stat(upstream_hydrovak['variant_max_depth'],
+                                                      hydrovak['new_variant_max_depth'], min),
+                    'distance': distance + hydrovak['length']
+                })
+
+                feature = add_line(upstream_hydrovak)
+
+                if i == 0:
+                    new_tree_item = LeggerTreeItem(upstream_hydrovak, parent_tree_item)
+                    if parent_tree_item is None:
+                        a = 1
+
+                    parent_tree_item.appendChild(new_tree_item)
+                    new_parent_tree_item = parent_tree_item
+                elif i == 1:
+                    new_tree_item = LeggerTreeItem(upstream_hydrovak, tree_item)
+                    tree_item.appendChild(new_tree_item)
+                    new_parent_tree_item = tree_item
+                else:
+                    # first insert dummy split
+                    split_hydrovak = hydrovak_class(
+                        {'hydro_id': 'tak {0}'.format(i),
+                         'tak': True,
+                         # 'line_feature': upstream_hydrovak['feature'],  # todo: correct??
+                         'distance': round(distance)
+                         },
+                        feature=feature)
+                    split_item = LeggerTreeItem(split_hydrovak, parent_tree_item)
+                    tree_item.insertChild(i - 2, split_item)
+                    new_tree_item = LeggerTreeItem(upstream_hydrovak, split_item)
+                    split_item.appendChild(new_tree_item)
+                    new_parent_tree_item = split_item
+
+                if len(upstream_hydrovak['upstream_line_nrs']) == 0:
+                    endpoint_feature = add_point(upstream_hydrovak['feat_id'], 'end', upstream_hydrovak['in_node'])
+                    upstream_hydrovak['end_arc_type'] = 'end'
+
+                loop_upstream_arcs(
+                    upstream_hydrovak,
+                    new_parent_tree_item,
+                    new_tree_item,
+                    (upstream_hydrovak['target_level']
+                     if upstream_hydrovak['target_level'] is not None else target_level),
+                    distance + hydrovak['length']
+                )
+
+        hydrovak = self.arc_tree[self.start_arc_tree]
+
+        hydrovak.update({
+            'new_depth': hydrovak['depth'],
+            'new_variant_min_depth': hydrovak['variant_min_depth'],
+            'new_variant_max_depth': hydrovak['variant_max_depth'],
+            'distance': 0
+        })
+
+        feature = add_line(hydrovak)
+
+        new_tree_item = LeggerTreeItem(hydrovak, root_node)
+        root_node.appendChild(new_tree_item)
+
+        loop_upstream_arcs(
+            hydrovak,
+            root_node,
+            new_tree_item,
+            hydrovak['target_level'],
+            0
+        )
+
+        self._virtual_tree_layer.dataProvider().addFeatures(features)
+        self._virtual_tree_layer.commitChanges()
+        self._virtual_tree_layer.updateExtents()
+        self._virtual_tree_layer.triggerRepaint()
+
+        self._endpoint_layer.dataProvider().addFeatures(points)
+        self._endpoint_layer.commitChanges()
+        self._endpoint_layer.updateExtents()
+        self._endpoint_layer.triggerRepaint()
+
+        return True
+
+    def get_start_arc_tree(self):
+        """
+        get tree with startarcs.
+        return: start_arc_tree, example of structure
+            {
+                'children': [
+                   ...startpoints,
+                   {
+                    'children': []
+                ]
+            }
+        """
+        if self.arc_tree is None:
+            self.build_tree()
+
+        # todo: target level change arcs ...
+        start_arc_tree = {
+            'children': self.start_arcs
+        }
+
+        return start_arc_tree
+
+    def set_tree_start_arc(self, id_start_arc):
+        """
+        set point (initial or next point) for expending path
+
+        qgs_start_point (int): start point of tree for (extension) of path
+        return: None
+        """
+
+        if id_start_arc == -1:
+            return
+
+        self.start_arc_tree = id_start_arc

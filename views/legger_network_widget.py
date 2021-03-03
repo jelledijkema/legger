@@ -1,10 +1,11 @@
 import logging
 from collections import OrderedDict
 
+from PyQt5.QtGui import QStandardItemModel, QStandardItem
 from qgis.PyQt import QtWidgets
-from qgis.PyQt.QtCore import QMetaObject, QSize, Qt, pyqtSignal, QVariant
+from qgis.PyQt.QtCore import QMetaObject, QSize, Qt, pyqtSignal, QVariant, QSortFilterProxyModel
 from qgis.PyQt.QtWidgets import (QApplication, QComboBox, QDockWidget, QGroupBox, QHBoxLayout, QLabel, QPlainTextEdit,
-                                 QPushButton, QSizePolicy, QSpacerItem, QTabWidget, QVBoxLayout, QWidget)
+                                 QPushButton, QSizePolicy, QSpacerItem, QTabWidget, QVBoxLayout, QWidget, QCompleter)
 from legger.qt_models.area_tree import AreaTreeItem, AreaTreeModel, area_class
 from legger.qt_models.legger_tree import LeggerTreeItem, LeggerTreeModel
 from legger.qt_models.profile import ProfileModel
@@ -15,6 +16,7 @@ from legger.utils.formats import try_round
 from legger.utils.legger_map_manager import LeggerMapManager
 from legger.utils.network_utils import LeggerMapVisualisation
 from legger.utils.new_network import NewNetwork
+from legger.utils.network import Network
 from legger.utils.user_message import messagebar_message
 from legger.views.input_widget import NewWindow
 from legger.views.kijk_legger_popup import KijkProfielPopup
@@ -22,7 +24,7 @@ from qgis._core import QgsFields
 from legger.sql_models.legger_views import create_legger_views
 
 from .network_graph_widgets import LeggerPlotWidget, LeggerSideViewPlotWidget
-from qgis.core import QgsFeature, QgsGeometry, QgsProject, QgsField
+from qgis.core import QgsFeature, QgsGeometry, QgsProject, QgsField, QgsPointXY
 from qgis.analysis import QgsVectorLayerDirector
 from sqlalchemy import and_, or_
 
@@ -48,6 +50,48 @@ PRE_SELECTED = 'opgegeven'
 STRATEGY_THIS = 'dit hydrovak'
 STRATEGY_DONWSTREAM_ALL = 'benedenstr. altijd'
 STRATEGY_DONWSTREAM_LESS = 'benedenstr. of meer'
+
+
+class ExtendedCombo(QComboBox):
+    def __init__(self, parent=None):
+        super(ExtendedCombo, self).__init__(parent)
+
+        self.setFocusPolicy(Qt.StrongFocus)
+        self.setEditable(True)
+        self.completer = QCompleter(self)
+
+        # always show all completions
+        self.completer.setCompletionMode(QCompleter.UnfilteredPopupCompletion)
+        self.pFilterModel = QSortFilterProxyModel(self)
+        self.pFilterModel.setFilterCaseSensitivity(Qt.CaseInsensitive)
+
+        self.completer.setPopup(self.view())
+
+        self.setCompleter(self.completer)
+
+        self.lineEdit().textEdited.connect(self.pFilterModel.setFilterFixedString)
+        self.completer.activated.connect(self.setTextIfCompleterIsClicked)
+
+    def setModel(self, model):
+        super(ExtendedCombo, self).setModel(model)
+        self.pFilterModel.setSourceModel(model)
+        self.completer.setModel(self.pFilterModel)
+
+    def setModelColumn(self, column):
+        self.completer.setCompletionColumn(column)
+        self.pFilterModel.setFilterKeyColumn(column)
+        super(ExtendedCombo, self).setModelColumn(column)
+
+    def view(self):
+        return self.completer.popup()
+
+    def index(self):
+        return self.currentIndex()
+
+    def setTextIfCompleterIsClicked(self, text):
+        if text:
+            index = self.findText(text)
+            self.setCurrentIndex(index)
 
 
 def interpolated_color(value, color_map, alpha=255):
@@ -169,8 +213,11 @@ class LeggerWidget(QDockWidget):
         director = QgsVectorLayerDirector(
             line_direct, field_nr, '2', '1', '3', 3)
 
-        self.network = NewNetwork(
-            line_direct, self.line_layer, director, None, self.vl_tree_layer, self.vl_endpoint_layer
+        self.network = Network(
+            spatialite_path=path_legger_db,
+            full_line_layer=self.line_layer,
+            virtual_tree_layer=self.vl_tree_layer,
+            endpoint_layer=self.vl_endpoint_layer
         )
 
         # add listeners
@@ -183,6 +230,7 @@ class LeggerWidget(QDockWidget):
         self.next_endpoint_button.clicked.connect(
             self.set_next_endpoint)
         self.begroeiings_combo.currentIndexChanged.connect(self.onSelectBegroeiingsVariant)
+        self.search_hydrovak.currentIndexChanged.connect(self.search_hydrovak_combo)
 
         self.kijk_variant_knop.clicked.connect(self.open_kijkprofiel_dialog)
 
@@ -207,6 +255,14 @@ class LeggerWidget(QDockWidget):
         first_area = root.child(0)
         self.area_model.setDataItemKey(first_area, 'selected', True)
 
+        self.hydrovak_model = QStandardItemModel()
+        self.hydrovak_model.appendRow(QStandardItem(''))
+        for hline in self.network.arc_tree.values():
+            item = QStandardItem(hline.get('code'))
+            self.hydrovak_model.appendRow(item)
+
+        self.search_hydrovak.setModel(self.hydrovak_model)
+
         self.track_nodes = []
         self._kijkprofiel_popup = None
 
@@ -214,6 +270,21 @@ class LeggerWidget(QDockWidget):
         self.init_depth = 0.8
         self.init_talud = 2
         self.init_reason = ''
+
+    def open_parents_recursive(self, index):
+        self.legger_tree_widget.setExpanded(index, True)
+        parent = index.parent()
+        if parent and parent.internalPointer():
+            self.open_parents_recursive(parent)
+
+    def search_hydrovak_combo(self):
+        hydrovak = self.search_hydrovak.currentText()
+        node = self.legger_model.rootItem.child(0)
+        index = self.legger_model.find_younger(self.legger_model.createIndex(node.row(), 0, node), 'code', hydrovak)
+        if index:
+            self.open_parents_recursive(index)
+            node = index.internalPointer()
+            self.legger_model.setDataItemKey(node, 'selected', Qt.Checked)
 
     def open_kijkprofiel_dialog(self):
 
@@ -573,7 +644,7 @@ class LeggerWidget(QDockWidget):
 
                 area_item = self.area_model.data(index, role=Qt.UserRole)
 
-                self.network.set_tree_start_arc(area_item.area.get('arc_nr'))
+                self.network.set_tree_start_arc(area_item.area.get('line_nr'))
 
                 self.legger_model.clear()
 
@@ -601,7 +672,7 @@ class LeggerWidget(QDockWidget):
                 node = self.area_model.data(index, role=Qt.UserRole)
                 feat = QgsFeature()
 
-                feat.setGeometry(QgsGeometry.fromPointXY(node.area.get('point')))
+                feat.setGeometry(QgsGeometry.fromPointXY(QgsPointXY(*node.area.get('point'))))
                 feat.setAttributes([
                     node.area.get('vertex_id')])
                 features.append(feat)
@@ -929,13 +1000,9 @@ class LeggerWidget(QDockWidget):
         self.button_bar_hlayout.addWidget(self.next_endpoint_button)
         self.next_endpoint_button.setDisabled(True)
 
-        self.search_hydrovak = QtWidgets.QLineEdit(self)
+        self.search_hydrovak = ExtendedCombo(self)
         self.search_hydrovak.setFixedWidth(200)
         self.button_bar_hlayout.addWidget(self.search_hydrovak)
-
-        self.search_hydrovak_botton = QPushButton(self)
-        self.button_bar_hlayout.addWidget(self.search_hydrovak_botton)
-        self.search_hydrovak_botton.setDisabled(True)
 
         self.child_selection_strategy_combo = QComboBox(self)
         self.button_bar_hlayout.addWidget(QLabel("doortrekken tot:"))
@@ -1071,6 +1138,4 @@ class LeggerWidget(QDockWidget):
         self.next_endpoint_button.setText(_translate(
             "DockWidget", "Volgend eindpunt", None))
         self.kijk_variant_knop.setText(_translate(
-            "DockWidget", "Definieer kijkprofiel", None))
-        self.search_hydrovak_botton.setText(_translate(
-            "DockWidget", "ga", None))
+            "DockWidget", "Definieer brede kijkprofiel", None))

@@ -142,7 +142,7 @@ class KijkProfielPopup(QWidget):  # , FORM_CLASS):
         self.input_width.setSingleStep(0.1)
         self.input_width.setObjectName("Invoer_waterbreedte")
         lbl = QtWidgets.QLabel(self)
-        lbl.setText("Breedte")
+        lbl.setText("Waterbreedte")
         self.form_row.addWidget(lbl, 0, 0)
         self.form_row.addWidget(self.input_width, 0, 1)
 
@@ -199,7 +199,7 @@ class KijkProfielPopup(QWidget):  # , FORM_CLASS):
         QtCore.QMetaObject.connectSlotsByName(self)
 
     def retranslateUi(self, Dialog):
-        Dialog.setWindowTitle(_translate("Dialog", "Definieer breder kijkprofiel", None))
+        Dialog.setWindowTitle(_translate("Dialog", "Definieer brede kijkprofiel", None))
         self.cancel_button.setText(_translate("Dialog", "Sluiten", None))
         self.save_button.setText(_translate("Dialog", "Opslaan", None))
         self.clear_button.setText(_translate("Dialog", "Maak leeg", None))

@@ -59,8 +59,8 @@ class LeggerMapManager(object):
             geometry_col)
 
         # todo: remove this filter when bidirectional islands are supported
-        if not add_to_map:
-            layer.setSubsetString('"direction"!=3')
+        # if not add_to_map:
+        #     layer.setSubsetString('"direction"!=3')
 
         if add_to_map:
             self.map_manager.add_layer_to_group(
