@@ -5,7 +5,8 @@ from PyQt5.QtGui import QStandardItemModel, QStandardItem
 from qgis.PyQt import QtWidgets
 from qgis.PyQt.QtCore import QMetaObject, QSize, Qt, pyqtSignal, QVariant, QSortFilterProxyModel
 from qgis.PyQt.QtWidgets import (QApplication, QComboBox, QDockWidget, QGroupBox, QHBoxLayout, QLabel, QPlainTextEdit,
-                                 QPushButton, QSizePolicy, QSpacerItem, QTabWidget, QVBoxLayout, QWidget, QCompleter)
+                                 QPushButton, QSizePolicy, QSpacerItem, QTabWidget, QVBoxLayout, QWidget, QCompleter,
+                                 QAbstractItemView)
 from legger.qt_models.area_tree import AreaTreeItem, AreaTreeModel, area_class
 from legger.qt_models.legger_tree import LeggerTreeItem, LeggerTreeModel
 from legger.qt_models.profile import ProfileModel
@@ -22,6 +23,7 @@ from legger.views.input_widget import NewWindow
 from legger.views.kijk_legger_popup import KijkProfielPopup
 from qgis._core import QgsFields
 from legger.sql_models.legger_views import create_legger_views
+from qgis._gui import QgsMapToolIdentifyFeature, QgsMapToolIdentify
 
 from .network_graph_widgets import LeggerPlotWidget, LeggerSideViewPlotWidget
 from qgis.core import QgsFeature, QgsGeometry, QgsProject, QgsField, QgsPointXY
@@ -92,6 +94,22 @@ class ExtendedCombo(QComboBox):
         if text:
             index = self.findText(text)
             self.setCurrentIndex(index)
+
+
+class clickTool(QgsMapToolIdentifyFeature):
+    # from https://gis.stackexchange.com/a/371172
+
+    def __init__(self, iface, layer, onClick):
+        self.iface = iface
+        self.canvas = self.iface.mapCanvas()
+        self.layer = layer
+        QgsMapToolIdentifyFeature.__init__(self, self.canvas, layer)
+        self.onClick = onClick
+
+    def canvasPressEvent(self, event):
+        found_features = self.identify(event.x(), event.y(), [self.layer], QgsMapToolIdentify.TopDownAll)
+        if found_features and len(found_features) > 0:
+            self.onClick(found_features)
 
 
 def interpolated_color(value, color_map, alpha=255):
@@ -207,11 +225,15 @@ class LeggerWidget(QDockWidget):
         self.map_visualisation = LeggerMapVisualisation(
             self.iface, self.line_layer.crs())
 
+        self.clickTool = clickTool(iface, self.vl_tree_layer, self.onMapClick)
+        self.click_tool_active = False
+        self.last_map_tool = None
+
         # init network
-        line_direct = self.layer_manager.get_line_layer(geometry_col='line')
-        field_nr = line_direct.fields().indexFromName('direction')
-        director = QgsVectorLayerDirector(
-            line_direct, field_nr, '2', '1', '3', 3)
+        # line_direct = self.layer_manager.get_line_layer(geometry_col='line')
+        # field_nr = line_direct.fields().indexFromName('direction')
+        # director = QgsVectorLayerDirector(
+        #     line_direct, field_nr, '2', '1', '3', 3)
 
         self.network = Network(
             spatialite_path=path_legger_db,
@@ -231,6 +253,7 @@ class LeggerWidget(QDockWidget):
             self.set_next_endpoint)
         self.begroeiings_combo.currentIndexChanged.connect(self.onSelectBegroeiingsVariant)
         self.search_hydrovak.currentIndexChanged.connect(self.search_hydrovak_combo)
+        self.map_search_button.clicked.connect(self.toggleMapTool)
 
         self.kijk_variant_knop.clicked.connect(self.open_kijkprofiel_dialog)
 
@@ -271,6 +294,29 @@ class LeggerWidget(QDockWidget):
         self.init_talud = 2
         self.init_reason = ''
 
+    def onMapClick(self, identifyFeatures):
+        if len(identifyFeatures):
+            hydro_id = identifyFeatures[0].mFeature.attribute('hydro_id')
+            node = self.legger_model.rootItem.child(0)
+            index = self.legger_model.find_younger(self.legger_model.createIndex(node.row(), 0, node), 'hydro_id', hydro_id)
+            if index:
+                self.select_hydrovak(index)
+                if self.click_tool_active:
+                    self.toggleMapTool()
+
+    def toggleMapTool(self):
+
+        if self.click_tool_active:
+            self.iface.mapCanvas().unsetMapTool(self.clickTool)
+            self.click_tool_active = False
+            if self.last_map_tool:
+                self.iface.mapCanvas().setMapTool(self.last_map_tool)
+                self.last_map_tool = None
+        else:
+            self.last_map_tool = self.iface.mapCanvas().mapTool()
+            self.iface.mapCanvas().setMapTool(self.clickTool)
+            self.click_tool_active = True
+
     def open_parents_recursive(self, index):
         self.legger_tree_widget.setExpanded(index, True)
         parent = index.parent()
@@ -278,13 +324,17 @@ class LeggerWidget(QDockWidget):
             self.open_parents_recursive(parent)
 
     def search_hydrovak_combo(self):
-        hydrovak = self.search_hydrovak.currentText()
+        code = self.search_hydrovak.currentText()
         node = self.legger_model.rootItem.child(0)
-        index = self.legger_model.find_younger(self.legger_model.createIndex(node.row(), 0, node), 'code', hydrovak)
+        index = self.legger_model.find_younger(self.legger_model.createIndex(node.row(), 0, node), 'code', code)
         if index:
-            self.open_parents_recursive(index)
-            node = index.internalPointer()
-            self.legger_model.setDataItemKey(node, 'selected', Qt.Checked)
+            self.select_hydrovak(index)
+
+    def select_hydrovak(self, index):
+        self.open_parents_recursive(index)
+        node = index.internalPointer()
+        self.legger_model.setDataItemKey(node, 'selected', Qt.Checked)
+        self.legger_tree_widget.scrollTo(index, QAbstractItemView.EnsureVisible)
 
     def open_kijkprofiel_dialog(self):
 
@@ -964,8 +1014,13 @@ class LeggerWidget(QDockWidget):
         self.area_model.dataChanged.disconnect(self.data_changed_area_model)
         self.begroeiings_combo.currentIndexChanged.disconnect(self.onSelectBegroeiingsVariant)
         self.kijk_variant_knop.clicked.disconnect(self.open_kijkprofiel_dialog)
+        self.search_hydrovak.currentIndexChanged.disconnect(self.search_hydrovak_combo)
+        self.map_search_button.clicked.disconnect(self.toggleMapTool)
 
         self.legger_model.setTreeWidget(None)
+
+        if self.click_tool_active:
+            self.toggleMapTool()
 
         self.closingWidget.emit()
         event.accept()
@@ -1003,6 +1058,9 @@ class LeggerWidget(QDockWidget):
         self.search_hydrovak = ExtendedCombo(self)
         self.search_hydrovak.setFixedWidth(200)
         self.button_bar_hlayout.addWidget(self.search_hydrovak)
+
+        self.map_search_button = QPushButton(self)
+        self.button_bar_hlayout.addWidget(self.map_search_button)
 
         self.child_selection_strategy_combo = QComboBox(self)
         self.button_bar_hlayout.addWidget(QLabel("doortrekken tot:"))
@@ -1139,3 +1197,6 @@ class LeggerWidget(QDockWidget):
             "DockWidget", "Volgend eindpunt", None))
         self.kijk_variant_knop.setText(_translate(
             "DockWidget", "Definieer brede kijkprofiel", None))
+
+        self.map_search_button.setText(_translate(
+            "DockWidget", "selecteer op kaart", None))
