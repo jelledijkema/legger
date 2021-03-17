@@ -31,7 +31,7 @@ class LeggerMapManager(object):
         self._hover_startpoint_layer = None
         self._selected_layer = None
 
-    def get_line_layer(self, add_to_map=False, geometry_col='geometry'):
+    def get_line_layer(self, add_to_map=False, geometry_col='GEOMETRY'):
         """ get QGis instance of hydrovak with kenmerken as layer
 
         add_to_map (bool): add layer to map, including default styling
@@ -43,7 +43,10 @@ class LeggerMapManager(object):
         def get_layer(spatialite_path, table_name, geom_column=''):
             uri2 = QgsDataSourceUri()
             uri2.setDatabase(spatialite_path)
-            uri2.setDataSource('', table_name, geom_column)
+            uri2.setDataSource(
+                '',
+                '(SELECT * FROM "{}")'.format(table_name) if add_to_map else table_name,
+                geom_column)
 
             return QgsVectorLayer(
                 uri2.uri(),
@@ -56,7 +59,8 @@ class LeggerMapManager(object):
             geometry_col)
 
         # todo: remove this filter when bidirectional islands are supported
-        layer.setSubsetString('"direction"!=3')
+        # if not add_to_map:
+        #     layer.setSubsetString('"direction"!=3')
 
         if add_to_map:
             self.map_manager.add_layer_to_group(

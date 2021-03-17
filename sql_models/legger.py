@@ -2,7 +2,7 @@ import datetime
 import logging
 
 from geoalchemy2.types import Geometry
-from sqlalchemy import (Boolean, Column, DateTime, Float, ForeignKey, Integer, String)
+from sqlalchemy import (Boolean, Column, DateTime, Float, ForeignKey, Integer, String, UniqueConstraint)
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql.expression import ClauseElement
@@ -101,6 +101,15 @@ class HydroObject(Base):
                                    ForeignKey(BegroeiingsVariant.__tablename__ + ".id"),
                                    index=True)
     opmerkingen = Column(String())
+    eindpunt_potentieel = Column(Boolean)
+    eindpunt_geselecteerd = Column(Boolean)
+    geforceerd_omgedraaid = Column(Boolean)
+    routing_gewicht = Column(Float)
+
+    kijkp_breedte = Column(Float)
+    kijkp_diepte = Column(Float)
+    kijkp_talud = Column(Float)
+    kijkp_reden = Column(String(30))
     # shape_length = Column(Float)
 
     # profielen = relationship("Profielen",
@@ -286,11 +295,13 @@ class GeselecteerdeProfielen(Base):
                         ForeignKey(Varianten.__tablename__ + ".id"),
                         index=True)
     selected_on = Column(DateTime, default=datetime.datetime.utcnow)
+    tot_verhang = Column(Float)
 
     hydro = relationship(HydroObject,
                          back_populates="geselecteerd")
 
     variant = relationship(Varianten)
+    UniqueConstraint('hydro_id', 'variant_id', name='hydro_variant_unique')
     # back_populates="geselecteerd")
 
 

@@ -84,7 +84,7 @@ class NewWindow(QtWidgets.QWidget):
 
         self.setup_ui()
 
-        self.variants = self.session.query(BegroeiingsVariant).order_by('-friction_manning')
+        self.variants = self.session.query(BegroeiingsVariant).order_by('friction_manning')
 
         self.begroeiings_combo.insertItems(
             0, [v.naam for v in self.variants]

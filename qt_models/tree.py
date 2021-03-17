@@ -9,7 +9,7 @@ from legger.utils.formats import try_round
 
 CHECKBOX_FIELD = 1
 INDICATION_HOVER = 2
-
+INDICATION_HOVER_FUNCTION = 3
 
 class BaseTreeItem(object):
     """
@@ -150,7 +150,7 @@ class BaseTreeModel(QtCore.QAbstractItemModel):
 
         item = index.internalPointer()
         if role == QtCore.Qt.DisplayRole:
-            if self.headers[index.column()].get('field_type') == INDICATION_HOVER:
+            if self.headers[index.column()].get('field_type') in (INDICATION_HOVER, INDICATION_HOVER_FUNCTION):
                 if item.data(index.column()):
                     return '*'
                 else:
@@ -171,6 +171,8 @@ class BaseTreeModel(QtCore.QAbstractItemModel):
         elif role == Qt.ToolTipRole:
             if self.headers[index.column()].get('field_type') == INDICATION_HOVER:
                 return item.data(index.column())
+            elif self.headers[index.column()].get('field_type') == INDICATION_HOVER_FUNCTION:
+                return self.headers[index.column()].get('hover_function')(item, index.column())
         elif role == QtCore.Qt.UserRole:
             if item:
                 return item

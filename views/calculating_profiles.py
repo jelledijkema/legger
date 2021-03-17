@@ -8,19 +8,19 @@
 import logging
 import time
 
-from qgis.PyQt import QtCore, QtGui, QtWidgets
-from qgis.PyQt.QtCore import pyqtSignal
-from qgis.PyQt.QtWidgets import QComboBox, QWidget
-from legger.sql_models.legger import BegroeiingsVariant, HydroObject, get_or_create
+from legger.sql_models.legger import BegroeiingsVariant, HydroObject
 from legger.sql_models.legger_database import LeggerDatabase
+from legger.sql_models.legger_database import load_spatialite
+from legger.utils.calc_gradient import calc_gradient
 from legger.utils.profile_match_a import doe_profinprof, maaktabellen
 from legger.utils.read_tdi_results import (get_timestamps, read_tdi_culvert_results, read_tdi_results,
                                            write_tdi_culvert_results_to_db, write_tdi_results_to_db)
 from legger.utils.redirect_flows_to_main_branches import redirect_flows
 from legger.utils.snap_points import snap_points
-import sqlite3
-from legger.sql_models.legger_database import load_spatialite
-from legger.utils.theoretical_profiles import Kb, create_theoretical_profiles, write_theoretical_profile_results_to_db
+from legger.utils.theoretical_profiles import create_theoretical_profiles, write_theoretical_profile_results_to_db
+from qgis.PyQt import QtCore, QtWidgets
+from qgis.PyQt.QtCore import pyqtSignal
+from qgis.PyQt.QtWidgets import QComboBox, QWidget
 
 log = logging.getLogger(__name__)
 
@@ -347,6 +347,10 @@ class ProfileCalculationWidget(QWidget):  # , FORM_CLASS):
         self.execute_step3()
         self.feedbacktext.setText("Alle taken uitgevoerd.")
 
+    def post_process(self):
+        calc_gradient(self.iface, self.polder_datasource)
+        self.feedbacktext.setText("Totaal gradient berekend")
+
     def setup_ui(self):
         self.verticalLayout = QtWidgets.QVBoxLayout(self)
         self.verticalLayout.setObjectName("verticalLayout")
@@ -475,6 +479,15 @@ class ProfileCalculationWidget(QWidget):  # , FORM_CLASS):
         self.box_run_all.addWidget(self.run_all_button)
         self.groupBox_run_all.setLayout(self.box_run_all)  # box toevoegen aan groupbox
 
+        # Assembling run all
+        self.run_post_process_button = QtWidgets.QPushButton(self)
+        self.run_post_process_button.clicked.connect(self.post_process)
+        self.groupBox_post_process = QtWidgets.QGroupBox(self)
+        self.groupBox_post_process.setTitle("Naverwerking")
+        self.box_run_post_process = QtWidgets.QHBoxLayout()
+        self.box_run_post_process.addWidget(self.run_post_process_button)
+        self.groupBox_post_process.setLayout(self.box_run_post_process)  # box toevoegen aan groupbox
+
         # Assembling feedback row
         self.feedbacktext = QtWidgets.QTextEdit(self)
         self.feedbackmessage = "Nog geen berekening uitgevoerd"
@@ -501,6 +514,7 @@ class ProfileCalculationWidget(QWidget):  # , FORM_CLASS):
         self.verticalLayout.addWidget(self.groupBox_step2)
         self.verticalLayout.addLayout(self.bottom_row)
         self.verticalLayout.addWidget(self.groupBox_run_all)
+        self.verticalLayout.addWidget(self.groupBox_post_process)
         self.verticalLayout.addLayout(self.feedback_row)
         self.verticalLayout.addLayout(self.exit_row)
 
@@ -521,5 +535,6 @@ class ProfileCalculationWidget(QWidget):  # , FORM_CLASS):
 
         self.pre_fill_button.setText("Vul profielen in waar duidelijk")
         self.run_all_button.setText("Run alle taken achter elkaar")
+        self.run_post_process_button.setText("Verhang op basis van gekozen legger")
 
         self.cancel_button.setText("Cancel")

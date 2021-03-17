@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 from legger.qt_models.legger_tree import LeggerTreeItem, hydrovak_class
-from qgis.core import QgsFeature, QgsFeatureRequest, QgsGeometry, QgsPointXY
 from qgis.analysis import QgsNetworkStrategy, QgsNetworkDistanceStrategy, QgsGraphBuilder
+from qgis.core import QgsFeature, QgsFeatureRequest, QgsGeometry, QgsPointXY
 
 from .formats import make_type
 
@@ -37,8 +37,6 @@ class AttributeProperter(QgsNetworkStrategy):
         else:
             value = feature[self.attribute]
         return value
-
-
 
 
 class NewNetwork(object):
@@ -96,59 +94,6 @@ class NewNetwork(object):
         self.arc_tree = None  # dictionary with tree data in format {[arc_nr]: {**arc_data}}
         self.start_arcs = None  # list of dicts with arc_nr, point (x, y), list childs, parent
 
-    def get_structure_bidirectional_group(self, arc_dict, group_vertexes):
-        """ Function not used.
-        Some old fragments and documentation to handle this 'bidirectional islands'
-
-        :return:
-
-        # situations:
-        # 1a. no way out, no way in --> skip
-        # 1b. no way out, one way in --> start at way in and stop on corner.
-        # 1c. no way out, multiple ways in --> start at ways in and stop on corners or when sides met.
-        # 2. one way out --> link everything to this point based on distance
-        # 3. multiple ways out --> shared flow over branches and found out main structure or something like that
-
-        idea - for all situations, use shortest distance
-        """
-
-        # todo: make this function...
-
-        def get_all_bidirectional_arcs(vertexes):
-            arcs = []
-            for vertex in vertexes:
-                arcs.extend([arc_nr for arc_nr in vertex.outgoingEdges() if arc_dict[arc_nr]['direction'] == 3])
-
-        arcs = []
-
-        in_arcs = [arc_nr for arc_nr in self.get_in_arc_nrs_of_vertex_nrs(group_vertexes)
-                   if arc_dict[arc_nr]['direction'] != 3]
-        out_arcs = [arc_nr for arc_nr in self.get_out_arc_nrs_of_vertex_nrs(group_vertexes)
-                    if arc_dict[arc_nr]['direction'] != 3]
-
-        if len(out_arcs) == 0:
-            # no way out
-            if len(in_arcs) == 0:
-                # remove all arcs
-                return get_all_bidirectional_arcs(group_vertexes), {}
-            elif len(in_arcs) == 1:
-                pass
-            else:
-                pass
-
-        elif len(out_arcs) == 1:
-            # one way out
-            pass
-
-        else:
-            # multiple ways out
-            pass
-
-        return [], {}
-        # (self.tree, self.cost) = QgsGraphAnalyzer.dijkstra(self.graph,
-        #                                                    self.id_start_tree,
-        #                                                    0)
-
     def hydrovak_class_tree_with_data(self):
 
         arc_tree = {}
@@ -185,164 +130,6 @@ class NewNetwork(object):
 
         return arc_tree
 
-    def get_bidirectional_islands(self, arc_tree=None):
-
-        if arc_tree is None:
-            arc_tree = self.hydrovak_class_tree_with_data()
-
-        output_islands = []
-        line_queue = {i: arc_tree[i] for i in range(self.graph.edgeCount()) if arc_tree[i].feature['direction'] == 3}
-
-        def find_connected_bidirectional_recursive(arc_nr):
-
-            arc = self.graph.edge(arc_nr)
-            if arc_nr in line_queue:
-                del line_queue[arc_nr]
-
-            bidirectional_line_island = [arc_nr]
-
-            connected_lines = self.graph.vertex(arc.fromVertex()).incomingEdges()
-            connected_lines += self.graph.vertex(arc.fromVertex()).outgoingEdges()
-            connected_lines += self.graph.vertex(arc.toVertex()).incomingEdges()
-            connected_lines += self.graph.vertex(arc.toVertex()).outgoingEdges()
-
-            for connected_line in connected_lines:
-                if connected_line in line_queue:
-                    bidirectional_line_island.extend(find_connected_bidirectional_recursive(connected_line))
-
-            return bidirectional_line_island
-
-        try:
-            line = next(iter(line_queue.values()))
-            while line:
-                output_islands.append(find_connected_bidirectional_recursive(line['arc_nr']))
-
-                # next for while loop
-                line = next(iter(line_queue.values()))
-        except StopIteration as e:
-            pass
-
-        return output_islands
-
-    def fill_bidirectional_gaps(self, arc_tree=None, bidirectional_islands=None):
-
-        raise NotImplementedError('functie niet geimplementeerd')
-
-        if arc_tree is None:
-            arc_tree = self.hydrovak_class_tree_with_data()
-
-        if bidirectional_islands is None:
-            bidirectional_islands = self.get_bidirectional_islands(self, arc_tree)
-
-        for island in bidirectional_islands:
-            vertexes = {}
-
-            # get inflow and outflow of vertexes
-            for arc_nr in island:
-                for vertex_nr in self.graph.edge(arc_nr).fromVertex():
-                    if vertex_nr in vertexes:
-                        continue
-                    vertex = self.graph.vertex(vertex_nr)
-                    inflow = sum(
-                        [abs(arc_tree[arc_nr]['flow_3di']) for arc_nr in vertex.outgoingEdges()
-                         if arc_tree[arc_nr]['flow_3di'] is not None])
-                    outflow = sum(
-                        [abs(arc_tree[arc_nr]['flow_3di']) for arc_nr in vertex.incomingEdges()
-                         if arc_tree[arc_nr]['flow_3di'] is not None])
-
-                    vertexes[vertex_nr] = inflow - outflow
-
-            # rate in between vertexes
-
-            # supply flows to arcs
-
-        return arc_tree
-
-    def re_distribute_flow(self):
-
-        vertex_done = [False for i in range(self.graph.vertexCount())]
-        arc_flow = [None for i in range(self.graph.edgeCount())]
-
-        arc_tree = self.hydrovak_class_tree_with_data()
-
-        # set initial vertex_queue on points with no upstream vertexes
-        vertex_queue = [i for i in range(self.graph.vertexCount()) if len(self.graph.vertex(i).outgoingEdges()) == 0]
-
-        current_vertex_nr = vertex_queue.pop()
-        while current_vertex_nr is not None:
-            current_vertex = self.graph.vertex(current_vertex_nr)
-
-            modified_flow_in = sum(
-                [abs(arc_flow[arc_id]) for arc_id in current_vertex.outgoingEdges() if arc_flow[arc_id] is not None])
-            original_flow_in = sum(
-                [abs(arc_tree[arc_nr]['flow_3di']) for arc_nr in current_vertex.outgoingEdges() if
-                 arc_tree[arc_nr]['flow_3di'] is not None])
-            original_flow_out = sum(
-                [abs(arc_tree[arc_nr]['flow_3di']) for arc_nr in current_vertex.incomingEdges() if
-                 arc_tree[arc_nr]['flow_3di'] is not None])
-
-            arcs = [arc_tree[arc_nr] for arc_nr in current_vertex.incomingEdges()]
-            arcs = sorted(arcs, key=lambda a: a['flow'])
-
-
-            # check if redistribution is required
-            rerouting_required = False
-            last_category = 100
-            categories_out = [arc['category'] for arc in arcs]
-            if categories_out:
-                rerouting_required = (min(categories_out) != max(categories_out) and min(categories_out) == 1)
-            else:
-                rerouting_required = False
-
-            if rerouting_required:
-                sum_flow_primary = sum(
-                    [abs(arc['flow_3di']) for arc in arcs if arc['category'] == 1 and arc['flow_3di'] is not None])
-
-                nr_not_primary = len([arc for arc in arcs if arc['category'] != 1])
-                primary_factor = (original_flow_out - nr_not_primary * min_flow) / sum_flow_primary
-                for arc in arcs:
-                    if arc['category'] == 1:
-                        arc['flow_corrected'] = primary_factor * arc['flow_3di']
-                    else:
-                        arc['flow_corrected'] = min_flow
-            else:
-                for arc in arcs:
-                    arc['flow_corrected'] = arc['flow_3di']
-
-            # compensate for changed flows upstream
-            change_flow_in = modified_flow_in - original_flow_in
-            if original_flow_out != 0:
-                percentual_change = 1.0 + change_flow_in / original_flow_out
-            else:
-                percentual_change = 1.0
-
-            if percentual_change < 0.0:
-                a = 1
-
-            for arc in arcs:
-                flow = arc['flow_corrected'] * percentual_change if arc['flow_corrected'] is not None else None
-                if arc.feature['reversed'] == 1:
-                    flow = -1 * flow
-                arc['flow_corrected'] = flow
-                arc_flow[arc['arc_nr']] = flow
-
-            vertex_done[current_vertex_nr] = True
-            # check if vertexes can be added to the flow
-            for arc in arcs:
-                if not vertex_done[arc['out_vertex']]:
-                    vertex = self.graph.vertex(arc['out_vertex'])
-                    complete = all([arc_flow[arc_nr] is not None for arc_nr in vertex.outgoingEdges()])
-                    if complete:
-                        vertex_queue.append(arc['out_vertex'])
-
-            # next
-            if vertex_queue:
-                current_vertex_nr = vertex_queue.pop()
-            else:
-                current_vertex_nr = None
-
-        return arc_flow, arc_tree
-
     def build_tree(self):
         """
         function that analyses tree and creates tree structure of network.
@@ -361,7 +148,7 @@ class NewNetwork(object):
             out_vertex = self.graph.vertex(arc['out_vertex'])
             # link arc with highest flow
             arc['downstream_arc'] = next(
-                iter(sorted(out_vertex.incomingEdges(), key=lambda nr: arc_tree[nr]['flow'] if arc_tree[nr]['flow'] is not None else 0, reverse=True)), None)
+                iter(sorted(out_vertex.incomingEdges(), key=lambda nr: abs(arc_tree[nr]['flow']) if arc_tree[nr]['flow'] is not None else 0, reverse=True)), None)
             if arc['downstream_arc'] is None:
                 start_arcs[arc_nr] = {
                     'arc_nr': arc_nr,

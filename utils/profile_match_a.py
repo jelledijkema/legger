@@ -12,7 +12,7 @@ matplotlib.use('AGG')
 import matplotlib.pyplot as plt
 import shapely
 import shapely.geometry
-from descartes import PolygonPatch
+# from descartes import PolygonPatch
 from matplotlib.pyplot import savefig
 
 logger = logging.getLogger(__name__)

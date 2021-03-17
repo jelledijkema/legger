@@ -43,7 +43,7 @@ def create_geom_line(coordinates, maincall=True):
 def read_tdi_results(path_model_db, path_result_db,
                      path_result_nc, path_legger_db,
                      timestep=-1,
-                     max_link_distance=5.0,
+                     max_link_distance=1.0,
                      match_criteria=3):
     """ joins hydoobjects to 3di-flowlines (through channels) and add the discharge of the selected timestep
 

@@ -8,7 +8,23 @@ from legger.utils.formats import transform_none
 from qgis.PyQt.QtCore import Qt
 from qgis.PyQt.QtGui import QBrush, QColor, QIcon
 
-from .tree import BaseTreeItem, BaseTreeModel, CHECKBOX_FIELD, INDICATION_HOVER
+from .tree import BaseTreeItem, BaseTreeModel, CHECKBOX_FIELD, INDICATION_HOVER, INDICATION_HOVER_FUNCTION
+
+def to_string(value):
+    if value is None:
+        return '-'
+    try:
+        return "{:.2f}".format(value)
+    except ValueError:
+        return '-'
+
+def kijkprofiel_function(item, column_index):
+    return "diepte: {} m\nwaterbreedte: {} m\ntalud: {}\nreden: {}".format(
+        to_string(item.hydrovak.get('kijkp_diepte')),
+        to_string(item.hydrovak.get('kijkp_breedte')),
+        to_string(item.hydrovak.get('kijkp_talud')),
+        item.hydrovak.get('kijkp_reden')
+    )
 
 # field and display config of 'hydrovakken'
 HORIZONTAL_HEADERS = (
@@ -24,11 +40,11 @@ HORIZONTAL_HEADERS = (
     {'field': 'distance', 'header': 'afstand', 'show': False, 'column_width': 50},
     {'field': 'length', 'header': 'Lengte', 'round': 0, 'show': True, 'column_width': 50},
     {'field': 'category', 'header': 'cat', 'header_tooltip': 'categorie waterlichaam', 'column_width': 30},
-    {'field': 'begroeiingsvariant_id', 'header': 'beg', 'header_tooltip': 'gezette begroeiingsvariant id', 'column_width': 40},
+    {'field': 'begroeiingsvariant_id', 'header': 'vbeg', 'header_tooltip': 'vooraf gezette begroeiingsvariant id', 'column_width': 40},
     {'field': 'flow', 'header': 'debiet', 'round': 3, 'show': True, 'column_width': 50},
     {'field': 'target_level', 'show': False, 'column_width': 50},
     {'field': 'depth', 'header': 'diepte', 'show': False, 'column_width': 50},
-    {'field': 'width', 'header': 'breedte', 'show': False, 'column_width': 50},
+    {'field': 'width', 'header': 'breedte', 'show': True, 'column_width': 50},
     {'field': 'variant_min_depth', 'show': False, 'column_width': 60},
     {'field': 'variant_max_depth', 'show': False, 'column_width': 60},
     {'field': 'selected_depth_tmp', 'header': 'sel d', 'header_tooltip': 'geselecteerde diepte tijdens hover over varianten', 'column_width': 60},
@@ -41,6 +57,7 @@ HORIZONTAL_HEADERS = (
     {'field': 'score', 'show': True, 'header_tooltip': 'score fit', 'column_width': 50},
     {'field': 'selected_variant_id', 'show': False, 'column_width': 100},
     {'field': 'selected_remarks', 'header': 'opm', 'header_tooltip': 'opmerkingen bij hydrovak', 'show': True, 'column_width': 30, 'field_type': INDICATION_HOVER},
+    {'field': 'kijkp_reden', 'header': 'kp', 'header_tooltip': 'kijkprofiel', 'show': True, 'column_width': 30, 'field_type': INDICATION_HOVER_FUNCTION, 'hover_function': kijkprofiel_function},
 )
 
 
@@ -76,11 +93,14 @@ class hydrovak_class(object):
             'variant_max_depth': 'max_diepte',
             'selected_depth': 'geselecteerd_diepte',
             'selected_width': 'geselecteerd_breedte',
-            'verhang': 'verhang',
+            'verhang': 'geselecteerd_verhang',
             'selected_variant_id': 'geselecteerde_variant',
             'begroeiingsvariant_id': 'begroeiingsvariant_id',
             'selected_begroeiingsvariant_id': 'geselecteerde_begroeiingsvariant',
-            'selected_remarks': 'opmerkingen',
+            'kijkp_breedte': 'kijkp_breedte',
+            'kijkp_diepte': 'kijkp_diepte',
+            'kijkp_talud': 'kijkp_talud',
+            'kijkp_reden': 'kijkp_reden',
         }
 
         # set default values
@@ -260,6 +280,12 @@ class LeggerTreeModel(BaseTreeModel):
         item = index.internalPointer()
         if role == Qt.DisplayRole:
             if self.headers[index.column()].get('field_type') == INDICATION_HOVER:
+                if self.headers[index.column()].get('field_type') == INDICATION_HOVER:
+                    if item.data(index.column()):
+                        return '*'
+                    else:
+                        return None
+            elif self.headers[index.column()].get('field_type') == INDICATION_HOVER_FUNCTION:
                 if item.data(index.column()):
                     return '*'
                 else:
@@ -285,6 +311,8 @@ class LeggerTreeModel(BaseTreeModel):
         elif role == Qt.ToolTipRole:
             if self.headers[index.column()].get('field_type') == INDICATION_HOVER:
                 return item.data(index.column())
+            elif self.headers[index.column()].get('field_type') == INDICATION_HOVER_FUNCTION:
+                return self.headers[index.column()].get('hover_function')(item, index.column())
         elif role == Qt.DecorationRole and HORIZONTAL_HEADERS[index.column()]['field'] == 'add':
             return QIcon(':/plugins/legger/media/plus.png')
         elif role == Qt.UserRole:
