@@ -2,7 +2,8 @@ import unittest
 import os.path
 from shutil import copyfile
 from legger.utils.profile_match_a import doe_profinprof, maaktabellen
-from pyspatialite import dbapi2 as dbapi
+import sqlite3
+from legger.sql_models.legger_database import load_spatialite
 
 test_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'data')
 
@@ -24,7 +25,8 @@ class TestProfileMatch(unittest.TestCase):
 
     def test_all_together(self):
 
-        con_legger = dbapi.connect(self.legger_db)
+        con_legger = load_spatialite(self.legger_db)
+
         maaktabellen(con_legger.cursor())
         con_legger.commit()
         doe_profinprof(con_legger.cursor(), con_legger.cursor())

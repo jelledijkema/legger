@@ -5,10 +5,11 @@
 import logging
 import os
 
-from PyQt4.QtCore import Qt, QObject
+from qgis.PyQt.QtCore import Qt, QObject
 from qgis.utils import plugins
 from qgis.gui import QgsMessageBar
-from PyQt4.QtGui import QAction, QIcon, QMenu
+from qgis.PyQt.QtWidgets import QAction, QMenu
+from qgis.PyQt.QtGui import QIcon
 
 from legger.utils.user_message import messagebar_message
 from legger.views.calculating_profiles import ProfileCalculationWidget
@@ -67,7 +68,7 @@ class SetBegroeiingsvariant(QObject):
                 self.popupMenu.addAction(action)
                 action.triggered.connect(callback_factory(variant.id))
         except:
-            log.warn('not able to get begroeiingsvarianten')
+            log.warning('not able to get begroeiingsvarianten')
 
     def remove_variant_items(self):
 

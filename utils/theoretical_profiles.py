@@ -1,10 +1,11 @@
-from pandas import DataFrame
-from pyspatialite import dbapi2 as sql
-
 import logging
+
 import numpy as np
 import pandas as pd
 from legger.sql_models.legger import Varianten, get_or_create
+from pandas import DataFrame
+import sqlite3
+from legger.sql_models.legger_database import load_spatialite
 
 log = logging.getLogger('legger.' + __name__)
 
@@ -15,7 +16,7 @@ Boundary Conditions
 Km = 25  # Manning coefficient in m**(1/3/s)
 Kb = 23  # Bos and Bijkerk coefficient in 1/s
 
-ini_waterdepth = 0.30  # Initial water depth (m).
+ini_waterdepth = 0.20  # Initial water depth (m).
 default_minimal_waterdepth = ini_waterdepth
 min_ditch_bottom_width = 0.5  # (m) Ditch bottom width can not be smaller dan 0,5m.
 default_minimal_bottom_width = min_ditch_bottom_width
@@ -68,11 +69,13 @@ def read_spatialite(cursor):
 
 def calc_pitlo_griffioen(flow, ditch_bottom_width, water_depth, slope, friction_manning, friction_begroeiing,
                          begroeiingsdeel):
-    ditch_circumference = (ditch_bottom_width * np.sqrt(begroeiingsdeel) +
-                           (np.sqrt((water_depth * np.sqrt(begroeiingsdeel)) ** 2 +
-                                    (slope * water_depth * np.sqrt(begroeiingsdeel)) ** 2)) +
-                           (np.sqrt((water_depth * np.sqrt(begroeiingsdeel)) ** 2 +
-                                    (slope * water_depth * np.sqrt(begroeiingsdeel)) ** 2)))
+	
+    ditch_circumference = (ditch_bottom_width * np.sqrt(1 - begroeiingsdeel) +
+                           (np.sqrt((water_depth * np.sqrt(1 - begroeiingsdeel)) ** 2 +
+                                    (slope * water_depth * np.sqrt(1 - begroeiingsdeel)) ** 2)) +
+                           (np.sqrt((water_depth * np.sqrt(1 - begroeiingsdeel)) ** 2 +
+                                    (slope * water_depth * np.sqrt(1 - begroeiingsdeel)) ** 2)))
+	
     total_cross_section_area = (ditch_bottom_width + water_depth * slope) * water_depth
 
     A_1 = (1 - begroeiingsdeel) * total_cross_section_area
@@ -143,6 +146,8 @@ def calc_profile_variants_for_all(hydro_objects,
                                         'normative_flow', 'gradient', 'friction_manning', 'friction_begroeiing',
                                         'begroeiingsdeel', 'surge'])
 
+    hydro_objects.DIEPTE = pd.to_numeric(hydro_objects.DIEPTE, downcast='float', errors='coerce')
+
     for row in hydro_objects.itertuples():
 
         if depth_mapping_field and type(store_all_from_depth) == dict:
@@ -154,7 +159,7 @@ def calc_profile_variants_for_all(hydro_objects,
         else:
             to_depth = store_all_to_depth
 
-        to_depth = max(to_depth, row.DIEPTE * 1.2 if pd.notnull(row.DIEPTE) else None)
+        to_depth = max(to_depth, row.DIEPTE * 1.2 if pd.notna(row.DIEPTE) and pd.notnull(row.DIEPTE) else to_depth)
 
         try:
             variants_table = variants_table.append(
@@ -242,12 +247,12 @@ def calc_profile_variants_for_hydro_object(
                 raise e
 
             gradient_pitlo_griffioen = calc_pitlo_griffioen(
-                normative_flow, ditch_bottom_width, water_depth, slope,
+                abs(normative_flow), ditch_bottom_width, water_depth, slope,
                 friction_manning, friction_begroeiing, begroeiingsdeel)
 
             # loop until gradient is lower than norm or profile gets wider than max_width
             # if first try is wider, this (to wide) profile is stored
-            if ditch_width + 0.05 > max_ditch_width:
+            if ditch_width + 0.0 > max_ditch_width:
                 break
 
         # store
@@ -290,8 +295,9 @@ def create_theoretical_profiles(legger_db_filepath, gradient_norm, bv):
     return: calculated profile variant
     """
 
-    conn = sql.connect(legger_db_filepath)
-    conn.row_factory = sql.Row
+    conn = load_spatialite(legger_db_filepath)
+
+    conn.row_factory = sqlite3.Row
     cursor = conn.cursor()
 
     # Part 1: read SpatiaLite
@@ -311,23 +317,31 @@ def create_theoretical_profiles(legger_db_filepath, gradient_norm, bv):
 
     # additional: set max on 1.2 times th maximal depth within the specific category
     cursor.execute(
-        "Select categorieoppwaterlichaam, max(diepte) as max_diepte from hydroobjects_kenmerken GROUP BY categorieoppwaterlichaam ORDER BY categorieoppwaterlichaam ")
+        "SELECT categorieoppwaterlichaam, max(diepte) as max_diepte FROM hydroobjects_kenmerken "
+        "WHERE diepte > 0 AND diepte < 10 GROUP BY categorieoppwaterlichaam ORDER BY categorieoppwaterlichaam ")
     categories_max_depth = cursor.fetchall()
 
     last_category = 15
     for cat in categories_max_depth:
+        try:
+            cat_max_depth = cat['max_diepte'] * 1.2
+        except TypeError as e:
+            log.warning('category max depth caclulation fault. Max depth is {} of type {}'.format(
+                cat['max_diepte'], type(cat['max_diepte'])))
+            cat_max_depth = 999
+
         if cat['categorieoppwaterlichaam'] in max_depth_settings:
+
             max_depth_settings[cat['categorieoppwaterlichaam']] = min(
-                cat['max_diepte'] * 1.2, last_category, max_depth_settings[cat['categorieoppwaterlichaam']])
+                cat_max_depth, last_category, max_depth_settings[cat['categorieoppwaterlichaam']])
         else:
-            max_depth_settings[cat['categorieoppwaterlichaam']] = min(cat['max_diepte'] * 1.2, last_category)
+            max_depth_settings[cat['categorieoppwaterlichaam']] = min(cat['max_diepte'] * cat_max_depth)
 
     default_slope = {cat['categorie']: cat['default_talud'] for cat in all_categories
                      if cat['default_talud'] is not None}
 
-    for category, default_slope in default_slope.items():
-        hydro_objects.loc[
-            (pd.isnull(hydro_objects.slope)) & (hydro_objects.category == category), 'slope'] = default_slope
+    for category, slope in default_slope.items():
+        hydro_objects.loc[(pd.isnull(hydro_objects.slope)) & (hydro_objects.category == category), 'slope'] = slope
 
     hydro_objects.loc[(hydro_objects.grondsoort == "veenweide") & (hydro_objects.slope < 3.0), 'slope'] = 3.0
     for cat, slope in default_slope.items():

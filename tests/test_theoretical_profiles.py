@@ -2,7 +2,7 @@ import unittest
 import os.path
 from shutil import copyfile
 from legger.utils.theoretical_profiles import create_theoretical_profiles, write_theoretical_profile_results_to_db
-
+from legger.sql_models.legger import BegroeiingsVariant
 
 test_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'data')
 
@@ -24,9 +24,11 @@ class TestTheoreticalProfiles(unittest.TestCase):
 
     def test_all_together(self):
 
-        profiles = create_theoretical_profiles(self.legger_db)
+        bv = BegroeiingsVariant()
 
-        write_theoretical_profile_results_to_db(profiles, self.legger_db)
+        profiles = create_theoretical_profiles(self.legger_db, 2, bv)
+
+        write_theoretical_profile_results_to_db(profiles, self.legger_db, 2, bv)
 
         pass
 

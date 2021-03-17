@@ -5,7 +5,8 @@ from legger.utils.read_tdi_results import (
     read_tdi_results, write_tdi_results_to_db, read_tdi_culvert_results,
     write_tdi_culvert_results_to_db)
 from legger.sql_models.legger_views import create_legger_views
-from pyspatialite import dbapi2 as dbapi
+import sqlite3
+from legger.sql_models.legger_database import load_spatialite
 
 test_data_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'data')
 
@@ -59,11 +60,13 @@ class TestReadTdiResults(unittest.TestCase):
         write_tdi_results_to_db(result,
                                 self.legger_db)
 
-        con_legger = dbapi.connect(self.legger_db)
+        con_legger = load_spatialite(self.legger_db)
+
         create_legger_views(con_legger)
         
         results = read_tdi_culvert_results(
             self.model_db,
+            self.result_db,
             self.result_nc,
             self.legger_db
         )
@@ -91,7 +94,8 @@ class TestReadTdiResults(unittest.TestCase):
         write_tdi_results_to_db(result,
                                 self.legger_db)
 
-        con_legger = dbapi.connect(self.legger_db)
+        con_legger = load_spatialite(self.legger_db)
+
         create_legger_views(con_legger)
 
         # todo: check results

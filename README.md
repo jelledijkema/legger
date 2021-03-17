@@ -3,13 +3,14 @@
 Toolset for assigning 'legger' profiles to channels (hydro objects), based on
 the water gradiant calculated with 3di model results
 
-Current version is tested for QGIS version 2.18.26 and ThreeDiToolbox version 1.6
+
+Current version is tested for QGIS version 3.4 and 3.12 and ThreeDiToolbox version 1.13
 
 ## Installation
 
 Steps for installation of this QGIS plugin:
 
-1. Make sure the 64-bit version of QGIS 2.18.x is installed. Version 2.18.23 and 2.18.26 are known to work properly. Versions 2.18.27 and 2.18.28 of QGIS don't seem to support this plugin.
+1. Make sure the 64-bit version of QGIS 3.4 or higher is installed.
 
 2. Install the 3di QGIS plugin. See installation instruction on:
    https://github.com/nens/threedi-qgis-plugin/wiki
@@ -22,13 +23,15 @@ Steps for installation of this QGIS plugin:
    If these packages indeed are missing, download the wheels for pandas 0.23.4 and descartes 1.1.0
    Download shapely from the site:
    https://www.lfd.uci.edu/~gohlke/pythonlibs/#shapely
-   Probably you need the version Shapely‑1.6.xxx‑cp27‑cp27m‑win_amd64.whl
+   Probably you need the version Shapely‑1.xxx.xxx‑cp37‑cp37m‑win_amd64.whl
 
-4. Find the program root of your QGIS installation or OSGeo4w64 installation (Windows Batch file)
+4. Find the program root of your QGIS installation or OSGeo4w64 installation (Windows Batch file). Start the commandline through the OSGeo4W??.bat file.
+   Check if everything is working well be testing with the command `pip`. Sometimes you first have to run the command `bin\py3_env.bat`
 
 5. For PANDAS and DESCARTES: It might be required to update pip before installing pandas and descartes: 
    ```
     python -m pip install --upgrade pip
+    pip install wheel
    ```
    Then:
    ```
@@ -48,7 +51,7 @@ Steps for installation of this QGIS plugin:
 6. For installing SHAPELY start a command prompt (cmd) and go to the QGIS or OSgeo4w64 root directory (cd xxxx)
    First remove the old version of shapely
    ```
-    del apps\python27\lib\site-packages\shapely.pth
+    del apps\python37\lib\site-packages\shapely.pth
    ```
    and install new version
    ```
@@ -57,16 +60,16 @@ Steps for installation of this QGIS plugin:
 
 7. Copy the legger tool directory (the directory containing this readme) to the qgis plugin folder
    This folder is situated under:
-   <<user directory>>\.qgis\python\plugins
+   <<user directory>>\AppData\Roaming\QGIS\QGIS3\profiles\default\python\plugins\legger
    
    Make sure the name of the folder is called "legger"
    
  ## Alternative steps
    
 8. If the plugin doesn't recognize packages (like the just installed pandas and descartes) you can copy the packages to:
-   <<user directory>>\.qgis\python\plugins\legger\external
+   <<user directory>>\AppData\Roaming\QGIS\QGIS3\profiles\default\python\plugins\legger\external
    
-   In practice that means you already have a Python installed where these packages can be installed to. Just make sure you have Python       2.7.x installed when you decide to take this route.
+   In practice that means you already have a Python installed where these packages can be installed to. Just make sure you have Python 3.7.x installed when you decide to take this route.
 
 ## development remarks
 

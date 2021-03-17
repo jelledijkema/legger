@@ -5,8 +5,8 @@ import logging
 from collections import OrderedDict
 
 import pyqtgraph as pg
-from PyQt4.QtCore import Qt
-from PyQt4.QtGui import QBrush, QColor
+from qgis.PyQt.QtCore import Qt
+from qgis.PyQt.QtGui import QBrush, QColor
 import numpy as np
 from legger.sql_models.legger import HydroObject, ProfielFiguren, Varianten
 from shapely.wkt import loads
