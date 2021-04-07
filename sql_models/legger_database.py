@@ -3,11 +3,18 @@ import logging
 import os
 
 from osgeo import ogr
-from ThreeDiToolbox.utils.threedi_database import (ThreediDatabase)
+from ThreeDiToolbox.utils.threedi_database import ThreediDatabase, load_spatialite as set_spatial_extension
+import sqlite3
 
 from .legger import Base
 
 log = logging.getLogger(__name__)
+
+
+def load_spatialite(path: str):
+    con = sqlite3.connect(path)
+    set_spatial_extension(con, '')
+    return con
 
 
 class LeggerDatabase(ThreediDatabase):

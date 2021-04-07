@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 import os
-from PyQt4.QtCore import QVariant
-from qgis.core import QgsField, QgsVectorLayer, QgsDataSourceURI, QgsMapLayerRegistry
+from qgis.PyQt.QtCore import QVariant
+from qgis.core import QgsField, QgsVectorLayer, QgsDataSourceUri, QgsProject
 from legger.utils.map_layers import LayerManager
 
 
@@ -31,7 +31,7 @@ class LeggerMapManager(object):
         self._hover_startpoint_layer = None
         self._selected_layer = None
 
-    def get_line_layer(self, add_to_map=False, geometry_col='geometry'):
+    def get_line_layer(self, add_to_map=False, geometry_col='GEOMETRY'):
         """ get QGis instance of hydrovak with kenmerken as layer
 
         add_to_map (bool): add layer to map, including default styling
@@ -41,9 +41,12 @@ class LeggerMapManager(object):
         """
 
         def get_layer(spatialite_path, table_name, geom_column=''):
-            uri2 = QgsDataSourceURI()
+            uri2 = QgsDataSourceUri()
             uri2.setDatabase(spatialite_path)
-            uri2.setDataSource('', table_name, geom_column)
+            uri2.setDataSource(
+                '',
+                '(SELECT * FROM "{}")'.format(table_name) if add_to_map else table_name,
+                geom_column)
 
             return QgsVectorLayer(
                 uri2.uri(),
@@ -56,13 +59,14 @@ class LeggerMapManager(object):
             geometry_col)
 
         # todo: remove this filter when bidirectional islands are supported
-        layer.setSubsetString('"direction"!=3')
+        # if not add_to_map:
+        #     layer.setSubsetString('"direction"!=3')
 
         if add_to_map:
             self.map_manager.add_layer_to_group(
                 self.network_layer_group,
                 layer,
-                os.path.join(self.style_path, 'line.qml')
+                os.path.join(self.style_path, 'hydroobjects_kenmerken.qml')
             )
 
         return layer
@@ -100,7 +104,7 @@ class LeggerMapManager(object):
             self.map_manager.add_layer_to_group(
                 self.network_layer_group,
                 self._virtual_tree_layer,
-                os.path.join(self.style_path, 'tree_classified.qml')
+                os.path.join(self.style_path, 'verbonden_hydrovakken.qml')
             )
         return self._virtual_tree_layer
 
@@ -118,7 +122,7 @@ class LeggerMapManager(object):
             crs = self.get_line_layer().crs().authid()
             self._endpoint_layer = QgsVectorLayer(
                 "point?crs={0}".format(crs),
-                "endpoints",
+                "Eindpunten",
                 "memory")
 
             self._endpoint_layer.dataProvider().addAttributes([
@@ -183,7 +187,7 @@ class LeggerMapManager(object):
             crs = self.get_line_layer().crs().authid()
             self._hover_layer = QgsVectorLayer(
                 "linestring?crs={0}".format(crs),
-                "hover",
+                "Muisaanwijzer",
                 "memory")
 
             self._hover_layer.dataProvider().addAttributes([
@@ -214,7 +218,7 @@ class LeggerMapManager(object):
             crs = self.get_line_layer().crs().authid()
             self._selected_layer = QgsVectorLayer(
                 "linestring?crs={0}".format(crs),
-                "geselecteerd",
+                "Geselecteerd hydroobject",
                 "memory")
 
             self._selected_layer.dataProvider().addAttributes([
@@ -245,7 +249,7 @@ class LeggerMapManager(object):
             crs = self.get_line_layer().crs().authid()
             self._hover_startpoint_layer = QgsVectorLayer(
                 "point?crs={0}".format(crs),
-                "start_point_hover",
+                "Startpunt",
                 "memory")
 
             self._hover_startpoint_layer.dataProvider().addAttributes([

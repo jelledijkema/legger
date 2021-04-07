@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 from legger.qt_models.legger_tree import LeggerTreeItem, hydrovak_class
-from qgis.core import QgsFeature, QgsFeatureRequest, QgsGeometry, QgsPoint
-from qgis.networkanalysis import QgsArcProperter, QgsDistanceArcProperter, QgsGraphBuilder
+from qgis.analysis import QgsNetworkStrategy, QgsNetworkDistanceStrategy, QgsGraphBuilder
+from qgis.core import QgsFeature, QgsFeatureRequest, QgsGeometry, QgsPointXY
 
 from .formats import make_type
 
@@ -19,7 +19,7 @@ def merge_dicts(x, y):
     return z
 
 
-class AttributeProperter(QgsArcProperter):
+class AttributeProperter(QgsNetworkStrategy):
     """custom properter which returns property of input layer"""
 
     def __init__(self, attribute, attribute_index):
@@ -27,20 +27,16 @@ class AttributeProperter(QgsArcProperter):
         attribute (str): field name. Provide 'feat_id' to get feature id (requested through feature.id())
         attribute_index (list of int): List of field indexes of fields used by property function
         """
-        QgsArcProperter.__init__(self)
+        QgsNetworkStrategy.__init__(self)
         self.attribute = attribute
         self.attribute_index = attribute_index
 
-    def property(self, distance, feature):
+    def cost(self, distance, feature):
         if self.attribute == 'feat_id':
             value = feature.id()
         else:
             value = feature[self.attribute]
         return value
-
-    def requiredAttributes(self):
-        # Must be a list of the attribute indexes (int), not strings:
-        return self.attribute_index
 
 
 class NewNetwork(object):
@@ -74,11 +70,11 @@ class NewNetwork(object):
         self.id_field = id_field
 
         # build graph for network
-        properter_1 = distance_properter or QgsDistanceArcProperter()
-        properter_2 = AttributeProperter(id_field, [line_layer.dataProvider().fieldNameIndex(id_field)])
+        properter_1 = distance_properter or QgsNetworkDistanceStrategy()
+        properter_2 = AttributeProperter(id_field, [line_layer.dataProvider().fields().indexFromName(id_field)])
 
-        self.director.addProperter(properter_1)
-        self.director.addProperter(properter_2)
+        self.director.addStrategy(properter_1)
+        self.director.addStrategy(properter_2)
 
         if not self.line_layer.isValid():
             raise AttributeError('Linelayer is not valid')
@@ -98,68 +94,15 @@ class NewNetwork(object):
         self.arc_tree = None  # dictionary with tree data in format {[arc_nr]: {**arc_data}}
         self.start_arcs = None  # list of dicts with arc_nr, point (x, y), list childs, parent
 
-    def get_structure_bidirectional_group(self, arc_dict, group_vertexes):
-        """ Function not used.
-        Some old fragments and documentation to handle this 'bidirectional islands'
-
-        :return:
-
-        # situations:
-        # 1a. no way out, no way in --> skip
-        # 1b. no way out, one way in --> start at way in and stop on corner.
-        # 1c. no way out, multiple ways in --> start at ways in and stop on corners or when sides met.
-        # 2. one way out --> link everything to this point based on distance
-        # 3. multiple ways out --> shared flow over branches and found out main structure or something like that
-
-        idea - for all situations, use shortest distance
-        """
-
-        # todo: make this function...
-
-        def get_all_bidirectional_arcs(vertexes):
-            arcs = []
-            for vertex in vertexes:
-                arcs.extend([arc_nr for arc_nr in vertex.outArc() if arc_dict[arc_nr]['direction'] == 3])
-
-        arcs = []
-
-        in_arcs = [arc_nr for arc_nr in self.get_in_arc_nrs_of_vertex_nrs(group_vertexes)
-                   if arc_dict[arc_nr]['direction'] != 3]
-        out_arcs = [arc_nr for arc_nr in self.get_out_arc_nrs_of_vertex_nrs(group_vertexes)
-                    if arc_dict[arc_nr]['direction'] != 3]
-
-        if len(out_arcs) == 0:
-            # no way out
-            if len(in_arcs) == 0:
-                # remove all arcs
-                return get_all_bidirectional_arcs(group_vertexes), {}
-            elif len(in_arcs) == 1:
-                pass
-            else:
-                pass
-
-        elif len(out_arcs) == 1:
-            # one way out
-            pass
-
-        else:
-            # multiple ways out
-            pass
-
-        return [], {}
-        # (self.tree, self.cost) = QgsGraphAnalyzer.dijkstra(self.graph,
-        #                                                    self.id_start_tree,
-        #                                                    0)
-
     def hydrovak_class_tree_with_data(self):
 
         arc_tree = {}
         # create dicts with lines (arcs), required information and mark vertexes in bi-directional islands
-        for arc_nr in range(0, self.graph.arcCount()):
-            arc = self.graph.arc(arc_nr)
-            feat_id = int(arc.properties()[FEAT_ID_PROPERTER_NR])
-            request = QgsFeatureRequest().setFilterFid(feat_id)
-            line_feature = self.full_line_layer.getFeatures(request).next()
+        for arc_nr in range(0, self.graph.edgeCount()):
+            arc = self.graph.edge(arc_nr)
+            feat_id = int(arc.strategies()[FEAT_ID_PROPERTER_NR])
+            request = QgsFeatureRequest(feat_id)
+            line_feature = next(self.full_line_layer.getFeatures(request))
 
             direction = line_feature['direction']
             if direction == 3:
@@ -172,9 +115,9 @@ class NewNetwork(object):
                     # basic information
                     'feat_id': feat_id,
                     'arc_nr': arc_nr,
-                    'in_vertex': arc.inVertex(),
-                    'out_vertex': arc.outVertex(),
-                    'weight': (line_feature['debiet'] or 0) * arc.properties()[DISTANCE_PROPERTER_NR],
+                    'in_vertex': arc.toVertex(),
+                    'out_vertex': arc.fromVertex(),
+                    'weight': (line_feature['debiet'] or 0) * arc.strategies()[DISTANCE_PROPERTER_NR],
                     # info need to be generated later
                     'downstream_arc': None,
                     'upstream_arcs': None,
@@ -186,165 +129,6 @@ class NewNetwork(object):
             )
 
         return arc_tree
-
-    def get_bidirectional_islands(self, arc_tree=None):
-
-        if arc_tree is None:
-            arc_tree = self.hydrovak_class_tree_with_data()
-
-        output_islands = []
-        line_queue = {i: arc_tree[i] for i in range(self.graph.arcCount()) if arc_tree[i].feature['direction'] == 3}
-
-        def find_connected_bidirectional_recursive(arc_nr):
-
-            arc = self.graph.arc(arc_nr)
-            if arc_nr in line_queue:
-                del line_queue[arc_nr]
-
-            bidirectional_line_island = [arc_nr]
-
-            connected_lines = self.graph.vertex(arc.outVertex()).inArc()
-            connected_lines += self.graph.vertex(arc.outVertex()).outArc()
-            connected_lines += self.graph.vertex(arc.inVertex()).inArc()
-            connected_lines += self.graph.vertex(arc.inVertex()).outArc()
-
-            for connected_line in connected_lines:
-                if connected_line in line_queue:
-                    bidirectional_line_island.extend(find_connected_bidirectional_recursive(connected_line))
-
-            return bidirectional_line_island
-
-        try:
-            line = next(line_queue.itervalues())
-            while line:
-                output_islands.append(find_connected_bidirectional_recursive(line['arc_nr']))
-
-                # next for while loop
-                line = next(line_queue.itervalues())
-        except StopIteration, e:
-            pass
-
-        return output_islands
-
-    def fill_bidirectional_gaps(self, arc_tree=None, bidirectional_islands=None):
-
-        raise NotImplementedError('functie niet geimplementeerd')
-
-        if arc_tree is None:
-            arc_tree = self.hydrovak_class_tree_with_data()
-
-        if bidirectional_islands is None:
-            bidirectional_islands = self.get_bidirectional_islands(self, arc_tree)
-
-        for island in bidirectional_islands:
-            vertexes = {}
-
-            # get inflow and outflow of vertexes
-            for arc_nr in island:
-                for vertex_nr in self.graph.arc(arc_nr).inVertex():
-                    if vertex_nr in vertexes:
-                        continue
-                    vertex = self.graph.vertex(vertex_nr)
-                    inflow = sum(
-                        [abs(arc_tree[arc_nr]['flow_3di']) for arc_nr in vertex.outArc()
-                         if arc_tree[arc_nr]['flow_3di'] is not None])
-                    outflow = sum(
-                        [abs(arc_tree[arc_nr]['flow_3di']) for arc_nr in vertex.inArc()
-                         if arc_tree[arc_nr]['flow_3di'] is not None])
-
-                    vertexes[vertex_nr] = inflow - outflow
-
-            # rate in between vertexes
-
-            # supply flows to arcs
-
-        return arc_tree
-
-    def re_distribute_flow(self):
-
-        vertex_done = [False for i in range(self.graph.vertexCount())]
-        arc_flow = [None for i in range(self.graph.arcCount())]
-
-        arc_tree = self.hydrovak_class_tree_with_data()
-
-        # set initial vertex_queue on points with no upstream vertexes
-        vertex_queue = [i for i in range(self.graph.vertexCount()) if len(self.graph.vertex(i).outArc()) == 0]
-
-        current_vertex_nr = vertex_queue.pop()
-        while current_vertex_nr is not None:
-            current_vertex = self.graph.vertex(current_vertex_nr)
-
-            modified_flow_in = sum(
-                [abs(arc_flow[arc_id]) for arc_id in current_vertex.outArc() if arc_flow[arc_id] is not None])
-            original_flow_in = sum(
-                [abs(arc_tree[arc_nr]['flow_3di']) for arc_nr in current_vertex.outArc() if
-                 arc_tree[arc_nr]['flow_3di'] is not None])
-            original_flow_out = sum(
-                [abs(arc_tree[arc_nr]['flow_3di']) for arc_nr in current_vertex.inArc() if
-                 arc_tree[arc_nr]['flow_3di'] is not None])
-
-            arcs = [arc_tree[arc_nr] for arc_nr in current_vertex.inArc()]
-            arcs = sorted(arcs, key=lambda a: a['flow'])
-            if 387746 in [arc['hydro_id'] for arc in arcs]:
-                a = 1
-
-            # check if redistribution is required
-            rerouting_required = False
-            last_category = 100
-            categories_out = [arc['category'] for arc in arcs]
-            if categories_out:
-                rerouting_required = (min(categories_out) != max(categories_out) and min(categories_out) == 1)
-            else:
-                rerouting_required = False
-
-            if rerouting_required:
-                sum_flow_primary = sum(
-                    [abs(arc['flow_3di']) for arc in arcs if arc['category'] == 1 and arc['flow_3di'] is not None])
-
-                nr_not_primary = len([arc for arc in arcs if arc['category'] != 1])
-                primary_factor = (original_flow_out - nr_not_primary * min_flow) / sum_flow_primary
-                for arc in arcs:
-                    if arc['category'] == 1:
-                        arc['flow_corrected'] = primary_factor * arc['flow_3di']
-                    else:
-                        arc['flow_corrected'] = min_flow
-            else:
-                for arc in arcs:
-                    arc['flow_corrected'] = arc['flow_3di']
-
-            # compensate for changed flows upstream
-            change_flow_in = modified_flow_in - original_flow_in
-            if original_flow_out != 0:
-                percentual_change = 1.0 + change_flow_in / original_flow_out
-            else:
-                percentual_change = 1.0
-
-            if percentual_change < 0.0:
-                a = 1
-
-            for arc in arcs:
-                flow = arc['flow_corrected'] * percentual_change if arc['flow_corrected'] is not None else None
-                if arc.feature['reversed'] == 1:
-                    flow = -1 * flow
-                arc['flow_corrected'] = flow
-                arc_flow[arc['arc_nr']] = flow
-
-            vertex_done[current_vertex_nr] = True
-            # check if vertexes can be added to the flow
-            for arc in arcs:
-                if not vertex_done[arc['out_vertex']]:
-                    vertex = self.graph.vertex(arc['out_vertex'])
-                    complete = all([arc_flow[arc_nr] is not None for arc_nr in vertex.outArc()])
-                    if complete:
-                        vertex_queue.append(arc['out_vertex'])
-
-            # next
-            if vertex_queue:
-                current_vertex_nr = vertex_queue.pop()
-            else:
-                current_vertex_nr = None
-
-        return arc_flow, arc_tree
 
     def build_tree(self):
         """
@@ -364,7 +148,7 @@ class NewNetwork(object):
             out_vertex = self.graph.vertex(arc['out_vertex'])
             # link arc with highest flow
             arc['downstream_arc'] = next(
-                iter(sorted(out_vertex.inArc(), key=lambda nr: arc_tree[nr]['flow'], reverse=True)), None)
+                iter(sorted(out_vertex.incomingEdges(), key=lambda nr: abs(arc_tree[nr]['flow']) if arc_tree[nr]['flow'] is not None else 0, reverse=True)), None)
             if arc['downstream_arc'] is None:
                 start_arcs[arc_nr] = {
                     'arc_nr': arc_nr,
@@ -394,7 +178,7 @@ class NewNetwork(object):
         # streams are forced into a tree structure with no alternative paths to same point
         for arc_nr, arc in arc_tree.items():
             arc['upstream_arcs'] = [
-                nr for nr in self.graph.vertex(arc['in_vertex']).outArc()
+                nr for nr in self.graph.vertex(arc['in_vertex']).outgoingEdges()
                 if arc_tree[nr]['downstream_arc'] == arc_nr]
 
         # order upstream arcs based on 'cum weight'. An (arbitrary) weight to select the long bigger flows as
@@ -459,8 +243,7 @@ class NewNetwork(object):
                 pass
 
         # sort area start arcs and nested (inbetween) area arcs
-        start_arcs = start_arcs.values()
-        start_arcs.sort(key=lambda arc_d: arc_d['cum_weight'], reverse=True)
+        start_arcs = sorted(start_arcs.values(), key=lambda arc_d: arc_d['cum_weight'], reverse=True)
 
         def sort_arc_list_on_weight(area_arc):
             area_arc['children'].sort(key=lambda arc_d: arc_d['cum_weight'], reverse=True)
@@ -516,7 +299,7 @@ class NewNetwork(object):
             """create endpoint and add to addpoint layer"""
             p = self.graph.vertex(vertex_id).point()
             feat = QgsFeature()
-            feat.setGeometry(QgsGeometry.fromPoint(QgsPoint(p[0], p[1])))
+            feat.setGeometry(QgsGeometry.fromPointXY(QgsPointXY(p[0], p[1])))
             feat.setAttributes([
                 int(feat_id),
                 str(feat_id),
@@ -642,7 +425,7 @@ class NewNetwork(object):
         """
         arc_nrs = []
         for vertex_nr in vertex_nrs:
-            arc_nrs.extend(self.graph.vertex(vertex_nr).outArc())
+            arc_nrs.extend(self.graph.vertex(vertex_nr).outgoingEdges())
 
         return arc_nrs
 
@@ -654,7 +437,7 @@ class NewNetwork(object):
         """
         arc_nrs = []
         for vertex_nr in vertex_nrs:
-            arc_nrs.extend(self.graph.vertex(vertex_nr).inArc())
+            arc_nrs.extend(self.graph.vertex(vertex_nr).incomingEdges())
 
         return arc_nrs
 

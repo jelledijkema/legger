@@ -2,10 +2,10 @@ import datetime
 import logging
 
 from geoalchemy2.types import Geometry
-from sqlalchemy import (Column, DateTime, Float, ForeignKey, Integer, String, Boolean)
+from sqlalchemy import (Boolean, Column, DateTime, Float, ForeignKey, Integer, String, UniqueConstraint)
 from sqlalchemy.ext.declarative import declarative_base
-from sqlalchemy.sql.expression import ClauseElement
 from sqlalchemy.orm import relationship
+from sqlalchemy.sql.expression import ClauseElement
 
 logger = logging.getLogger('legger.sql_models.legger')
 
@@ -17,7 +17,7 @@ def get_or_create(session, model, defaults=None, **kwargs):
     if instance:
         return instance, False
     else:
-        params = dict((k, v) for k, v in kwargs.iteritems() if not isinstance(v, ClauseElement))
+        params = dict((k, v) for k, v in kwargs.items() if not isinstance(v, ClauseElement))
         params.update(defaults or {})
         instance = model(**params)
         session.add(instance)
@@ -54,7 +54,10 @@ class Waterdeel(Base):
     id = Column(Integer, primary_key=True, index=True)
     shape_length = Column(Float)
     shape_area = Column(Float)
-    geometry = Column("GEOMETRY", Geometry(geometry_type='MULTIPOLYGON', srid=28992))
+    geometry = Column(
+        "GEOMETRY",
+        Geometry(geometry_type='MULTIPOLYGON', srid=28992, spatial_index=True, management=True)
+    )
 
     def __str__(self):
         return u'Waterdeel {0}'.format(
@@ -81,7 +84,10 @@ class HydroObject(Base):
     extend_existing = True
 
     id = Column(Integer, primary_key=True, index=True)
-    geometry = Column("GEOMETRY", Geometry(geometry_type='MULTILINESTRING', srid=28992))
+    geometry = Column(
+        "GEOMETRY",
+        Geometry(geometry_type='MULTILINESTRING', srid=28992, spatial_index=True, management=True)
+    )
     code = Column(String(50), index=True)
     categorieoppwaterlichaam = Column(Integer)
     streefpeil = Column(Float)
@@ -95,6 +101,15 @@ class HydroObject(Base):
                                    ForeignKey(BegroeiingsVariant.__tablename__ + ".id"),
                                    index=True)
     opmerkingen = Column(String())
+    eindpunt_potentieel = Column(Boolean)
+    eindpunt_geselecteerd = Column(Boolean)
+    geforceerd_omgedraaid = Column(Boolean)
+    routing_gewicht = Column(Float)
+
+    kijkp_breedte = Column(Float)
+    kijkp_diepte = Column(Float)
+    kijkp_talud = Column(Float)
+    kijkp_reden = Column(String(30))
     # shape_length = Column(Float)
 
     # profielen = relationship("Profielen",
@@ -172,7 +187,10 @@ class Profielpunten(Base):
     pro_pro_id = Column(Integer,
                         ForeignKey(Profielen.__tablename__ + '.pro_id'),
                         index=True)
-    geometry = Column("GEOMETRY", Geometry(geometry_type='POINT', srid=28992))
+    geometry = Column(
+        "GEOMETRY",
+        Geometry(geometry_type='POINT', srid=28992, spatial_index=True, management=True)
+    )
 
     profiel = relationship(
         "Profielen",
@@ -277,11 +295,13 @@ class GeselecteerdeProfielen(Base):
                         ForeignKey(Varianten.__tablename__ + ".id"),
                         index=True)
     selected_on = Column(DateTime, default=datetime.datetime.utcnow)
+    tot_verhang = Column(Float)
 
     hydro = relationship(HydroObject,
                          back_populates="geselecteerd")
 
     variant = relationship(Varianten)
+    UniqueConstraint('hydro_id', 'variant_id', name='hydro_variant_unique')
     # back_populates="geselecteerd")
 
 
@@ -329,7 +349,10 @@ class DuikerSifonHevel(Base):
     extend_existing = True
 
     id = Column(Integer, primary_key=True, index=True)
-    geometry = Column("GEOMETRY", Geometry(geometry_type='MULTILINESTRING', srid=28992))
+    geometry = Column(
+        "GEOMETRY",
+        Geometry(geometry_type='MULTILINESTRING', srid=28992, spatial_index=True, management=True)
+    )
     code = Column(String(50), index=True)
     categorie = Column(Integer)
     lengte = Column(Float)

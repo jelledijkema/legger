@@ -1,19 +1,18 @@
+
+
 import unittest
 
-try:
-    from qgis.core import (
-        QgsVectorLayer, QgsFeature, QgsPoint, QgsField, QgsGeometry)
-except ImportError:
-    pass
-
-from legger.tests.utilities import get_qgis_app, TemporaryDirectory
-
+from legger.tests.utilities import get_qgis_app
 QGIS_APP = get_qgis_app()
 
+from PyQt5.QtCore import QVariant
+
+from qgis.core import (
+    QgsVectorLayer, QgsFeature, QgsPoint, QgsField, QgsGeometry)
+
 from random import shuffle
-from qgis.networkanalysis import (QgsLineVectorLayerDirector)
+from qgis.analysis import QgsVectorLayerDirector
 from legger.utils.new_network import NewNetwork, AttributeProperter
-from PyQt4.QtCore import QVariant
 
 
 # @unittest.skipIf()
@@ -34,8 +33,10 @@ class TestTheoreticalNetwork(unittest.TestCase):
         network:
               o
               |
+              3
+              |
               v
-        o <-- o <-- o <-- o <-- o
+        o <-1- o <-2- o <-4- o <-5- o
         """
         line_layer, director, distance_properter = self.get_line_layer_and_director(self.one_simple_line_network)
 
@@ -51,8 +52,10 @@ class TestTheoreticalNetwork(unittest.TestCase):
         network:
               o
               |
+              3
+              |
               v
-        o <-- o <-- o <-- o --> o
+        o <-1- o <-2- o <-4- o -5-> o
         """
         layer_data = [row.copy() for row in self.one_simple_line_network]
         layer_data[4]['direction'] = 2
@@ -264,9 +267,6 @@ class TestTheoreticalNetwork(unittest.TestCase):
             one_simple_line_network_for_redistrubution)
 
         network = NewNetwork(line_layer, line_layer, director, distance_properter, id_field='id')
-        bidirectional_islands = network.get_bidirectional_islands()
-
-        self.assertEqual(len(bidirectional_islands), 2)
 
         # line_layer_updates = network.fill_bidirectional_gaps(bidirectional_islands)
 
@@ -311,8 +311,8 @@ class TestTheoreticalNetwork(unittest.TestCase):
         line_layer.dataProvider().addFeatures(features)
         line_layer.updateExtents()
         # setup director which is direction sensitive
-        field_nr = line_layer.fieldNameIndex('direction')
-        director = QgsLineVectorLayerDirector(
+        field_nr = line_layer.fields().indexFromName('direction')
+        director = QgsVectorLayerDirector(
             line_layer, field_nr, '2', '1', '3', 3)
 
         distance_properter = AttributeProperter('length', 0)

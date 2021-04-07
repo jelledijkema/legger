@@ -2,11 +2,11 @@
 
 import logging
 
-from PyQt4 import QtGui
-from PyQt4.QtCore import QEvent, QModelIndex, Qt, pyqtSignal
-from PyQt4.QtGui import (QApplication, QTableView, QTreeView)
 from legger.qt_models.area_tree import AreaTreeModel
 from legger.qt_models.legger_tree import LeggerTreeModel
+from qgis.PyQt import QtGui, QtWidgets
+from qgis.PyQt.QtCore import QEvent, Qt, pyqtSignal
+from qgis.PyQt.QtWidgets import (QApplication, QTableView, QTreeView)
 
 log = logging.getLogger('legger.' + __name__)
 
@@ -127,7 +127,7 @@ class StartpointTreeWidget(QTreeView):
 
         # set other
         self.setAlternatingRowColors(True)
-        self.setSelectionMode(QtGui.QAbstractItemView.NoSelection)
+        self.setSelectionMode(QtWidgets.QAbstractItemView.NoSelection)
 
     def closeEvent(self, event):
         """
@@ -221,7 +221,7 @@ class LeggerTreeWidget(QTreeView):
 
         # set other
         self.setAlternatingRowColors(True)
-        self.setSelectionMode(QtGui.QAbstractItemView.NoSelection)
+        self.setSelectionMode(QtWidgets.QAbstractItemView.NoSelection)
 
     def closeEvent(self, event):
         """
