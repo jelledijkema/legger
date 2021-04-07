@@ -7,18 +7,26 @@
 from __future__ import division
 
 import logging
+import os
 import time
+
 
 from PyQt4 import QtCore, QtGui
 from PyQt4.QtCore import pyqtSignal
 from PyQt4.QtGui import QComboBox, QWidget
 from legger.sql_models.legger import BegroeiingsVariant, HydroObject, get_or_create
+
+from PyQt5.QtWidgets import QFileDialog
+from legger.sql_models.legger import BegroeiingsVariant, HydroObject
+
 from legger.sql_models.legger_database import LeggerDatabase
 from legger.utils.profile_match_a import doe_profinprof, maaktabellen
 from legger.utils.read_tdi_results import (get_timestamps, read_tdi_culvert_results, read_tdi_results,
                                            write_tdi_culvert_results_to_db, write_tdi_results_to_db)
+from legger.utils.read_tdi_results_from_shape import read_tdi_results_from_shape
 from legger.utils.redirect_flows_to_main_branches import redirect_flows
 from legger.utils.snap_points import snap_points
+
 from pyspatialite import dbapi2 as dbapi
 from legger.utils.theoretical_profiles import Kb, create_theoretical_profiles, write_theoretical_profile_results_to_db
 
@@ -39,6 +47,12 @@ try:
 except AttributeError:
     def _translate(context, text, disambig):
         return QtGui.QApplication.translate(context, text, disambig)
+from legger.utils.theoretical_profiles import create_theoretical_profiles, write_theoretical_profile_results_to_db
+from qgis.PyQt import QtCore, QtWidgets
+from qgis.PyQt.QtCore import pyqtSignal, QSettings
+from qgis.PyQt.QtWidgets import QComboBox, QWidget
+
+log = logging.getLogger(__name__)
 
 
 class ProfileCalculationWidget(QWidget):  # , FORM_CLASS):
@@ -75,6 +89,9 @@ class ProfileCalculationWidget(QWidget):  # , FORM_CLASS):
 
         try:
             self.path_result_db = self.ts_datasource.rows[0].spatialite_cache_filepath().replace('\\', '/')
+            # self.path_result_db = self.ts_datasource.rows[0].datasource_layer_helper.sqlite_gridadmin_filepath.replace(
+            #     '\\', '/')
+
         except:
             self.path_result_db = errormessage
 
@@ -168,7 +185,7 @@ class ProfileCalculationWidget(QWidget):  # , FORM_CLASS):
 
         self.box_step1.addWidget(self.msg_upper_row)
 
-    def execute_step1(self):
+    def execute_step1b(self):
         """
        Eerste stap in klaarzetten van de data:
         - update legger database met data vanuit de netcdf (koppeling debieten van gekozen tijdstap)
@@ -248,6 +265,68 @@ class ProfileCalculationWidget(QWidget):  # , FORM_CLASS):
             finally:
                 self.feedbacktext.setText(self.feedbackmessage)
 
+    def select_flow_result_file(self):
+        """
+        Select a dump or export of the DAMO database (.gdb)
+        :return:
+        """
+        settings = QSettings('leggertool', 'filepaths')
+        try:
+            init_path = settings.value('last_used_flow_result_path', type=str)
+        except:
+            init_path = os.path.expanduser("~")  # get path to respectively "user" folder
+
+        result_datasource = QFileDialog.getOpenFileName(
+            self,
+            'Selecteer debiet resultaten bestand',
+            init_path)
+
+        if result_datasource:
+            settings.setValue('last_used_flow_result_path',
+                              os.path.dirname(result_datasource[0]))
+        return result_datasource[0]
+
+    def execute_step1(self):
+        """
+       Eerste stap in klaarzetten van de data:
+        - update legger database met data vanuit bestand met debieten (geopackage)
+        returns: None
+        """
+
+        file_path = self.select_flow_result_file()
+
+        # read 3di channel results
+        result = None
+        try:
+            result = read_tdi_results_from_shape(
+                file_path,
+                'BWN_HR_channels_v2',
+                self.polder_datasource
+            )
+            self.feedbackmessage += "\nDatabases zijn gekoppeld."
+        except Exception as e:
+            self.feedbackmessage = self.feedbackmessage + \
+                                   "\nFout in wegschrijven 3Di resultaten naar polder database. " + \
+                                   str(e)
+
+        if result is not None:
+            try:
+                # write 3di channel result to legger spatialite
+                write_tdi_results_to_db(
+                    result,
+                    self.polder_datasource)
+
+                self.feedbackmessage = self.feedbackmessage + "\n3Di resultaten weggeschreven naar polder database."
+            except Exception as e:
+                self.feedbackmessage = self.feedbackmessage + \
+                                       "\nFout in wegschrijven 3Di resultaten naar polder database. " + \
+                                       str(e)
+            finally:
+                self.feedbacktext.setText(self.feedbackmessage)
+        else:
+            self.feedbackmessage = self.feedbackmessage + "\nFout in wegschrijven 3Di resultaten naar polder database."
+            return
+
     def execute_redirect_flows(self):
 
         redirect_flows(self.iface, self.polder_datasource)
@@ -305,8 +384,12 @@ class ProfileCalculationWidget(QWidget):  # , FORM_CLASS):
             try:
                 write_theoretical_profile_results_to_db(session, profiles, opstuw_norm, bv)
                 self.feedbackmessage = self.feedbackmessage + ("\nProfielen opgeslagen in legger db.")
-            except:
-                self.feedbackmessage = self.feedbackmessage + ("\nFout, profielen niet opgeslagen in legger database.")
+
+            except Exception as e:
+                log.error(e)
+                self.feedbackmessage = self.feedbackmessage + (
+                    "\nFout, profielen niet opgeslagen in legger database. melding: {}")
+
             finally:
                 self.feedbacktext.setText(self.feedbackmessage)
 
@@ -410,13 +493,13 @@ class ProfileCalculationWidget(QWidget):  # , FORM_CLASS):
         self.step_redirect_flow_button.clicked.connect(self.execute_redirect_flows)
 
         self.groupBox_step1 = QtGui.QGroupBox(self)
-        self.groupBox_step1.setTitle("stap 2: lees 3di resultaten")
+        self.groupBox_step1.setTitle("stap 2: herverdeel 3di debiet")
         self.box_step1 = QtGui.QVBoxLayout()
-        self.box_step1.addWidget(self.timestep_combo_box)
-        self.box_step1.addWidget(self.step1_button)
         self.box_step1.addWidget(self.step_redirect_flow_button)
-        self.box_step1.addWidget(self.step1_explanation_button)
         self.groupBox_step1.setLayout(self.box_step1)  # box toevoegen aan groupbox
+
+
+
 
         #         # surge selection:
         self.surge_combo_box = QComboBox(self)
@@ -468,6 +551,14 @@ class ProfileCalculationWidget(QWidget):  # , FORM_CLASS):
         self.box_run_all = QtGui.QHBoxLayout()
         self.box_run_all.addWidget(self.run_all_button)
         self.groupBox_run_all.setLayout(self.box_run_all)  # box toevoegen aan groupbox
+
+        self.groupBox_step1old = QtGui.QGroupBox(self)
+        self.groupBox_step1old.setTitle("oude functies: lees 3di resultaten")
+        self.box_step1old = QtGui.QVBoxLayout()
+        self.box_step1old.addWidget(self.timestep_combo_box)
+        self.box_step1old.addWidget(self.step1_button)
+        self.box_step1old.addWidget(self.step1_explanation_button)
+        self.groupBox_step1.setLayout(self.box_step1old)  # box toevoegen aan groupbox
 
         # Assembling feedback row
         self.feedbacktext = QtGui.QTextEdit(self)

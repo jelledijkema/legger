@@ -65,17 +65,12 @@ class CreateLeggerSpatialite(object):
         self.filepath_HDB = filepath_HDB
         self.database_path = database_path
 
-        self.profielpunten_tabel = None
-        self.profielen_tabel = None
-        self.kenmerken_tabel = None
-        self.hydroobject_tabel = None
-        self.waterdeel_tabel = None
-        self.duikersifonhevel_tabel = None
-
         self.ogr_exe = os.path.abspath(os.path.join(sys.executable, os.pardir, os.pardir, 'bin', 'ogr2ogr.exe'))
 
-        self.tables = ['DuikerSifonHevel', 'Waterdeel', 'HydroObject', 'PeilafwijkingGebied', 'PeilgebiedPraktijk',
-                  'GW_PRO', 'GW_PRW', 'GW_PBP', 'IWS_GEO_BESCHR_PROFIELPUNTEN']
+        self.tables = ['DuikerSifonHevel', 'Waterdeel', 'HydroObject',
+                       'GW_PRO', 'GW_PRW', 'GW_PBP', 'IWS_GEO_BESCHR_PROFIELPUNTEN', 'Debieten_3Di_HR_waterlopen',
+                       'Peilgebieden_na_datacheck']
+        # tabellen oude methode peilgebieden: 'PeilafwijkingGebied', 'PeilgebiedPraktijk',
 
         self.db = LeggerDatabase(
             {
@@ -121,7 +116,7 @@ class CreateLeggerSpatialite(object):
         nr_tables = len(self.tables)
         for i, table in enumerate(self.tables):
 
-            log.info("--- copy {0}/{1} table {2} ---".format(i+1, nr_tables, table))
+            log.info("--- copy {0}/{1} table {2} ---".format(i + 1, nr_tables, table))
 
             # "-overwrite"
             cmd = '"{ogr_exe}" -a_srs EPSG:28992 -f SQLite -dsco SPATIALITE=YES -append ' \
@@ -134,6 +129,7 @@ class CreateLeggerSpatialite(object):
                 spatialite_path=self.database_path
             )
             log.info(cmd)
+            print(cmd)
 
             ret = subprocess.call(cmd, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
 
@@ -187,27 +183,41 @@ class CreateLeggerSpatialite(object):
             --substr(breedte_getabuleerd, 1, instr(breedte_getabuleerd, ' ')-1) as bodembreedte, 
             keuze_profiel as bron_breedte,
             shape_length as lengte,
-            "" as talud_voorkeur,
+            taludvoorkeur as talud_voorkeur,
             min(ws_talud_links, ws_talud_rechts) as steilste_talud,
-            "" as grondsoort,
+            grondsoort as grondsoort,
             "" as bron_grondsoort,
             hydroobject_id as hydro_id
           FROM imp_hydroobject
         """)
 
         # vullen hydroobjecten
+        # oude methode
+        # session.execute("""
+        # INSERT INTO hydroobject  (id, code, categorieoppwaterlichaam, streefpeil, geometry)
+        # SELECT
+        #     ho.hydroobject_id as id,
+        #     min(ho.code),
+        #     min(ho.categorieoppwaterlichaam),
+        #     min(COALESCE(pgp.peil_wsa, pag.peil_wsa)) as streefpeil,
+        #     min(ho.geometry)
+        # FROM imp_hydroobject ho
+        # JOIN  imp_peilgebiedpraktijk pgp ON st_intersects(ho.geometry, pgp.geometry)
+        # LEFT OUTER JOIN  imp_peilafwijkinggebied pag ON st_intersects(ho.geometry, pag.geometry)
+        # GROUP BY id
+        # """)
+
         session.execute("""
         INSERT INTO hydroobject  (id, code, categorieoppwaterlichaam, streefpeil, geometry)
         SELECT 
             ho.hydroobject_id as id,
             min(ho.code),
             min(ho.categorieoppwaterlichaam),
-            min(COALESCE(pgp.peil_wsa, pag.peil_wsa)) as streefpeil,
+            min(pgp.streefpeil_bwn2) as streefpeil,
             min(ho.geometry)
         FROM imp_hydroobject ho
-        JOIN  imp_peilgebiedpraktijk pgp ON st_intersects(ho.geometry, pgp.geometry)  
-        LEFT OUTER JOIN  imp_peilafwijkinggebied pag ON st_intersects(ho.geometry, pag.geometry) 
-        GROUP BY id
+        JOIN  imp_peilgebieden_na_datacheck pgp ON st_intersects(ho.geometry, pgp.geometry)  
+        GROUP BY ho.hydroobject_id
         """)
 
         # vullen waterdeel =
@@ -246,6 +256,65 @@ class CreateLeggerSpatialite(object):
          FROM imp_duikersifonhevel
          """)
 
+        # debiet 3di
+        session.execute("""
+         CREATE TABLE debiet_3di AS SELECT
+             ogc_fid as id,
+             code,
+             polder,
+             CASE WHEN richting > 0 THEN q_m3_s ELSE -1 * q_m3_s END as debiet,
+             verhang_abs_cm_km,
+             geometry
+         FROM imp_Debieten_3Di_HR_waterlopen;
+         """)
+
+        session.execute("""
+                 SELECT RecoverGeometryColumn( 'debiet_3di' , 'geometry' , 28992 , 'MULTILINESTRING' );
+                 """)
+
+        session.execute("""
+                 SELECT CreateSpatialIndex('debiet_3di', 'geometry');
+                 """)
+
+        session.execute("""
+WITH
+    cnt as (SELECT 1 x union select x+1 from cnt where x<9),
+    pnt as (SELECT h.id, cnt.x / 10.0 as fraction, Line_Interpolate_Point(h.geometry, cnt.x / 10.0) as geom, ST_LENGTH(h.geometry) as length
+            FROM hydroobject h, cnt),
+    pnt_buf as (SELECT p.*, ST_Expand(p.geom, MIN(5, length/ 11 )) as geom_buffer from pnt p),
+    link as (SELECT 
+                p.id as h_id, 
+                d.id as d_id, 
+                p.fraction, 5 - st_distance(p.geom, d.geometry) as score, 
+                abs(d.debiet) as flow 
+             FROM pnt_buf p, debiet_3di d 
+             WHERE st_intersects(p.geom_buffer, d.geometry) 
+                AND d.ROWID IN (SELECT ROWID 
+                                FROM SpatialIndex
+                                WHERE f_table_name = 'debiet_3di' AND search_frame = p.geom_buffer)),
+    score as (SELECT h_id, d_id, sum(score) as score, max(flow) as flow, count(*) as cnt
+              FROM link 
+              GROUP BY h_id, d_id 
+              ORDER BY 1, 4 DESC, 3 DESC),
+    linked as (SELECT distinct * FROM score WHERE cnt >= 2 GROUP BY h_id),
+    matched as (SELECT  
+                    h.id as hydro_id, 
+                    CASE WHEN Line_Locate_Point(h.geometry, st_startpoint(d.geometry)) <= Line_Locate_Point(h.geometry, st_endpoint(d.geometry)) THEN d.debiet ELSE -1 * d.debiet END as debiet_3di,
+                    round (l.score / 45.0 * 100.0, 2) as score
+                FROM linked l, hydroobject h, debiet_3di d  
+                WHERE l.h_id = h.id and l.d_id = d.id)
+
+    UPDATE hydroobject
+    SET 
+        debiet_3di = (SELECT m.debiet_3di FROM matched m WHERE m.hydro_id = id),
+        score = (SELECT m.score FROM matched m WHERE m.hydro_id = id)
+         """)
+
+        session.execute("""
+UPDATE hydroobject
+SET debiet = debiet_3di
+                 """)
+
         session.commit()
 
     def delete_imported_tables(self):
@@ -265,12 +334,15 @@ class CreateLeggerSpatialite(object):
 
     def add_default_settings(self):
         session = self.db.get_session()
-        session.execute("INSERT INTO categorie(categorie, naam, variant_diepte_min, variant_diepte_max, default_talud) VALUES "
-                        "(1, 'primair', 0.3, 8, 1.5),"
-                        "(2, 'secundair', 0.3, 2.5, 1.5),"
-                        "(3, 'tertaire', 0.3, 1, 1.5),"
-                        "(4, 'overig', 0.3, 1, 1.5)")
+        session.execute(
+            "INSERT INTO categorie(categorie, naam, variant_diepte_min, variant_diepte_max, default_talud) VALUES "
+            "(1, 'primair', 0.3, 8, 1.5),"
+            "(2, 'secundair', 0.3, 2.5, 1.5),"
+            "(3, 'tertaire', 0.3, 1, 1.5),"
+            "(4, 'overig', 0.3, 1, 1.5)")
+
         session.commit()
+
 
 def main():
     test_data_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), os.pardir, 'tests', 'data'))
@@ -290,7 +362,6 @@ def main():
     )
 
     legger_class.full_import_ogr2ogr()
-
 
 
 if __name__ == '__main__':
