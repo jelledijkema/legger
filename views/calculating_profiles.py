@@ -9,9 +9,9 @@ import logging
 import os
 import time
 
-
+from PyQt5.QtCore import QSettings
+from PyQt5.QtWidgets import QFileDialog
 from legger.sql_models.legger import BegroeiingsVariant, HydroObject
-
 from legger.sql_models.legger_database import LeggerDatabase
 from legger.sql_models.legger_database import load_spatialite
 from legger.utils.calc_gradient import calc_gradient
@@ -21,7 +21,6 @@ from legger.utils.read_tdi_results import (get_timestamps, read_tdi_culvert_resu
 from legger.utils.read_tdi_results_from_shape import read_tdi_results_from_shape
 from legger.utils.redirect_flows_to_main_branches import redirect_flows
 from legger.utils.snap_points import snap_points
-
 from legger.utils.theoretical_profiles import create_theoretical_profiles, write_theoretical_profile_results_to_db
 from qgis.PyQt import QtCore, QtWidgets
 from qgis.PyQt.QtCore import pyqtSignal
@@ -473,16 +472,11 @@ class ProfileCalculationWidget(QWidget):  # , FORM_CLASS):
         self.step_redirect_flow_button.setObjectName("redirect_flow")
         self.step_redirect_flow_button.clicked.connect(self.execute_redirect_flows)
 
-        self.groupBox_step1 = QtGui.QGroupBox(self)
+        self.groupBox_step1 = QtWidgets.QGroupBox(self)
         self.groupBox_step1.setTitle("stap 2: herverdeel 3di debiet")
-        self.box_step1 = QtGui.QVBoxLayout()
-
-
+        self.box_step1 = QtWidgets.QVBoxLayout()
         self.box_step1.addWidget(self.step_redirect_flow_button)
         self.groupBox_step1.setLayout(self.box_step1)  # box toevoegen aan groupbox
-
-
-
 
         #         # surge selection:
         self.surge_combo_box = QComboBox(self)
@@ -544,15 +538,13 @@ class ProfileCalculationWidget(QWidget):  # , FORM_CLASS):
         self.box_run_post_process.addWidget(self.run_post_process_button)
         self.groupBox_post_process.setLayout(self.box_run_post_process)  # box toevoegen aan groupbox
         
-        self.groupBox_step1old = QtGui.QGroupBox(self)
+        self.groupBox_step1old = QtWidgets.QGroupBox(self)
         self.groupBox_step1old.setTitle("oude functies: lees 3di resultaten")
-        self.box_step1old = QtGui.QVBoxLayout()
+        self.box_step1old = QtWidgets.QVBoxLayout()
         self.box_step1old.addWidget(self.timestep_combo_box)
         self.box_step1old.addWidget(self.step1_button)
         self.box_step1old.addWidget(self.step1_explanation_button)
         self.groupBox_step1old.setLayout(self.box_step1old)  # box toevoegen aan groupbox
-
-
 
 
         # Assembling feedback row
