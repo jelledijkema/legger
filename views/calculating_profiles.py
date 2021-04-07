@@ -24,22 +24,6 @@ from qgis.PyQt.QtWidgets import QComboBox, QWidget
 
 log = logging.getLogger(__name__)
 
-# try:
-#     _fromUtf8 = QtCore.QString.fromUtf8
-# except AttributeError:
-#     def _fromUtf8(s):
-#         return s
-# 
-# try:
-#     _encoding = QtGui.QApplication.UnicodeUTF8
-# 
-# 
-#     def _translate(context, text, disambig):
-#         return QtGui.QApplication.translate(context, text, disambig, _encoding)
-# except AttributeError:
-#     def _translate(context, text, disambig):
-#         return QtGui.QApplication.translate(context, text, disambig)
-
 
 class ProfileCalculationWidget(QWidget):  # , FORM_CLASS):
     """Dialog for making the pre-process steps for the Legger"""
@@ -74,7 +58,9 @@ class ProfileCalculationWidget(QWidget):  # , FORM_CLASS):
             self.path_model_db = errormessage
 
         try:
+
             self.path_result_db = self.ts_datasource.rows[0].datasource_layer_helper.sqlite_gridadmin_filepath.replace('\\', '/')
+
         except:
             self.path_result_db = errormessage
 
@@ -308,6 +294,7 @@ class ProfileCalculationWidget(QWidget):  # , FORM_CLASS):
             try:
                 write_theoretical_profile_results_to_db(session, profiles, opstuw_norm, bv)
                 self.feedbackmessage = self.feedbackmessage + ("\nProfielen opgeslagen in legger db.")
+
             except Exception as e:
                 log.error(e)
                 self.feedbackmessage = self.feedbackmessage + ("\nFout, profielen niet opgeslagen in legger database. melding: {}")
@@ -420,12 +407,9 @@ class ProfileCalculationWidget(QWidget):  # , FORM_CLASS):
         self.step_redirect_flow_button.clicked.connect(self.execute_redirect_flows)
 
         self.groupBox_step1 = QtWidgets.QGroupBox(self)
-        self.groupBox_step1.setTitle("Stap 2: lees 3Di resultaten")
+        self.groupBox_step1.setTitle("stap 2: herverdeel 3di debiet")
         self.box_step1 = QtWidgets.QVBoxLayout()
-        self.box_step1.addWidget(self.timestep_combo_box)
-        self.box_step1.addWidget(self.step1_button)
         self.box_step1.addWidget(self.step_redirect_flow_button)
-        self.box_step1.addWidget(self.step1_explanation_button)
         self.groupBox_step1.setLayout(self.box_step1)  # box toevoegen aan groupbox
 
         #         # surge selection:
@@ -479,7 +463,7 @@ class ProfileCalculationWidget(QWidget):  # , FORM_CLASS):
         self.box_run_all.addWidget(self.run_all_button)
         self.groupBox_run_all.setLayout(self.box_run_all)  # box toevoegen aan groupbox
 
-        # Assembling run all
+                # Assembling run all
         self.run_post_process_button = QtWidgets.QPushButton(self)
         self.run_post_process_button.clicked.connect(self.post_process)
         self.groupBox_post_process = QtWidgets.QGroupBox(self)
@@ -487,6 +471,15 @@ class ProfileCalculationWidget(QWidget):  # , FORM_CLASS):
         self.box_run_post_process = QtWidgets.QHBoxLayout()
         self.box_run_post_process.addWidget(self.run_post_process_button)
         self.groupBox_post_process.setLayout(self.box_run_post_process)  # box toevoegen aan groupbox
+        
+        self.groupBox_step1old = QtWidgets.QGroupBox(self)
+        self.groupBox_step1old.setTitle("oude functies: lees 3di resultaten")
+        self.box_step1old = QtWidgets.QVBoxLayout()
+        self.box_step1old.addWidget(self.timestep_combo_box)
+        self.box_step1old.addWidget(self.step1_button)
+        self.box_step1old.addWidget(self.step1_explanation_button)
+        self.groupBox_step1old.setLayout(self.box_step1old)  # box toevoegen aan groupbox
+
 
         # Assembling feedback row
         self.feedbacktext = QtWidgets.QTextEdit(self)
@@ -515,6 +508,7 @@ class ProfileCalculationWidget(QWidget):  # , FORM_CLASS):
         self.verticalLayout.addLayout(self.bottom_row)
         self.verticalLayout.addWidget(self.groupBox_run_all)
         self.verticalLayout.addWidget(self.groupBox_post_process)
+        self.verticalLayout.addWidget(self.groupBox_step1old)
         self.verticalLayout.addLayout(self.feedback_row)
         self.verticalLayout.addLayout(self.exit_row)
 
