@@ -133,9 +133,9 @@ class ProfileCalculationWidget(QWidget):  # , FORM_CLASS):
 
         self.close()
 
-    def explain_step1(self):
+    def explain_step_old_3di(self):
         """
-        Uitleg van stap 1
+        Uitleg van stap 3si
         """
         # detailed information on UPPER ROW groupbox
         self.msg_upper_row = QtWidgets.QMessageBox(self)
@@ -154,9 +154,9 @@ class ProfileCalculationWidget(QWidget):  # , FORM_CLASS):
                                               "tijdstap net onder de waarde 518400, maar kan afwijken. De slider van"
                                               "de tijdstappen moet tussen ongeveer 2/3 en 3/4 van de grootste tijdstap")
 
-        self.box_step1.addWidget(self.msg_upper_row)
+        self.box_step3diold.addWidget(self.msg_upper_row)
 
-    def execute_step1(self):
+    def execute_step_old_3di(self):
         """
        Eerste stap in klaarzetten van de data:
         - update legger database met data vanuit de netcdf (koppeling debieten van gekozen tijdstap)
@@ -325,8 +325,6 @@ class ProfileCalculationWidget(QWidget):  # , FORM_CLASS):
     def run_all(self):
         self.execute_snap_points()
         time.sleep(1)
-        self.execute_step1()
-        time.sleep(1)
         self.execute_redirect_flows()
         time.sleep(1)
         self.execute_step2()
@@ -356,34 +354,16 @@ class ProfileCalculationWidget(QWidget):  # , FORM_CLASS):
         self.polder_filename.setText(self.polder_datasource)
         self.polder_filename.setObjectName("polder legger filename")
 
-        self.model_filename = QtWidgets.QLineEdit(self)
-        self.model_filename.setText(self.path_model_db)
-        self.model_filename.setObjectName("model filename")
-
-        self.result_filename = QtWidgets.QLineEdit(self)
-        self.result_filename.setText(self.path_result_nc)
-        self.result_filename.setObjectName("result filename")
-
-        self.connection_filename = QtWidgets.QLineEdit(self)
-        self.connection_filename.setText(self.path_result_db)
-        self.connection_filename.setObjectName("connection filename")
-
         # Assembling INFORMATION ROW groubox
         self.box_info = QtWidgets.QVBoxLayout()
         self.box_info.addWidget(self.polder_filename)  # intro text toevoegen aan box.
-        self.box_info.addWidget(self.model_filename)
-        self.box_info.addWidget(self.result_filename)
-        self.box_info.addWidget(self.connection_filename)
 
         self.groupBox_info = QtWidgets.QGroupBox(self)
         self.groupBox_info.setTitle("Bestanden gekozen:")
         self.groupBox_info.setLayout(self.box_info)  # box toevoegen aan groupbox
         self.information_row.addWidget(self.groupBox_info)
 
-        # timestep selection for UPPER ROW groupbox:
-        self.timestep_combo_box = QComboBox(self)
-
-        # Assembling step 0 row
+        # Assembling step 1 - snap_points
         self.snap_points_button = QtWidgets.QPushButton(self)
         self.snap_points_button.setObjectName("Snap points")
         self.snap_points_button.clicked.connect(self.execute_snap_points)
@@ -393,24 +373,16 @@ class ProfileCalculationWidget(QWidget):  # , FORM_CLASS):
         self.box_snap_points.addWidget(self.snap_points_button)
         self.groupBox_snap_points.setLayout(self.box_snap_points)  # box toevoegen aan groupbox
 
-        # Assembling step 1 row
-        self.step1_button = QtWidgets.QPushButton(self)
-        self.step1_button.setObjectName("stap1")
-        self.step1_button.clicked.connect(self.execute_step1)
-        self.step1_explanation_button = QtWidgets.QPushButton(self)
-        self.step1_explanation_button.setObjectName("uitleg_stap1")
-        self.step1_explanation_button.clicked.connect(self.explain_step1)
-
-        # Assembling step 2 row
+        # Assembling step 2 - redirect_flows
         self.step_redirect_flow_button = QtWidgets.QPushButton(self)
         self.step_redirect_flow_button.setObjectName("redirect_flow")
         self.step_redirect_flow_button.clicked.connect(self.execute_redirect_flows)
 
-        self.groupBox_step1 = QtWidgets.QGroupBox(self)
-        self.groupBox_step1.setTitle("stap 2: herverdeel 3di debiet")
-        self.box_step1 = QtWidgets.QVBoxLayout()
-        self.box_step1.addWidget(self.step_redirect_flow_button)
-        self.groupBox_step1.setLayout(self.box_step1)  # box toevoegen aan groupbox
+        self.groupBox_step_redirect_flows = QtWidgets.QGroupBox(self)
+        self.groupBox_step_redirect_flows.setTitle("stap 2: herverdeel 3di debiet")
+        self.box_step_redirect_flows = QtWidgets.QVBoxLayout()
+        self.box_step_redirect_flows.addWidget(self.step_redirect_flow_button)
+        self.groupBox_step_redirect_flows.setLayout(self.box_step_redirect_flows)  # box toevoegen aan groupbox
 
         #         # surge selection:
         self.surge_combo_box = QComboBox(self)
@@ -472,14 +444,39 @@ class ProfileCalculationWidget(QWidget):  # , FORM_CLASS):
         self.box_run_post_process.addWidget(self.run_post_process_button)
         self.groupBox_post_process.setLayout(self.box_run_post_process)  # box toevoegen aan groupbox
         
-        self.groupBox_step1old = QtWidgets.QGroupBox(self)
-        self.groupBox_step1old.setTitle("oude functies: lees 3di resultaten")
-        self.box_step1old = QtWidgets.QVBoxLayout()
-        self.box_step1old.addWidget(self.timestep_combo_box)
-        self.box_step1old.addWidget(self.step1_button)
-        self.box_step1old.addWidget(self.step1_explanation_button)
-        self.groupBox_step1old.setLayout(self.box_step1old)  # box toevoegen aan groupbox
+        # old 3di
+        # timestep selection for UPPER ROW groupbox:
+        self.timestep_combo_box = QComboBox(self)
 
+        self.step3di_button = QtWidgets.QPushButton(self)
+        self.step3di_button.setObjectName("step3di_button")
+        self.step3di_button.clicked.connect(self.execute_step_old_3di)
+
+        self.step3diold_explanation_button = QtWidgets.QPushButton(self)
+        self.step3diold_explanation_button.setObjectName("uitleg_stap1")
+        self.step3diold_explanation_button.clicked.connect(self.explain_step_old_3di)
+
+        self.groupBox_step3diold = QtWidgets.QGroupBox(self)
+        self.groupBox_step3diold.setTitle("oude functies: lees 3di resultaten")
+        self.box_step3diold = QtWidgets.QVBoxLayout()
+
+        self.model_filename = QtWidgets.QLineEdit(self)
+        self.model_filename.setText(self.path_model_db)
+        self.model_filename.setObjectName("model filename")
+        self.result_filename = QtWidgets.QLineEdit(self)
+        self.result_filename.setText(self.path_result_nc)
+        self.result_filename.setObjectName("result filename")
+        self.connection_filename = QtWidgets.QLineEdit(self)
+        self.connection_filename.setText(self.path_result_db)
+        self.connection_filename.setObjectName("connection filename")
+        self.box_step3diold.addWidget(self.model_filename)
+        self.box_step3diold.addWidget(self.result_filename)
+        self.box_step3diold.addWidget(self.connection_filename)
+
+        self.box_step3diold.addWidget(self.timestep_combo_box)
+        self.box_step3diold.addWidget(self.step3di_button)
+        self.box_step3diold.addWidget(self.step3diold_explanation_button)
+        self.groupBox_step3diold.setLayout(self.box_step3diold)  # box toevoegen aan groupbox
 
         # Assembling feedback row
         self.feedbacktext = QtWidgets.QTextEdit(self)
@@ -503,12 +500,12 @@ class ProfileCalculationWidget(QWidget):  # , FORM_CLASS):
         # Lay-out in elkaar zetten.
         self.verticalLayout.addLayout(self.information_row)
         self.verticalLayout.addWidget(self.groupBox_snap_points)
-        self.verticalLayout.addWidget(self.groupBox_step1)
+        self.verticalLayout.addWidget(self.groupBox_step_redirect_flows)
         self.verticalLayout.addWidget(self.groupBox_step2)
         self.verticalLayout.addLayout(self.bottom_row)
         self.verticalLayout.addWidget(self.groupBox_run_all)
         self.verticalLayout.addWidget(self.groupBox_post_process)
-        self.verticalLayout.addWidget(self.groupBox_step1old)
+        self.verticalLayout.addWidget(self.groupBox_step3diold)
         self.verticalLayout.addLayout(self.feedback_row)
         self.verticalLayout.addLayout(self.exit_row)
 
@@ -519,8 +516,8 @@ class ProfileCalculationWidget(QWidget):  # , FORM_CLASS):
 
         Dialog.setWindowTitle("Bereken de profielvarianten van de polder")
         self.save_button.setText("Opslaan en sluiten")
-        self.step1_explanation_button.setText("Uitleg stap 2")
-        self.step1_button.setText("Verbindt resultaten van netCDF aan de hydro-objecten")
+        self.step3diold_explanation_button.setText("Uitleg stap inlezen 3di netCDF")
+        self.step3di_button.setText("Verbindt resultaten van netCDF aan de hydro-objecten")
         self.step_redirect_flow_button.setText("Herverdeel debieten naar primair")
         self.step2_explanation_button.setText("Uitleg stap 3")
         self.step2_button.setText("Bereken alle mogelijke leggerprofielen")

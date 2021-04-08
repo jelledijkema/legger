@@ -220,6 +220,10 @@ class CreateLeggerSpatialite(object):
         GROUP BY ho.hydroobject_id
         """)
 
+        session.execute("""
+                 SELECT CreateSpatialIndex('hydroobject', 'geometry');
+                 """)
+
         # vullen waterdeel =
         session.execute("""
         INSERT INTO waterdeel  (id, shape_length, shape_area, geometry)
@@ -315,6 +319,18 @@ UPDATE hydroobject
 SET debiet = debiet_3di
                  """)
 
+        session.execute("""
+            WITH 
+                max_diepte as (Select pr.hydro_id as hydro_id, min(pp.iws_hoogte) as bodemhoogte, ho.streefpeil - min(pp.iws_hoogte)  as diepte, 'meting' as bron
+                from profielpunten pp, profielen pr, hydroobject ho
+                where pp.pro_pro_id = pr.pro_id AND ho.id = pr.hydro_id AND osmomsch='Z1'
+                group by pr.hydro_id)
+
+            UPDATE kenmerken
+            SET (bodemhoogte, diepte, bron_diepte) = (SELECT bodemhoogte, diepte, bron FROM max_diepte WHERE kenmerken.hydro_id = max_diepte.hydro_id)
+            WHERE kenmerken.hydro_id in (SELECT hydro_id FROM max_diepte)    
+            """)
+
         session.commit()
 
     def delete_imported_tables(self):
@@ -335,11 +351,21 @@ SET debiet = debiet_3di
     def add_default_settings(self):
         session = self.db.get_session()
 
-        session.execute("INSERT INTO categorie(categorie, naam, variant_diepte_min, variant_diepte_max, default_talud) VALUES "
-                        "(1, 'primair', 0.2, 5, 1.5),"
-                        "(2, 'secundair', 0.2, 2.5, 1.5),"
-                        "(3, 'tertaire', 0.2, 1, 1.5),"
-                        "(4, 'overig', 0.2, 1, 1.5)")
+        session.execute(
+            """
+                    INSERT INTO begroeiingsvariant(id, naam, is_default, friction_manning, friction_begroeiing, begroeiingsdeel) 
+                    VALUES 
+                        (3, 'volledig begroeid', 1, 40, 65, 0.9),
+                        (2, 'half vol', 0, 20, 30, 0.5),
+                        (1, 'basis', 0, 20, 30, 0.25)
+                    """)
+
+        session.execute(
+            "INSERT INTO categorie(categorie, naam, variant_diepte_min, variant_diepte_max, default_talud) VALUES "
+            "(1, 'primair', 0.2, 5, 1.5),"
+            "(2, 'secundair', 0.2, 2.5, 1.5),"
+            "(3, 'tertaire', 0.2, 1, 1.5),"
+            "(4, 'overig', 0.2, 1, 1.5)")
         session.commit()
 
 

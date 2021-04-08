@@ -74,7 +74,12 @@ def create_legger_views(session: sqlite3.Connection):
                 WHERE g.variant_id = v.id) as sel
                 ON sel.hydro_id = h.id;
          
-        --DELETE FROM views_geometry_columns WHERE view_name = 'hydroobjects_kenmerken';
+        DELETE FROM views_geometry_columns WHERE view_name = 'hydroobjects_kenmerken';
+        INSERT INTO views_geometry_columns(view_name, view_geometry, view_rowid, f_table_name, f_geometry_column, read_only)
+            VALUES ('hydroobjects_kenmerken', 'line', 'id', 'hydroobject', 'geometry', 1);
+        INSERT INTO views_geometry_columns(view_name, view_geometry, view_rowid, f_table_name, f_geometry_column, read_only)
+            VALUES ('hydroobjects_kenmerken', 'geometry', 'id', 'hydroobject', 'geometry', 1);
+        
         SELECT RecoverGeometryColumn( 'hydroobjects_kenmerken' , 'geometry' , 28992 , 'LINESTRING');
         SELECT RecoverGeometryColumn( 'hydroobjects_kenmerken' , 'line' , 28992 , 'LINESTRING');
         
