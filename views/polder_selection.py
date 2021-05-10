@@ -197,7 +197,7 @@ class PolderSelectionWidget(QWidget):  # , FORM_CLASS):
 
         legger_class = CreateLeggerSpatialite(
             filepath_DAMO,
-            filepath_HDB,
+#            filepath_HDB,
             database_path,
         )
 
