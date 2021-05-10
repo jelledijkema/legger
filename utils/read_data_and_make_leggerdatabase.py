@@ -50,19 +50,18 @@ def nonwkt(value, default_value=None):
 
 class CreateLeggerSpatialite(object):
     """
-        Select "dump" or "export" .gdb files that come from DAMO and HDB
+        Select "dump" or "export" .gdb files that come from DAMO
         This should be similar to the export that is send to the N&S datachecker and modelbuilder for this model revision.
 
         The output of this step is a legger_{polder}_{datetime}.sqlite file with all the necessary tables and data.
         Step 1: make empty legger database
-        Step 2: Read DAMO and HDB (geopandas)
+        Step 2: Read DAMO (geopandas)
         Step 3: make dataframes from data according to right format
         Step 4: write dataframes to legger database (sqlalchemy)
         """
 
-    def __init__(self, filepath_DAMO, filepath_HDB, database_path):
+    def __init__(self, filepath_DAMO, database_path):
         self.filepath_DAMO = filepath_DAMO
-        self.filepath_HDB = filepath_HDB
         self.database_path = database_path
 
         self.ogr_exe = os.path.abspath(os.path.join(sys.executable, os.pardir, os.pardir, 'bin', 'ogr2ogr.exe'))
@@ -378,11 +377,9 @@ def main():
     )
 
     filepath_DAMO = os.path.join(test_data_dir, 'DAMO.gdb')  # 'Hoekje_leggertool_database.gdb')
-    filepath_HDB = os.path.join(test_data_dir, 'HDB.gdb')  # 'Hoekje_leggertool_HDB.gdb')
 
     legger_class = CreateLeggerSpatialite(
         filepath_DAMO,
-        filepath_HDB,
         database_path
     )
 

@@ -50,7 +50,6 @@ class PolderSelectionWidget(QWidget):  # , FORM_CLASS):
         self.root_tool = root_tool  # "root tool meegeven aan nieuw scherm. Verwijzing naar een class, i.p.v. een nieuwe variabele"
 
         self.var_text_DAMO.setText("...")
-        # self.var_text_HDB.setText("...")
         self.var_text_leggerdatabase.setText(
             self.root_tool.polder_datasource)  # De tekst verwijst naar de tekst in de root_tool totdat deze geupdated wordt.
 
@@ -70,10 +69,10 @@ class PolderSelectionWidget(QWidget):  # , FORM_CLASS):
         self.msg_upper_row.setInformativeText(
             "Voor de toewijzing van leggerprofielen wordt een aparte 'leggerdatabase' "
             "gemaakt. Deze database is een aparte .sqlite bestand waar data uit "
-            "DAMO en de Hydrologendatabase (HDB) gecombineerd wordt als randvoorwaarden "
+            "DAMO als randvoorwaarden "
             "voor de leggerprofielen, zoals breedte en talud per hydro-object.\n"
             "Wanneer een nieuwe leggerdatabase gemaakt moet worden, selecteer dan bij "
-            "voorkeur de DAMO en HDB die ook voor de opbouw van het 3di model zijn "
+            "voorkeur de DAMO die ook voor de opbouw van het 3di model zijn "
             "gebruikt.\n"
             "Is er al een 'leggerdatabase' aangemaakt, sla deze stap dan over en zorg "
             "dat dit bestand (met als extentie .sqlite) in de tweede stap geselecteerd "
@@ -103,31 +102,6 @@ class PolderSelectionWidget(QWidget):  # , FORM_CLASS):
             settings.setValue('last_used_DAMO_path',
                               os.path.dirname(DAMO_datasource))
         return
-
-    # def select_HDB(self):
-    #     """
-    #     Select a dump or export of the HDB (Dutch: Hydrologen database) (.gdb)
-    #
-    #     :return:
-    #     """
-    #     settings = QSettings('leggertool', 'filepaths')
-    #     try:
-    #         init_path = settings.value('last_used_HDB_path', type=str)
-    #     except:
-    #         init_path = os.path.expanduser("~")  # get path to respectively "user" folder
-    #
-    #     HDB_datasource = QFileDialog.getExistingDirectory(
-    #         self,
-    #         'Selecteer Hydrologen fileGeoDatabase (.gdb) van polder',
-    #         init_path
-    #     )
-    #
-    #     if HDB_datasource:
-    #         self.var_text_HDB.setText(HDB_datasource)
-    #         settings.setValue('last_used_HDB_path',
-    #                           os.path.dirname(
-    #                               HDB_datasource))  # verwijzing naar de class.variable in het hoofdscherm
-    #     return
 
     def select_spatialite(self):
         """
@@ -184,7 +158,6 @@ class PolderSelectionWidget(QWidget):  # , FORM_CLASS):
 
         database_path = self.var_text_leggerdatabase.text()
         filepath_DAMO = self.var_text_DAMO.text()
-        # filepath_HDB = self.var_text_HDB.text()
 
         if not os.path.exists(filepath_DAMO):
             messagebar_message(
@@ -197,7 +170,6 @@ class PolderSelectionWidget(QWidget):  # , FORM_CLASS):
 
         legger_class = CreateLeggerSpatialite(
             filepath_DAMO,
-            filepath_HDB,
             database_path,
         )
 
@@ -239,11 +211,6 @@ class PolderSelectionWidget(QWidget):  # , FORM_CLASS):
         self.load_DAMO_dump_button.clicked.connect(self.select_DAMO)
         self.load_DAMO_dump_button.setMinimumWidth(190)
 
-        # self.load_HDB_dump_button = QtWidgets.QPushButton(self)
-        # self.load_HDB_dump_button.setObjectName("Load HDB")
-        # self.load_HDB_dump_button.clicked.connect(self.select_HDB)
-        # self.load_HDB_dump_button.setMinimumWidth(190)
-
         self.explanation_button = QtWidgets.QPushButton(self)
         self.explanation_button.setObjectName("Explain")
         self.explanation_button.clicked.connect(self.explain_leggerdatabase)
@@ -269,9 +236,6 @@ class PolderSelectionWidget(QWidget):  # , FORM_CLASS):
         self.var_text_DAMO = QtWidgets.QLineEdit(self)
         self.var_text_DAMO.setText("leeg")
 
-        # self.var_text_HDB = QtWidgets.QLineEdit(self)
-        # self.var_text_HDB.setText("leeg")
-
         self.var_text_leggerdatabase = QtWidgets.QLineEdit(self)
         self.var_text_leggerdatabase.setText("leeg")
 
@@ -280,17 +244,12 @@ class PolderSelectionWidget(QWidget):  # , FORM_CLASS):
         self.box_explanation = QtWidgets.QVBoxLayout()
         self.box_explanation.addWidget(self.explanation_button)
 
-        # Create buttons with functions to select damo and hdb and database creation and add it to rows
+        # Create buttons with functions to select damo and database creation and add it to rows
         self.box_leggerdatabase_create = QtWidgets.QVBoxLayout()
         self.hbox_DAMO = QtWidgets.QHBoxLayout()
         self.hbox_DAMO.addWidget(self.var_text_DAMO)
         self.hbox_DAMO.addWidget(self.load_DAMO_dump_button)
         self.box_leggerdatabase_create.addLayout(self.hbox_DAMO)
-
-        # self.hbox_HDB = QtWidgets.QHBoxLayout()
-        # self.hbox_HDB.addWidget(self.var_text_HDB)
-        # self.hbox_HDB.addWidget(self.load_HDB_dump_button)
-        # self.box_leggerdatabase_create.addLayout(self.hbox_HDB)
 
         self.box_leggerdatabase_create.addWidget(self.create_leggerdatabase_button)
 
@@ -331,7 +290,6 @@ class PolderSelectionWidget(QWidget):  # , FORM_CLASS):
         Dialog.setWindowTitle(_translate("Dialog", "Selecteer en/of maak de leggerdatabase van de polder", None))
         self.explanation_button.setText(_translate("Dialog", "Klik hier voor meer uitleg", None))
         self.load_DAMO_dump_button.setText(_translate("Dialog", "Selecteer DAMO gdb", None))
-        # self.load_HDB_dump_button.setText(_translate("Dialog", "Selecteer HDB gdb", None))
         self.create_leggerdatabase_button.setText(_translate("Dialog", "Aanmaken database", None))
         self.load_leggerdatabase_button.setText(_translate("Dialog", "Selecteer leggerdb", None))
         self.cancel_button.setText(_translate("Dialog", "Sluiten", None))
