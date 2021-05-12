@@ -354,9 +354,9 @@ SET debiet = debiet_3di
             """
                     INSERT INTO begroeiingsvariant(id, naam, is_default, friction_manning, friction_begroeiing, begroeiingsdeel) 
                     VALUES 
-                        (3, 'volledig begroeid', 1, 40, 65, 0.9),
-                        (2, 'half vol', 0, 20, 30, 0.5),
-                        (1, 'basis', 0, 20, 30, 0.25)
+                        (3, 'volledig begroeid', 1, 34, 65, 0.9),
+                        (2, 'half vol', 0, 34, 30, 0.5),
+                        (1, 'basis', 0, 34, 30, 0.25)
                     """)
 
         session.execute(

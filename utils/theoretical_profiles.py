@@ -67,15 +67,15 @@ def read_spatialite(cursor):
     return df
 
 
-def calc_pitlo_griffioen(flow, ditch_bottom_width, water_depth, slope, friction_manning, friction_begroeiing,
-                         begroeiingsdeel):
-	
-    ditch_circumference = (ditch_bottom_width * np.sqrt(1 - begroeiingsdeel) +
-                           (np.sqrt((water_depth * np.sqrt(1 - begroeiingsdeel)) ** 2 +
-                                    (slope * water_depth * np.sqrt(1 - begroeiingsdeel)) ** 2)) +
-                           (np.sqrt((water_depth * np.sqrt(1 - begroeiingsdeel)) ** 2 +
-                                    (slope * water_depth * np.sqrt(1 - begroeiingsdeel)) ** 2)))
-	
+def calc_pitlo_griffioen(flow, ditch_bottom_width, water_depth, slope, friction_manning, friction_begroeiing,begroeiingsdeel):
+    """
+    A calculation of the formula for gradient in the water level according to Pitlo and Griffioen.
+    Based on physical parameters like normative flow, ditch width, water depth and plant growth within the profile.
+    """
+    width_at_waterlevel = ditch_bottom_width + 2 * water_depth * slope
+
+    ditch_circumference = width_at_waterlevel + 2 * (1 - begroeiingsdeel) * water_depth
+
     total_cross_section_area = (ditch_bottom_width + water_depth * slope) * water_depth
 
     A_1 = (1 - begroeiingsdeel) * total_cross_section_area
