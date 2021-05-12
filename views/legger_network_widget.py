@@ -293,6 +293,7 @@ class LeggerWidget(QDockWidget):
         self.init_depth = 0.8
         self.init_talud = 2
         self.init_reason = ''
+        self.selected_hydrovak_db = None
 
     def onMapClick(self, identifyFeatures):
         if len(identifyFeatures):
@@ -448,7 +449,7 @@ class LeggerWidget(QDockWidget):
                         begroeiingsvariant) != str:
                     profile_variant = self.session.query(Varianten).filter(
                         Varianten.hydro_id == node.hydrovak.get('hydro_id'),
-                        Varianten.begroeiingsvariant_id == begroeiingsvariant,
+                        Varianten.begroeiingsvariant_id == begroeiingsvariant.id,
                         Varianten.diepte < depth + precision,
                         Varianten.diepte > depth - precision
                     )
@@ -886,7 +887,11 @@ class LeggerWidget(QDockWidget):
 
         item = self.selected_hydrovak
         hydro_object = self.selected_hydrovak_db
+
         self.variant_model.removeRows(0, len(self.variant_model.rows))
+
+        if hydro_object is None:
+            return
 
         selected_variant_id = item.hydrovak.get('selected_variant_id')
 
