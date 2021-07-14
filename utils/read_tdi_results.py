@@ -6,21 +6,18 @@
 import json
 import logging
 import math
+import sqlite3
 
-from qgis.core import QgsGeometry, QgsLineStringV2, QgsPoint
-
-try:
-    from ThreeDiToolbox.datasource.netcdf_groundwater_h5py import \
-        NetcdfGroundwaterDataSourceH5py as NetcdfGroundwaterDataSource
-except ImportError:
-    from ThreeDiToolbox.datasource.netcdf_groundwater import NetcdfGroundwaterDataSource
-
-from legger.utils.geom_collections.lines import LineCollection
-from legger.utils.geometries import LineString
-from legger.utils.geometries import shape
 from legger.sql_models.legger import DuikerSifonHevel, HydroObject
 from legger.sql_models.legger_database import LeggerDatabase
-from pyspatialite import dbapi2 as dbapi
+from legger.sql_models.legger_database import load_spatialite
+from legger.utils.geom_collections.lines import LineCollection
+from qgis.core import QgsGeometry, QgsPointXY
+
+try:
+    from ThreeDiToolbox.datasource.threedi_results import ThreediResult
+except ImportError as e:
+    ThreediResult = None
 
 log = logging.getLogger(__name__)
 
@@ -72,7 +69,14 @@ def read_tdi_results(path_model_db, path_result_db,
     con_res = dbapi.connect(path_result_db)
     con_legger = dbapi.connect(path_legger_db)
 
-    result_ds = NetcdfGroundwaterDataSource(path_result_nc)
+    con_res = load_spatialite(path_result_db)
+
+    con_legger = load_spatialite(path_legger_db)
+
+    if ThreediResult is None:
+        raise ImportError('no ThreeDiToolbox plugin')
+
+    result_ds = ThreediResult(path_result_nc)
 
     # make sure we got dictionaries returned
     con_model.row_factory = dbapi.Row

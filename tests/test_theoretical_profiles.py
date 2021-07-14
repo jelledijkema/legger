@@ -24,9 +24,11 @@ class TestTheoreticalProfiles(unittest.TestCase):
 
     def test_all_together(self):
 
-        profiles = create_theoretical_profiles(self.legger_db)
+        bv = BegroeiingsVariant()
 
-        write_theoretical_profile_results_to_db(profiles, self.legger_db)
+        profiles = create_theoretical_profiles(self.legger_db, 2, 2, bv)
+
+        write_theoretical_profile_results_to_db(profiles, self.legger_db, 2, 2, bv)
 
         pass
 

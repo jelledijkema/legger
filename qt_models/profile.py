@@ -128,6 +128,15 @@ class ProfileModel(ModifiedBaseModel):
         verhang_color = ColorField(show=False,
                                    default_value=(0, 0, 0, 0))
 
+        verhang_inlaat = ValueField(show=True,
+                                    column_width=45,
+                                    round=1,
+                                    column_name='inlaat',
+                                    column_tooltip='verhang inlaat [cm/km]',
+                                    color_from='verhang_inlaat_color')
+        verhang_inlaat_color = ColorField(show=False,
+                                          default_value=(0, 0, 0, 0))
+
         hover = ValueField(show=False,
                            default_value=False)
 

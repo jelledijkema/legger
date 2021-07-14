@@ -85,7 +85,9 @@ class HydroObject(Base):
     code = Column(String(50), index=True)
     categorieoppwaterlichaam = Column(Integer)
     streefpeil = Column(Float)
+    zomerpeil = Column(Float)
     debiet_3di = Column(Float)
+    debiet_inlaat = Column(Float)
     debiet_aangepast = Column(Float)
     debiet = Column(Float)
     channel_id = Column(Integer)  # link to 3di id
@@ -140,6 +142,7 @@ class Profielen(Base):
     hydro_id = Column(Integer,
                       ForeignKey(HydroObject.__tablename__ + ".id"),
                       index=True)
+
     # shape_lengte = Column(Float)
     # hydro = relationship(HydroObject,
     #                      back_populates="profielen")
@@ -183,10 +186,11 @@ class Profielpunten(Base):
         return u'profielpunt {0}'.format(
             self.pbpident)
 
+
 Profielen.profielpunten = relationship(
-        Profielpunten,
-        uselist=True,
-        back_populates="profiel")
+    Profielpunten,
+    uselist=True,
+    back_populates="profiel")
 Profielpunten.profiel = relationship(
     Profielen,
     uselist=False,
@@ -237,6 +241,8 @@ class Varianten(Base):
     talud = Column(Float)
     # maatgevend_debiet = Column(Float)
     verhang = Column(Float)
+    verhang_inlaat = Column(Float)
+    afvoer_leidend = Column(Integer)
     opmerkingen = Column(String())
     hydro_id = Column(Integer,
                       ForeignKey(HydroObject.__tablename__ + ".id"),
@@ -277,6 +283,9 @@ class GeselecteerdeProfielen(Base):
                         ForeignKey(Varianten.__tablename__ + ".id"),
                         index=True)
     selected_on = Column(DateTime, default=datetime.datetime.utcnow)
+
+    hydro_verhang = Column(Float)
+    tot_verhang = Column(Float)
 
     hydro = relationship(HydroObject,
                          back_populates="geselecteerd")
@@ -347,6 +356,3 @@ class DuikerSifonHevel(Base):
     def __str__(self):
         return u'DuikerSifonHevel {0}'.format(
             self.code)
-
-
-

@@ -246,6 +246,77 @@ class CreateLeggerSpatialite(object):
          FROM imp_duikersifonhevel
          """)
 
+        # debiet 3di
+        session.execute("""
+         CREATE TABLE debiet_3di AS SELECT
+             ogc_fid as id,
+             code,
+             polder,
+             CASE WHEN richting > 0 THEN q_m3_s ELSE -1 * q_m3_s END as debiet,
+             verhang_abs_cm_km,
+             geometry
+         FROM imp_Debieten_3Di_HR_waterlopen;
+         """)
+
+        session.execute("""
+                 SELECT RecoverGeometryColumn( 'debiet_3di' , 'geometry' , 28992 , 'MULTILINESTRING' );
+                 """)
+
+        session.execute("""
+                 SELECT CreateSpatialIndex('debiet_3di', 'geometry');
+                 """)
+
+        session.execute("""
+WITH
+    cnt as (SELECT 1 x union select x+1 from cnt where x<9),
+    pnt as (SELECT h.id, cnt.x / 10.0 as fraction, Line_Interpolate_Point(h.geometry, cnt.x / 10.0) as geom, ST_LENGTH(h.geometry) as length
+            FROM hydroobject h, cnt),
+    pnt_buf as (SELECT p.*, ST_Expand(p.geom, MIN(5, length/ 11 )) as geom_buffer from pnt p),
+    link as (SELECT 
+                p.id as h_id, 
+                d.id as d_id, 
+                p.fraction, 5 - st_distance(p.geom, d.geometry) as score, 
+                abs(d.debiet) as flow 
+             FROM pnt_buf p, debiet_3di d 
+             WHERE st_intersects(p.geom_buffer, d.geometry) 
+                AND d.ROWID IN (SELECT ROWID 
+                                FROM SpatialIndex
+                                WHERE f_table_name = 'debiet_3di' AND search_frame = p.geom_buffer)),
+    score as (SELECT h_id, d_id, sum(score) as score, max(flow) as flow, count(*) as cnt
+              FROM link 
+              GROUP BY h_id, d_id 
+              ORDER BY 1, 4 DESC, 3 DESC),
+    linked as (SELECT distinct * FROM score WHERE cnt >= 2 GROUP BY h_id),
+    matched as (SELECT  
+                    h.id as hydro_id, 
+                    CASE WHEN Line_Locate_Point(h.geometry, st_startpoint(d.geometry)) <= Line_Locate_Point(h.geometry, st_endpoint(d.geometry)) THEN d.debiet ELSE -1 * d.debiet END as debiet_3di,
+                    round (l.score / 45.0 * 100.0, 2) as score
+                FROM linked l, hydroobject h, debiet_3di d  
+                WHERE l.h_id = h.id and l.d_id = d.id)
+
+    UPDATE hydroobject
+    SET 
+        debiet_3di = (SELECT m.debiet_3di FROM matched m WHERE m.hydro_id = id),
+        score = (SELECT m.score FROM matched m WHERE m.hydro_id = id)
+         """)
+
+        session.execute("""
+    UPDATE hydroobject
+    SET debiet = debiet_3di
+                 """)
+
+        session.execute("""
+            WITH 
+                max_diepte as (Select pr.hydro_id as hydro_id, min(pp.iws_hoogte) as bodemhoogte, ho.streefpeil - min(pp.iws_hoogte)  as diepte, 'meting' as bron
+                from profielpunten pp, profielen pr, hydroobject ho
+                where pp.pro_pro_id = pr.pro_id AND ho.id = pr.hydro_id AND osmomsch='Z1'
+                group by pr.hydro_id)
+
+            UPDATE kenmerken
+            SET (bodemhoogte, diepte, bron_diepte) = (SELECT bodemhoogte, diepte, bron FROM max_diepte WHERE kenmerken.hydro_id = max_diepte.hydro_id)
+            WHERE kenmerken.hydro_id in (SELECT hydro_id FROM max_diepte)    
+            """)
+
         session.commit()
 
     def delete_imported_tables(self):

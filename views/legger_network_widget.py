@@ -196,6 +196,74 @@ class LeggerWidget(QDockWidget):
         first_area = root.child(0)
         self.area_model.setDataItemKey(first_area, 'selected', True)
 
+        self.hydrovak_model = QStandardItemModel()
+        self.hydrovak_model.appendRow(QStandardItem(''))
+        for hline in self.network.arc_tree.values():
+            item = QStandardItem(hline.get('code'))
+            self.hydrovak_model.appendRow(item)
+
+        self.search_hydrovak.setModel(self.hydrovak_model)
+
+        self.track_nodes = []
+        self._kijkprofiel_popup = None
+
+        self.init_width = 1.0
+        self.init_depth = 0.8
+        self.init_talud = 2
+        self.init_reason = ''
+        self.selected_hydrovak_db = None
+
+    def onMapClick(self, identifyFeatures):
+        if len(identifyFeatures):
+            hydro_id = identifyFeatures[0].mFeature.attribute('hydro_id')
+            node = self.legger_model.rootItem.child(0)
+            index = self.legger_model.find_younger(self.legger_model.createIndex(node.row(), 0, node), 'hydro_id',
+                                                   hydro_id)
+            if index:
+                self.select_hydrovak(index)
+                if self.click_tool_active:
+                    self.toggleMapTool()
+
+    def toggleMapTool(self):
+
+        if self.click_tool_active:
+            self.iface.mapCanvas().unsetMapTool(self.clickTool)
+            self.click_tool_active = False
+            if self.last_map_tool:
+                self.iface.mapCanvas().setMapTool(self.last_map_tool)
+                self.last_map_tool = None
+        else:
+            self.last_map_tool = self.iface.mapCanvas().mapTool()
+            self.iface.mapCanvas().setMapTool(self.clickTool)
+            self.click_tool_active = True
+
+    def open_parents_recursive(self, index):
+        self.legger_tree_widget.setExpanded(index, True)
+        parent = index.parent()
+        if parent and parent.internalPointer():
+            self.open_parents_recursive(parent)
+
+    def search_hydrovak_combo(self):
+        code = self.search_hydrovak.currentText()
+        node = self.legger_model.rootItem.child(0)
+        index = self.legger_model.find_younger(self.legger_model.createIndex(node.row(), 0, node), 'code', code)
+        if index:
+            self.select_hydrovak(index)
+
+    def select_hydrovak(self, index):
+        self.open_parents_recursive(index)
+        node = index.internalPointer()
+        self.legger_model.setDataItemKey(node, 'selected', Qt.Checked)
+        self.legger_tree_widget.scrollTo(index, QAbstractItemView.EnsureVisible)
+
+    def open_kijkprofiel_dialog(self):
+
+        self._kijkprofiel_popup = KijkProfielPopup(
+            self,
+            self.iface,
+            self)
+        self._kijkprofiel_popup.show()
+
     def category_change(self, nr):
         """
         filters the tree and re-initialize legger tree
@@ -358,10 +426,12 @@ class LeggerWidget(QDockWidget):
                             GeselecteerdeProfielen.hydro_id == node.hydrovak.get('hydro_id')).first()
                         if selected:
                             selected.variant = profilev
+                            selected.hydro_verhang = profilev.verhang * node.hydrovak.get('length')
                         else:
                             selected = GeselecteerdeProfielen(
                                 hydro_id=node.hydrovak.get('hydro_id'),
-                                variant_id=profilev.id
+                                variant_id=profilev.id,
+                                hydro_verhang=profilev.verhang * node.hydrovak.get('length') / 1000
                             )
                         self.session.add(selected)
             elif not initial:
@@ -619,6 +689,8 @@ class LeggerWidget(QDockWidget):
                     traject_nodes=traject
                 )
                 self.session.commit()
+                # todo: update here the cumulative slope calculation
+
                 # trigger repaint of sideview
                 self.sideview_widget.draw_selected_lines(self.sideview_widget._get_data())
             else:
@@ -770,6 +842,9 @@ class LeggerWidget(QDockWidget):
                 'verhang': profile.verhang,
                 'color': interpolated_color(value=profile.verhang, color_map=color_map,
                                             alpha=(255 if active else 80)),
+                'verhang_inlaat': profile.verhang_inlaat,
+                'color_inlaat': interpolated_color(value=profile.verhang_inlaat, color_map=color_map,
+                                                   alpha=(255 if active else 80)),
                 'points': [
                     (-0.5 * profile.waterbreedte, hydro_object.streefpeil),
                     (-0.5 * profile.bodembreedte, hydro_object.streefpeil - profile.diepte),

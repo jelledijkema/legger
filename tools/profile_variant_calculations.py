@@ -62,11 +62,6 @@ class ProfileCalculations(QObject):
 
         try:
             tdi_plugin = plugins['ThreeDiToolbox']
-        except:
-            raise ImportError("For Leggertool the ThreeDiToolbox plugin must be installed, "
-                              "version xxx or higher")
-
-        try:
             ts_datasource = tdi_plugin.ts_datasource
         except:
             ts_datasource = "Kies eerst 3Di output (model, simulatie (nc), sqlite1)"

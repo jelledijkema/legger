@@ -113,6 +113,8 @@ class ProfileCalculationWidget(QWidget):  # , FORM_CLASS):
         surge_choices = ['%s' % s for s in [1.5, 2.0, 2.5, 3.0, 3.5, 4.0, 4.5, 5.0]]
         self.surge_combo_box.insertItems(0, surge_choices)
         self.surge_combo_box.setCurrentIndex(3)
+        self.surge_combo_inlaat_box.insertItems(0, surge_choices)
+        self.surge_combo_inlaat_box.setCurrentIndex(3)
 
     def timestep_selection_change(self, nr):
         """Proces new selected timestep in combobox
@@ -291,11 +293,12 @@ class ProfileCalculationWidget(QWidget):  # , FORM_CLASS):
         # session.query('Select * FROM varianten')
 
         opstuw_norm = float(self.surge_combo_box.currentText())
+        opstuw_norm_inlaat = float(self.surge_combo_inlaat_box.currentText())
 
         for bv in session.query(BegroeiingsVariant).all():
 
-            if True:  # try:
-                profiles = create_theoretical_profiles(self.polder_datasource, opstuw_norm, bv)
+            try:
+                profiles = create_theoretical_profiles(self.polder_datasource, opstuw_norm, opstuw_norm_inlaat, bv)
                 self.feedbackmessage = "Profielen zijn berekend."
             # except:
             #     self.feedbackmessage = "Fout, profielen konden niet worden berekend."
@@ -418,8 +421,10 @@ class ProfileCalculationWidget(QWidget):  # , FORM_CLASS):
         self.box_step1.addWidget(self.step1_explanation_button)
         self.groupBox_step1.setLayout(self.box_step1)  # box toevoegen aan groupbox
 
-        #         # surge selection:
+        # surge selection:
+        self.form_row = QtWidgets.QGridLayout(self)
         self.surge_combo_box = QComboBox(self)
+        self.surge_combo_inlaat_box = QComboBox(self)
 
         # Assembling step 2 row
         self.step2_button = QtGui.QPushButton(self)
@@ -429,10 +434,19 @@ class ProfileCalculationWidget(QWidget):  # , FORM_CLASS):
         self.step2_explanation_button.setObjectName(_fromUtf8("uitleg_stap2"))
         self.step2_explanation_button.clicked.connect(self.explain_step2)
 
-        self.groupBox_step2 = QtGui.QGroupBox(self)
-        self.groupBox_step2.setTitle("stap 3: bereken varianten")
-        self.box_step2 = QtGui.QVBoxLayout()
-        self.box_step2.addWidget(self.surge_combo_box)
+        self.groupBox_step2 = QtWidgets.QGroupBox(self)
+        self.groupBox_step2.setTitle("Stap 3: bereken profielvarianten")
+        self.box_step2 = QtWidgets.QVBoxLayout()
+        self.box_step2.addLayout(self.form_row)
+        lbl = QtWidgets.QLabel(self)
+        lbl.setText("Max verhang afvoer [cm/km]")
+        self.form_row.addWidget(lbl, 0, 0)
+        self.form_row.addWidget(self.surge_combo_box, 0, 1)
+        lbl = QtWidgets.QLabel(self)
+        lbl.setText("Max verhang inlaat [cm/km]")
+        self.form_row.addWidget(lbl, 1, 0)
+        self.form_row.addWidget(self.surge_combo_inlaat_box, 1, 1)
+
         self.box_step2.addWidget(self.step2_button)
         self.box_step2.addWidget(self.step2_explanation_button)
         self.groupBox_step2.setLayout(self.box_step2)  # box toevoegen aan groupbox
@@ -463,9 +477,11 @@ class ProfileCalculationWidget(QWidget):  # , FORM_CLASS):
         self.run_all_button = QtGui.QPushButton(self)
         self.run_all_button.setObjectName(_fromUtf8("pre fill profiles"))
         self.run_all_button.clicked.connect(self.run_all)
-        self.groupBox_run_all = QtGui.QGroupBox(self)
-        self.groupBox_run_all.setTitle("Run alle (vergeet 3di resultaten niet te selecteren)")
-        self.box_run_all = QtGui.QHBoxLayout()
+        
+        self.groupBox_run_all = QtWidgets.QGroupBox(self)
+        self.groupBox_run_all.setTitle("Run alle")
+        self.box_run_all = QtWidgets.QHBoxLayout()
+
         self.box_run_all.addWidget(self.run_all_button)
         self.groupBox_run_all.setLayout(self.box_run_all)  # box toevoegen aan groupbox
 
