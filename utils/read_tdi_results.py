@@ -32,20 +32,20 @@ def create_geom_line(coordinates, maincall=True):
         list_of_geoms = [create_geom_line(coord, False) for coord in coordinates]
 
         if maincall:
-            if type(list_of_geoms[0]) == QgsPoint:
-                return QgsGeometry.fromPolyline(list_of_geoms)
+            if type(list_of_geoms[0]) == QgsPointXY:
+                return QgsGeometry.fromPolylineXY(list_of_geoms)
             else:
-                return QgsGeometry.fromMultiPolyline(list_of_geoms)
+                return QgsGeometry.fromMultiPolylineXY(list_of_geoms)
         else:
             return list_of_geoms
     else:
-        return QgsPoint(coordinates[0], coordinates[1])
+        return QgsPointXY(coordinates[0], coordinates[1])
 
 
 def read_tdi_results(path_model_db, path_result_db,
                      path_result_nc, path_legger_db,
                      timestep=-1,
-                     max_link_distance=5.0,
+                     max_link_distance=1.0,
                      match_criteria=3):
     """ joins hydoobjects to 3di-flowlines (through channels) and add the discharge of the selected timestep
 
@@ -65,13 +65,12 @@ def read_tdi_results(path_model_db, path_result_db,
     - functions of the ThreeDiToolbox qgis-plugin are used, so make sure this plugin is available
     """
 
-    con_model = dbapi.connect(path_model_db)
-    con_res = dbapi.connect(path_result_db)
-    con_legger = dbapi.connect(path_legger_db)
+    con_model = load_spatialite(path_model_db)
 
     con_res = load_spatialite(path_result_db)
 
     con_legger = load_spatialite(path_legger_db)
+
 
     if ThreediResult is None:
         raise ImportError('no ThreeDiToolbox plugin')
@@ -79,9 +78,9 @@ def read_tdi_results(path_model_db, path_result_db,
     result_ds = ThreediResult(path_result_nc)
 
     # make sure we got dictionaries returned
-    con_model.row_factory = dbapi.Row
-    con_res.row_factory = dbapi.Row
-    con_legger.row_factory = dbapi.Row
+    con_model.row_factory = sqlite3.Row
+    con_res.row_factory = sqlite3.Row
+    con_legger.row_factory = sqlite3.Row
 
     # read discharge of timestep. Returns numpy array with index number is idx.
     # to link to model channels, the id mapping is needed.
@@ -186,7 +185,7 @@ def read_tdi_results(path_model_db, path_result_db,
         #     json.loads(hydroobject['geojson'])['coordinates'])
 
         bbox = line.boundingBox()
-        bbox = bbox.buffer(max_link_distance)
+        bbox = bbox.buffered(max_link_distance)
         bbox = [bbox.xMinimum(), bbox.yMinimum(), bbox.xMaximum(), bbox.yMaximum()]
         # with shapely
         # bbox = line.bounds
@@ -243,12 +242,12 @@ def read_tdi_results(path_model_db, path_result_db,
             # get orientation of hydroobject vs channel
             if line.isMultipart():
                 vertexes = line.asMultiPolyline()
-                d1, p1, v1 = geom_channel.closestSegmentWithContext(vertexes[0][0])
-                d2, p2, v2 = geom_channel.closestSegmentWithContext(vertexes[-1][-1])
+                d1, p1, v1, o1 = geom_channel.closestSegmentWithContext(vertexes[0][0])
+                d2, p2, v2, o2 = geom_channel.closestSegmentWithContext(vertexes[-1][-1])
             else:
                 vertexes = line.asPolyline()
-                d1, p1, v1 = geom_channel.closestSegmentWithContext(vertexes[0])
-                d2, p2, v2 = geom_channel.closestSegmentWithContext(vertexes[-1])
+                d1, p1, v1, o1 = geom_channel.closestSegmentWithContext(vertexes[0])
+                d2, p2, v2, o2 = geom_channel.closestSegmentWithContext(vertexes[-1])
 
             dist1 = geom_channel.distanceToVertex(v1) - math.sqrt(geom_channel.sqrDistToVertexAt(p1, v1))
             dist2 = geom_channel.distanceToVertex(v2) - math.sqrt(geom_channel.sqrDistToVertexAt(p2, v2))
@@ -327,12 +326,12 @@ def read_tdi_results(path_model_db, path_result_db,
                 # get orientation of hydroobject vs channel
                 if line.isMultipart():
                     vertexes = line.asMultiPolyline()
-                    d1, p1, v1 = geom_flowline.closestSegmentWithContext(vertexes[0][0])
-                    d2, p2, v2 = geom_flowline.closestSegmentWithContext(vertexes[-1][-1])
+                    d1, p1, v1, o1 = geom_flowline.closestSegmentWithContext(vertexes[0][0])
+                    d2, p2, v2, o2 = geom_flowline.closestSegmentWithContext(vertexes[-1][-1])
                 else:
                     vertexes = line.asPolyline()
-                    d1, p1, v1 = geom_flowline.closestSegmentWithContext(vertexes[0])
-                    d2, p2, v2 = geom_flowline.closestSegmentWithContext(vertexes[-1])
+                    d1, p1, v1, o1 = geom_flowline.closestSegmentWithContext(vertexes[0])
+                    d2, p2, v2, o2 = geom_flowline.closestSegmentWithContext(vertexes[-1])
 
                 dist1 = geom_flowline.distanceToVertex(v1) - math.sqrt(geom_flowline.sqrDistToVertexAt(p1, v1))
                 dist2 = geom_flowline.distanceToVertex(v2) - math.sqrt(geom_flowline.sqrDistToVertexAt(p2, v2))
@@ -381,7 +380,7 @@ def write_tdi_results_to_db(hydroobject_results, path_legger_db):
 
 def read_tdi_culvert_results(path_model_db, path_result_db,
                              path_result_nc, path_legger_db,
-                             timestep):
+                             timestep=-1):
     """
 
     path_model_db (str): path to 3di modelspatialite
@@ -393,16 +392,18 @@ def read_tdi_culvert_results(path_model_db, path_result_db,
     """
 
     # open databases and netCDF
-    con_model = dbapi.connect(path_model_db)
-    con_result = dbapi.connect(path_result_db)
-    con_legger = dbapi.connect(path_legger_db)
+    con_model = load_spatialite(path_model_db)
 
-    result_ds = NetcdfGroundwaterDataSource(path_result_nc)
+    con_result = load_spatialite(path_result_db)
+
+    con_legger = load_spatialite(path_legger_db)
+
+    result_ds = ThreediResult(path_result_nc)
 
     # make sure we got dictionaries returned
-    con_model.row_factory = dbapi.Row
-    con_result.row_factory = dbapi.Row
-    con_legger.row_factory = dbapi.Row
+    con_model.row_factory = sqlite3.Row
+    con_result.row_factory = sqlite3.Row
+    con_legger.row_factory = sqlite3.Row
 
     # read discharge of  timestep. Returns numpy array with index number is idx.
     # to link to model channels, the id mapping is needed.
@@ -474,6 +475,6 @@ def get_timestamps(path_result_nc, parameter=None):
     parameter (str): parameter identification
     :return:
     """
-    result_ds = NetcdfGroundwaterDataSource(path_result_nc)
+    result_ds = ThreediResult(path_result_nc)
 
     return result_ds.get_timestamps(parameter=parameter)

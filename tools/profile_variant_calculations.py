@@ -5,7 +5,7 @@
 import logging
 import os
 
-from PyQt4.QtCore import Qt, QObject
+from qgis.PyQt.QtCore import Qt, QObject
 from qgis.utils import plugins
 
 from legger.views.calculating_profiles import ProfileCalculationWidget

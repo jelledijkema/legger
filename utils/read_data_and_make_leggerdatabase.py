@@ -50,32 +50,26 @@ def nonwkt(value, default_value=None):
 
 class CreateLeggerSpatialite(object):
     """
-        Select "dump" or "export" .gdb files that come from DAMO and HDB
+        Select "dump" or "export" .gdb files that come from DAMO
         This should be similar to the export that is send to the N&S datachecker and modelbuilder for this model revision.
 
         The output of this step is a legger_{polder}_{datetime}.sqlite file with all the necessary tables and data.
         Step 1: make empty legger database
-        Step 2: Read DAMO and HDB (geopandas)
+        Step 2: Read DAMO (geopandas)
         Step 3: make dataframes from data according to right format
         Step 4: write dataframes to legger database (sqlalchemy)
         """
 
-    def __init__(self, filepath_DAMO, filepath_HDB, database_path):
+    def __init__(self, filepath_DAMO, database_path):
         self.filepath_DAMO = filepath_DAMO
-        self.filepath_HDB = filepath_HDB
         self.database_path = database_path
-
-        self.profielpunten_tabel = None
-        self.profielen_tabel = None
-        self.kenmerken_tabel = None
-        self.hydroobject_tabel = None
-        self.waterdeel_tabel = None
-        self.duikersifonhevel_tabel = None
 
         self.ogr_exe = os.path.abspath(os.path.join(sys.executable, os.pardir, os.pardir, 'bin', 'ogr2ogr.exe'))
 
-        self.tables = ['DuikerSifonHevel', 'Waterdeel', 'HydroObject', 'PeilafwijkingGebied', 'PeilgebiedPraktijk',
-                  'GW_PRO', 'GW_PRW', 'GW_PBP', 'IWS_GEO_BESCHR_PROFIELPUNTEN']
+        self.tables = ['DuikerSifonHevel', 'Waterdeel', 'HydroObject',
+                       'GW_PRO', 'GW_PRW', 'GW_PBP', 'IWS_GEO_BESCHR_PROFIELPUNTEN', 'Debieten_3Di_HR_waterlopen',
+                       'Peilgebieden_na_datacheck']
+        # tabellen oude methode peilgebieden: 'PeilafwijkingGebied', 'PeilgebiedPraktijk',
 
         self.db = LeggerDatabase(
             {
@@ -121,7 +115,7 @@ class CreateLeggerSpatialite(object):
         nr_tables = len(self.tables)
         for i, table in enumerate(self.tables):
 
-            log.info("--- copy {0}/{1} table {2} ---".format(i+1, nr_tables, table))
+            log.info("--- copy {0}/{1} table {2} ---".format(i + 1, nr_tables, table))
 
             # "-overwrite"
             cmd = '"{ogr_exe}" -a_srs EPSG:28992 -f SQLite -dsco SPATIALITE=YES -append ' \
@@ -134,6 +128,7 @@ class CreateLeggerSpatialite(object):
                 spatialite_path=self.database_path
             )
             log.info(cmd)
+            print(cmd)
 
             ret = subprocess.call(cmd, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
 
@@ -187,28 +182,46 @@ class CreateLeggerSpatialite(object):
             --substr(breedte_getabuleerd, 1, instr(breedte_getabuleerd, ' ')-1) as bodembreedte, 
             keuze_profiel as bron_breedte,
             shape_length as lengte,
-            "" as talud_voorkeur,
+            taludvoorkeur as talud_voorkeur,
             min(ws_talud_links, ws_talud_rechts) as steilste_talud,
-            "" as grondsoort,
+            grondsoort as grondsoort,
             "" as bron_grondsoort,
             hydroobject_id as hydro_id
           FROM imp_hydroobject
         """)
 
         # vullen hydroobjecten
+        # oude methode
+        # session.execute("""
+        # INSERT INTO hydroobject  (id, code, categorieoppwaterlichaam, streefpeil, geometry)
+        # SELECT
+        #     ho.hydroobject_id as id,
+        #     min(ho.code),
+        #     min(ho.categorieoppwaterlichaam),
+        #     min(COALESCE(pgp.peil_wsa, pag.peil_wsa)) as streefpeil,
+        #     min(ho.geometry)
+        # FROM imp_hydroobject ho
+        # JOIN  imp_peilgebiedpraktijk pgp ON st_intersects(ho.geometry, pgp.geometry)
+        # LEFT OUTER JOIN  imp_peilafwijkinggebied pag ON st_intersects(ho.geometry, pag.geometry)
+        # GROUP BY id
+        # """)
+
         session.execute("""
         INSERT INTO hydroobject  (id, code, categorieoppwaterlichaam, streefpeil, geometry)
         SELECT 
             ho.hydroobject_id as id,
             min(ho.code),
             min(ho.categorieoppwaterlichaam),
-            min(COALESCE(pgp.peil_wsa, pag.peil_wsa)) as streefpeil,
+            min(pgp.streefpeil_bwn2) as streefpeil,
             min(ho.geometry)
         FROM imp_hydroobject ho
-        JOIN  imp_peilgebiedpraktijk pgp ON st_intersects(ho.geometry, pgp.geometry)  
-        LEFT OUTER JOIN  imp_peilafwijkinggebied pag ON st_intersects(ho.geometry, pag.geometry) 
-        GROUP BY id
+        JOIN  imp_peilgebieden_na_datacheck pgp ON st_intersects(ho.geometry, pgp.geometry)  
+        GROUP BY ho.hydroobject_id
         """)
+
+        session.execute("""
+                 SELECT CreateSpatialIndex('hydroobject', 'geometry');
+                 """)
 
         # vullen waterdeel =
         session.execute("""
@@ -336,12 +349,24 @@ WITH
 
     def add_default_settings(self):
         session = self.db.get_session()
-        session.execute("INSERT INTO categorie(categorie, naam, variant_diepte_min, variant_diepte_max, default_talud) VALUES "
-                        "(1, 'primair', 0.3, 8, 1.5),"
-                        "(2, 'secundair', 0.3, 2.5, 1.5),"
-                        "(3, 'tertaire', 0.3, 1, 1.5),"
-                        "(4, 'overig', 0.3, 1, 1.5)")
+
+        session.execute(
+            """
+                    INSERT INTO begroeiingsvariant(id, naam, is_default, friction_manning, friction_begroeiing, begroeiingsdeel) 
+                    VALUES 
+                        (3, 'volledig begroeid', 1, 34, 65, 0.9),
+                        (2, 'half vol', 0, 34, 30, 0.5),
+                        (1, 'basis', 0, 34, 30, 0.25)
+                    """)
+
+        session.execute(
+            "INSERT INTO categorie(categorie, naam, variant_diepte_min, variant_diepte_max, default_talud) VALUES "
+            "(1, 'primair', 0.2, 5, 1.5),"
+            "(2, 'secundair', 0.2, 2.5, 1.5),"
+            "(3, 'tertaire', 0.2, 1, 1.5),"
+            "(4, 'overig', 0.2, 1, 1.5)")
         session.commit()
+
 
 def main():
     test_data_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), os.pardir, 'tests', 'data'))
@@ -352,16 +377,13 @@ def main():
     )
 
     filepath_DAMO = os.path.join(test_data_dir, 'DAMO.gdb')  # 'Hoekje_leggertool_database.gdb')
-    filepath_HDB = os.path.join(test_data_dir, 'HDB.gdb')  # 'Hoekje_leggertool_HDB.gdb')
 
     legger_class = CreateLeggerSpatialite(
         filepath_DAMO,
-        filepath_HDB,
         database_path
     )
 
     legger_class.full_import_ogr2ogr()
-
 
 
 if __name__ == '__main__':

@@ -1,4 +1,3 @@
-
 import inspect
 
 from legger.qt_models.base_fields import CHECKBOX_FIELD, COLOR_FIELD, VALUE_FIELD

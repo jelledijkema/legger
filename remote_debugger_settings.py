@@ -1,5 +1,3 @@
-
-
 try:
     import pydevd as pydevd_pycharm
 except ImportError:
@@ -17,4 +15,3 @@ try:
                             suspend=False) #, trace_only_current_thread=True
 except:
     pass
-

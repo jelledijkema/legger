@@ -134,7 +134,7 @@ class BaseCollection(object):
             # self._spatial_index.insert(nr, geom)
             # QGIS:
             feature = QgsFeature()
-            feature.setFeatureId(nr)
+            feature.setId(nr)
             try:
                 geom = shape(record['geometry'])
                 qgeom = QgsGeometry()

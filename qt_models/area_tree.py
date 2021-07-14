@@ -1,9 +1,9 @@
-from PyQt4 import QtCore
+from qgis.PyQt import QtCore
 
-from PyQt4.QtCore import Qt
-from PyQt4.QtGui import QBrush, QColor, QIcon
+from qgis.PyQt.QtCore import Qt
+from qgis.PyQt.QtGui import QBrush, QColor, QIcon
 from legger import settings
-from tree import BaseTreeItem, BaseTreeModel, CHECKBOX_FIELD
+from .tree import BaseTreeItem, BaseTreeModel, CHECKBOX_FIELD
 
 HORIZONTAL_HEADERS = (
     {'field': 'target_level', 'header': 'streefpeil', 'column_width': 300},

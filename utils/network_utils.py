@@ -1,12 +1,6 @@
-from PyQt4.QtCore import Qt
-from PyQt4.QtGui import QCursor
-from qgis.core import QGis, QgsCoordinateTransform, QgsDistanceArea, QgsFeatureRequest, QgsPoint, QgsRectangle
-from qgis.gui import QgsMapTool, QgsRubberBand, QgsVertexMarker
-from qgis.networkanalysis import QgsArcProperter
-
-from .formats import python_value
-
-
+from qgis.PyQt.QtCore import Qt
+from qgis.core import Qgis, QgsCoordinateTransform, QgsDistanceArea, QgsPoint
+from qgis.gui import QgsRubberBand, QgsVertexMarker
 
 
 class LeggerMapVisualisation(object):
@@ -95,7 +89,7 @@ class LeggerMapVisualisation(object):
 
                         length, unit_type = self.dist_calc.convertMeasurement(
                             distance_on_line,
-                            QGis.Meters, QGis.Degrees, False)  # QGis.Degrees
+                            Qgis.Meters, Qgis.Degrees, False)  # QGis.Degrees
 
                         point = part[4].geometry().interpolate(length)
                         self.hover_marker.setCenter(
