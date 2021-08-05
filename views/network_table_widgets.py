@@ -204,7 +204,7 @@ class LeggerTreeWidget(QTreeView):
     hoverExitAll = pyqtSignal()  # exit the whole widget
     # hoverEnterIndex = pyqtSignal(QModelIndex)
 
-    def __init__(self, parent=None, legger_model=None):
+    def __init__(self, parent=None, legger_model: LeggerTreeModel=None):
         super(LeggerTreeWidget, self).__init__(parent)
 
         self._last_hovered_item = None
@@ -215,6 +215,7 @@ class LeggerTreeWidget(QTreeView):
 
         # set signals
         self.clicked.connect(self.click_leaf)
+        # self.Resized.connect(self.on_resize)
 
         self.setMouseTracking(True)
         self.viewport().installEventFilter(self)
@@ -223,16 +224,41 @@ class LeggerTreeWidget(QTreeView):
         self.setAlternatingRowColors(True)
         self.setSelectionMode(QtWidgets.QAbstractItemView.NoSelection)
 
+        self.header().sectionClicked.connect(self.on_header_click)
+        self.header().setSectionsClickable(True)
+
+    def on_header_click(self, column):
+        a = 1
+        if column == 0:
+            if self.model().allCollapsed:
+                self.collapseAll()
+            else:
+                self.expandAll()
+
+            self.model().allCollapsed = not self.model().allCollapsed
+
     def closeEvent(self, event):
         """
         overwrite of QDockWidget class to emit signal
         :param event: QEvent
         """
         self.clicked.disconnect(self.click_leaf)
+        self.header().sectionClicked.disconnect(self.on_header_click)
         self.setMouseTracking(False)
         self.viewport().removeEventFilter(self)
         # super(LeggerTreeWidget, self).closeEvent(event)
         event.accept()
+
+    def resizeEvent(self, e: QtGui.QResizeEvent) -> None:
+        super().resizeEvent(e)
+        self.do_resize()
+
+    def do_resize(self):
+        if self.model() is None:
+            return
+        width = self.width()
+        self.model().set_column_sizes_on_view(self, width=width)
+
 
     def click_leaf(self, index):
 

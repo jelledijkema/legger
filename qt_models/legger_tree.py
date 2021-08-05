@@ -28,7 +28,7 @@ def kijkprofiel_function(item, column_index):
 
 # field and display config of 'hydrovakken'
 HORIZONTAL_HEADERS = (
-    {'field': 'code', 'column_width': 180, 'show': True},
+    {'field': 'code', 'column_width': 250, 'show': True},
     {'field': 'hydro_id', 'column_width': 100, 'show': False},
     {'field': 'sp', 'field_type': CHECKBOX_FIELD, 'column_width': 25, 'single_selection': True,
      'default': False, 'header': 's', 'header_tooltip': 'startpunt traject'},
@@ -266,6 +266,8 @@ class LeggerTreeModel(BaseTreeModel):
         self.hover = None
         self.selected = None
 
+        self.allCollapsed = False
+
     def data(self, index, role):
         """
         get data of field (required QAbstractItemModel function)
@@ -297,6 +299,8 @@ class LeggerTreeModel(BaseTreeModel):
                 return QBrush(QColor(*settings.SELECT_COLOR))
             elif item.hydrovak.get('hover'):
                 return QBrush(QColor(*settings.HOVER_COLOR))
+            elif item.hydrovak.get('selected_depth') is not None:
+                return QBrush(QColor(*settings.READY_COLOR))
             else:
                 return QBrush(Qt.transparent)
         elif role == Qt.TextAlignmentRole:
@@ -488,8 +492,15 @@ class LeggerTreeModel(BaseTreeModel):
         """
         if orientation == Qt.Horizontal:
             if role == Qt.DisplayRole:
+                prefix = ''
                 try:
-                    return self.headers[column].get(
+                    if column == 0:
+                        if self.allCollapsed:
+                            prefix = '- '
+                        else:
+                            prefix = '+ '
+
+                    return prefix + self.headers[column].get(
                         'header', self.headers[column]['field'])
                 except IndexError:
                     pass

@@ -1,5 +1,5 @@
 """ Base classes for QtTreeModel implementation """
-
+from PyQt5.QtWidgets import QTreeView
 from qgis.PyQt import QtCore
 
 from qgis.PyQt.QtCore import Qt
@@ -106,6 +106,7 @@ class BaseTreeModel(QtCore.QAbstractItemModel):
 
         self.headers = headers
         self.headers_dict = dict([(h['field'], h) for h in headers])
+        self.total_width = sum([max(h.get('column_width', 70), 70) for h in headers if h.get('show', True)])
 
         self.item_class = item_class
         if root_item:
@@ -424,18 +425,24 @@ class BaseTreeModel(QtCore.QAbstractItemModel):
         """
         return self.headers
 
-    def set_column_sizes_on_view(self, tree_view):
+    def set_column_sizes_on_view(self, tree_view: QTreeView, width: float = None):
         """
         Helper function for applying the column sizes on a view.
 
         table_view (QTableView): table view instance that uses this model
         """
 
+        factor = 1
+        if width and width > self.total_width:
+            # minus scrollbar
+            factor = ((width - 40) / self.total_width)
+
         for i, col in enumerate(self.headers):
-            width = col.get('column_width')
-            if width:
-                tree_view.setColumnWidth(i, width)
-            if not col.get('show', True):
+            width = max(col.get('column_width', 70), 70)
+            show = col.get('show', True)
+            if show:
+                tree_view.setColumnWidth(i, round(float(width) * factor))
+            else:
                 tree_view.setColumnHidden(i, True)
 
     def data_change_post_process(self, index, to_index):
