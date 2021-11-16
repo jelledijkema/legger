@@ -1,14 +1,17 @@
 try:
-    import pydevd_pycharm
+    import pydevd as pydevd_pycharm
 except ImportError:
     import sys
-
-    sys.path.append('C:\\Program Files\\JetBrains\\PyCharm 2020.3.3\\debug-eggs\\pydevd-pycharm.egg')
+    sys.path.append('C:\\Program Files\\JetBrains\\PyCharm 2021.1\\debug-eggs\\pydevd-pycharm.egg')
     import pydevd_pycharm
 
 
-# pydevd_pycharm.settrace('localhost',
-#                         port=5555,
-#                         stdoutToServer=True,
-#                         stderrToServer=True,
-#                         suspend=False) #, trace_only_current_thread=True
+try:
+
+    pydevd_pycharm.settrace('localhost',
+                            port=5555,
+                            stdoutToServer=True,
+                            stderrToServer=True,
+                            suspend=False) #, trace_only_current_thread=True
+except:
+    pass

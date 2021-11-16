@@ -11,8 +11,10 @@ def create_legger_views(session: sqlite3.Connection):
                 h.id, 
                 code, 
                 categorieoppwaterlichaam, 
-                streefpeil, 
+                streefpeil,
+                zomerpeil,
                 ABS(debiet) as debiet,
+                ABS(debiet_inlaat) as debiet_inlaat,
                 ABS(debiet_3di) as debiet_3di,
                 ABS(debiet_aangepast) as debiet_aangepast,
                 diepte, 
@@ -29,6 +31,9 @@ def create_legger_views(session: sqlite3.Connection):
                 geselecteerde_variant,
                 geselecteerde_begroeiingsvariant,
                 geselecteerd_verhang,
+                geselecteerd_verhang_inlaat,
+                geselecteerd_afvoer_leidend,
+
                 h.opmerkingen,
                 kijkp_breedte,
                 kijkp_diepte,
@@ -69,7 +74,9 @@ def create_legger_views(session: sqlite3.Connection):
                 v.waterbreedte as geselecteerd_breedte,
                 v.id as geselecteerde_variant,
                 v.begroeiingsvariant_id as geselecteerde_begroeiingsvariant,
-                v.verhang as geselecteerd_verhang
+                v.verhang as geselecteerd_verhang,
+                v.verhang_inlaat as geselecteerd_verhang_inlaat,
+                v.afvoer_leidend as geselecteerd_afvoer_leidend
                 FROM geselecteerd g, varianten v
                 WHERE g.variant_id = v.id) as sel
                 ON sel.hydro_id = h.id;
@@ -132,7 +139,9 @@ def create_legger_views(session: sqlite3.Connection):
                 h.code, 
                 h.categorieoppwaterlichaam, 
                 h.streefpeil, 
+                h.winterpeil,
                 h.debiet,
+                h.debiet_inlaat,
                 h.debiet_3di,
                 h.debiet_aangepast,
                 k.diepte,
@@ -161,7 +170,7 @@ def create_legger_views(session: sqlite3.Connection):
                 p.t_overbreedte_r as overbreedte_rechts
             FROM hydroobject h
             JOIN kenmerken k ON h.id = k.hydro_id 	
-            LEFT OUTER  JOIN geselecteerd s ON h.id = s.hydro_id
+            LEFT OUTER JOIN geselecteerd s ON h.id = s.hydro_id
             LEFT OUTER JOIN varianten v ON s.variant_id = v.id
             LEFT OUTER JOIN profielfiguren p ON v.id = p.profid;
          

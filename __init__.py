@@ -5,15 +5,32 @@ import sys
 log = logging.getLogger('legger')
 log.setLevel(logging.DEBUG)
 
-# sys.path.append(
-#     os.path.join(os.path.dirname(os.path.realpath(__file__)), 'external')
-# )
-#
-# tdi_external = os.path.join(os.path.dirname(os.path.realpath(__file__)),
-#                             os.path.pardir,
-#                             'ThreeDiToolbox',
-#                             'external')
-#
+
+try:
+    import pyqtgraph
+except ImportError:
+    log.info('no installation of pyqtgraph found, use one in external folder')
+    sys.path.append(
+        os.path.join(os.path.dirname(os.path.realpath(__file__)), 'external', 'pyqtgraph')
+    )
+
+try:
+    import sqlalchemy
+except ImportError:
+    log.info('no installation of sqlalchemy found, use one in external folder')
+    sys.path.append(
+        os.path.join(os.path.dirname(os.path.realpath(__file__)), 'external', 'sqlalchemy')
+    )
+
+try:
+    import geoalchemy2
+except ImportError:
+    log.info('no installation of geoalchemy2 found, use one in external folder')
+    sys.path.append(
+        os.path.join(os.path.dirname(os.path.realpath(__file__)), 'external', 'geoalchemy2')
+    )
+
+
 # try:
 #     # temporary fix of libary geoalchemy2 in ThreeDiToolbox
 #     geoalchemy_fix_file = os.path.join(tdi_external, 'geoalchemy2', '__init__.py')

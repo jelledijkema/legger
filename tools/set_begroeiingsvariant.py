@@ -56,19 +56,21 @@ class SetBegroeiingsvariant(QObject):
             return lambda: self.attach_variant(variant_id=variant_id)
 
         try:
-            self.remove_variant_items()
-            db = LeggerDatabase(
-                {'db_path': polder_datasource},
-                'spatialite'
-            )
-            db.create_and_check_fields()
-            self.session = db.get_session()
-            for variant in self.session.query(BegroeiingsVariant):
-                action = QAction(variant.naam, self.iface.mainWindow())
-                self.popupMenu.addAction(action)
-                action.triggered.connect(callback_factory(variant.id))
-        except:
-            log.warning('not able to get begroeiingsvarianten')
+            if polder_datasource:
+                self.remove_variant_items()
+                db = LeggerDatabase(
+                    {'db_path': polder_datasource},
+                    'spatialite'
+                )
+                db.create_and_check_fields()
+                self.session = db.get_session()
+                for variant in self.session.query(BegroeiingsVariant):
+                    action = QAction(variant.naam, self.iface.mainWindow())
+                    self.popupMenu.addAction(action)
+                    action.triggered.connect(callback_factory(variant.id))
+        except Exception as e:
+            log.warning('not able to get begroeiingsvarianten. Melding: %s', e)
+
 
     def remove_variant_items(self):
 

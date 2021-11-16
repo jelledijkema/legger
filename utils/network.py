@@ -338,7 +338,7 @@ class Network(object):
     #     - set endpoints on 90% or 10 meter before endpoint of hydrovak
 
     def __init__(self, spatialite_path, graph=None,
-        full_line_layer = None, virtual_tree_layer=None, endpoint_layer=None, id_field="id"):
+                 full_line_layer=None, virtual_tree_layer=None, endpoint_layer=None, id_field="id"):
         """
         spatialite_path (str): path to spatialite
         line_layer (QgsVectorLayer): input vector layer, with as geometry straight lines without in between vertexes
@@ -361,7 +361,6 @@ class Network(object):
         self.start_arcs = None  # list of dicts with arc_nr, point (x, y), list childs, parent
         self.start_arc_tree = None
         self.arc_tree = None  # dictionary with tree data in format {[arc_nr]: {**arc_data}}
-
 
         self.full_line_layer = full_line_layer
         self._virtual_tree_layer = virtual_tree_layer
@@ -785,7 +784,8 @@ class Network(object):
                         [l.surplus for l in node.inflow(modus=Definitions.FORCED) if l.surplus is not None])
                     # for forced points
                     modified_flow_out = sum(
-                        [abs(l.debiet_modified) for l in node.outflow(modus=Definitions.FORCED) if l.debiet_modified is not None])
+                        [abs(l.debiet_modified) for l in node.outflow(modus=Definitions.FORCED) if
+                         l.debiet_modified is not None])
 
                     modified_flow_in = modified_flow_in - modified_flow_out - modified_surplus_in
 
@@ -822,7 +822,8 @@ class Network(object):
                                     line.set_debiet_modified(min_flow, surplus / len(other_out))
                                 else:
                                     flow = max(min_flow, abs(line.debiet_3di) if line.debiet_3di else min_flow)
-                                    line.set_debiet_modified(flow * factor if flow != min_flow else min_flow, surplus * factor)
+                                    line.set_debiet_modified(flow * factor if flow != min_flow else min_flow,
+                                                             surplus * factor)
                     else:
                         # multiple primary.....
                         # filter out None values and zet minimum to min_flow (for example when direction is forced)
@@ -837,7 +838,8 @@ class Network(object):
                                 line.set_debiet_modified(min_flow, surplus / len(primary_out))
                             else:
                                 flow = max(min_flow, abs(line.debiet_3di) if line.debiet_3di else min_flow)
-                                line.set_debiet_modified(flow * factor if flow != min_flow else min_flow, factor * surplus)
+                                line.set_debiet_modified(flow * factor if flow != min_flow else min_flow,
+                                                         factor * surplus)
 
                         for line in other_out:
                             line.set_debiet_modified(min_flow, 0)
@@ -894,7 +896,6 @@ class Network(object):
 
         return True, []
 
-
     def hydrovak_class_tree_with_data(self):
 
         line_tree = {}
@@ -908,8 +909,11 @@ class Network(object):
             try:
                 line_feature = next(self.full_line_layer.getFeatures(request))
             except StopIteration:
-                logger.warning('no line feature for %i', ids)
-                pass
+                msg = ('Fout: Er is geen object in de tabel hydroobjects_kenmerken met id {}. '
+                       'Mogelijk is in de DAMO export in de tabel hydroobject de id leeg.').format(ids)
+                logger.warning(msg)
+                # todo: message to user.
+                raise Exception(msg)
 
             inflow_node = line.inflow_node(Definitions.DEBIET_DB)
             outflow_node = line.outflow_node(Definitions.DEBIET_DB)
@@ -938,7 +942,6 @@ class Network(object):
 
         return line_tree
 
-
     def build_tree(self):
         """
         function that analyses tree and creates tree structure of network.
@@ -957,9 +960,15 @@ class Network(object):
             out_node = self.graph.node(hline['out_node'])
             # link line with highest flow
             downstream_line_old = next(iter(sorted(out_node.outflow(Definitions.DEBIET_DB),
-                                                key=lambda l: (abs(l.debiet_db) if l.debiet_db is not None else 0) + (0 if (l.target_level is None or hline['target_level'] is None or hline['target_level'] < l.target_level) else 1000), reverse=True)), None)
+                                                   key=lambda l: (
+                                                                     abs(l.debiet_db) if l.debiet_db is not None else 0) + (
+                                                                     0 if (l.target_level is None or hline[
+                                                                         'target_level'] is None or hline[
+                                                                               'target_level'] < l.target_level) else 1000),
+                                                   reverse=True)), None)
             # hline['downstream_line_nr'] = downstream_line.nr if downstream_line else None
-            downstream_line = self.graph.lines[hline['downstream_line_nr']] if hline['downstream_line_nr'] is not None else None
+            downstream_line = self.graph.lines[hline['downstream_line_nr']] if hline[
+                                                                                   'downstream_line_nr'] is not None else None
 
             if hline.get('id') in [474252, 140888]:
                 a = 1

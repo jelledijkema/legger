@@ -60,10 +60,9 @@ class ProfileCalculations(QObject):
     def run(self):
         """Run method that loads and starts the plugin"""
 
-
-
         try:
-            ts_datasource = plugins['ThreeDiToolbox'].ts_datasources
+            tdi_plugin = plugins['ThreeDiToolbox']
+            ts_datasource = tdi_plugin.ts_datasource
         except:
             ts_datasource = "Kies eerst 3Di output (model, simulatie (nc), sqlite1)"
 

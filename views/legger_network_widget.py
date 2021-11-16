@@ -2,6 +2,7 @@ import logging
 from collections import OrderedDict
 
 from PyQt5.QtGui import QStandardItemModel, QStandardItem
+from PyQt5.QtWidgets import QSplitter
 from qgis.PyQt import QtWidgets
 from qgis.PyQt.QtCore import QMetaObject, QSize, Qt, pyqtSignal, QVariant, QSortFilterProxyModel
 from qgis.PyQt.QtWidgets import (QApplication, QComboBox, QDockWidget, QGroupBox, QHBoxLayout, QLabel, QPlainTextEdit,
@@ -113,6 +114,8 @@ class clickTool(QgsMapToolIdentifyFeature):
 
 
 def interpolated_color(value, color_map, alpha=255):
+    if value is None:
+        return [0, 0, 0, alpha]
     for i, cm in enumerate(color_map):
         if value <= cm[0]:
             if i == 0:
@@ -140,6 +143,7 @@ class LeggerWidget(QDockWidget):
         # store arguments
         self.iface = iface
         self.path_legger_db = path_legger_db
+        self.subwindows_docked = False
 
         con_legger = load_spatialite(path_legger_db)
         create_legger_views(con_legger)
@@ -257,6 +261,8 @@ class LeggerWidget(QDockWidget):
 
         self.kijk_variant_knop.clicked.connect(self.open_kijkprofiel_dialog)
 
+        self.make_dockable_button.clicked.connect(self.on_toggle_dockable)
+
         # self.begroeiings_strategy_combo.currentIndexChanged.connect(self.onSelectBegroeiingsVariantStrategy)
 
         # create and init startpoint (AreaTree) model
@@ -299,7 +305,8 @@ class LeggerWidget(QDockWidget):
         if len(identifyFeatures):
             hydro_id = identifyFeatures[0].mFeature.attribute('hydro_id')
             node = self.legger_model.rootItem.child(0)
-            index = self.legger_model.find_younger(self.legger_model.createIndex(node.row(), 0, node), 'hydro_id', hydro_id)
+            index = self.legger_model.find_younger(self.legger_model.createIndex(node.row(), 0, node), 'hydro_id',
+                                                   hydro_id)
             if index:
                 self.select_hydrovak(index)
                 if self.click_tool_active:
@@ -507,10 +514,12 @@ class LeggerWidget(QDockWidget):
                             GeselecteerdeProfielen.hydro_id == node.hydrovak.get('hydro_id')).first()
                         if selected:
                             selected.variant = profilev
+                            selected.hydro_verhang = profilev.verhang * node.hydrovak.get('length')
                         else:
                             selected = GeselecteerdeProfielen(
                                 hydro_id=node.hydrovak.get('hydro_id'),
-                                variant_id=profilev.id
+                                variant_id=profilev.id,
+                                hydro_verhang=profilev.verhang * node.hydrovak.get('length') / 1000
                             )
                         self.session.add(selected)
             elif not initial:
@@ -777,6 +786,8 @@ class LeggerWidget(QDockWidget):
                     traject_nodes=traject
                 )
                 self.session.commit()
+                # todo: update here the cumulative slope calculation
+
                 # trigger repaint of sideview
                 self.sideview_widget.draw_selected_lines(self.sideview_widget._get_data())
             else:
@@ -948,6 +959,9 @@ class LeggerWidget(QDockWidget):
                 'verhang': profile.verhang,
                 'color': interpolated_color(value=profile.verhang, color_map=color_map,
                                             alpha=(255 if active else 80)),
+                'verhang_inlaat': profile.verhang_inlaat,
+                'color_inlaat': interpolated_color(value=profile.verhang_inlaat, color_map=color_map,
+                                                   alpha=(255 if active else 80)),
                 'points': [
                     (-0.5 * profile.waterbreedte, hydro_object.streefpeil),
                     (-0.5 * profile.bodembreedte, hydro_object.streefpeil - profile.diepte),
@@ -985,6 +999,61 @@ class LeggerWidget(QDockWidget):
     def get_child_selection_strategy(self):
 
         return self.child_selection_strategies[self.child_selection_strategy_combo.currentText()]
+
+    def on_toggle_dockable(self, *args, **kwargs):
+        self.toggle_dockable()
+
+    def toggle_dockable(self, force_docked=None):
+
+        if (force_docked is not None and not force_docked) or (force_docked is None and self.subwindows_docked):
+            self.hydrovak_graphSplitter.addWidget(self.graph_widget)
+            self.contentLayout.addWidget(self.variantWidget)
+
+            self.hydrovak_graphSplitter.setStretchFactor(0, 0.75)
+            self.hydrovak_graphSplitter.setStretchFactor(1, 0.75)
+            # self.graph_widget.setMinimumSize()
+
+            if self.variantDockWidget:
+                self.variantDockWidget.close()
+            if self.graphDockWidget:
+                self.graphDockWidget.close()
+            self.variantDockWidget = None
+            self.graphDockWidget = None
+            self.make_dockable_button.setText("onderdelen los")
+            self.subwindows_docked = False
+        else:
+            self.graphDockWidget = QDockWidget(self)
+            self.variantDockWidget = QDockWidget(self)
+
+            def onGraphClose(e):
+                self.hydrovak_graphSplitter.addWidget(self.graph_widget)
+                self.hydrovak_graphSplitter.setStretchFactor(0, 0.75)
+                self.hydrovak_graphSplitter.setStretchFactor(1, 0.75)
+                self.graphDockWidget = None
+                e.accept()
+
+            self.graphDockWidget.closeEvent = onGraphClose
+
+            def onVariantClose(e):
+                self.contentLayout.addWidget(self.variantWidget)
+                self.variantDockWidget = None
+                e.accept()
+
+            self.variantDockWidget.closeEvent = onVariantClose
+
+            self.graphDockWidget.setWidget(self.graph_widget)
+            self.variantDockWidget.setWidget(self.variantWidget)
+            self.iface.addDockWidget(Qt.BottomDockWidgetArea, self.graphDockWidget)
+            self.iface.addDockWidget(Qt.BottomDockWidgetArea, self.variantDockWidget)
+
+            self.make_dockable_button.setText("onderdelen bijelkaar")
+            self.subwindows_docked = True
+
+    def on_variantdockwidget_close(self):
+        self.contentLayout.addWidget(self.variantWidget)
+
+    def on_graph_dockwidget_close(self):
+        self.contentLayout.addWidget(self.graph_widget)
 
     def closeEvent(self, event):
         """
@@ -1024,6 +1093,11 @@ class LeggerWidget(QDockWidget):
 
         self.legger_model.setTreeWidget(None)
 
+        if self.graphDockWidget:
+            self.graphDockWidget.close()
+        if self.variantDockWidget:
+            self.variantDockWidget.close()
+
         if self.click_tool_active:
             self.toggleMapTool()
 
@@ -1044,10 +1118,14 @@ class LeggerWidget(QDockWidget):
 
         self.main_vlayout = QVBoxLayout(self)
         self.dock_widget_content.setLayout(self.main_vlayout)
-
-        # add button to add objects to graphs
         self.button_bar_hlayout = QHBoxLayout(self)
+        self.contentLayout = QHBoxLayout(self)
+        self.hydrovak_graphSplitter = QSplitter(Qt.Horizontal, self)
+        self.hydrovak_graphSplitter.setMinimumWidth(1100)
+        self.contentLayout.addWidget(self.hydrovak_graphSplitter)
 
+        # ------------ buttonbar -----------------
+        # add button to add objects to graphs
         self.show_manual_input_button = QPushButton(self)
         self.button_bar_hlayout.addWidget(self.show_manual_input_button)
         self.show_manual_input_button.setDisabled(True)
@@ -1077,86 +1155,81 @@ class LeggerWidget(QDockWidget):
                                   QSizePolicy.Minimum)
         self.button_bar_hlayout.addItem(spacer_item)
 
-        # self.button_bar_hlayout.addItem(QLabel("doortrekken tot:"))
-        # self.button_bar_hlayout.addItem(self.begroeiings_strategy_combo)
+        self.make_dockable_button = QPushButton(self)
+        self.button_bar_hlayout.addWidget(self.make_dockable_button)
 
         self.main_vlayout.addLayout(self.button_bar_hlayout)
+
+        # ------------------- hydrovak table -----------------------
         # add tabWidget for graphWidgets
-        self.contentLayout = QHBoxLayout(self)
-
         self.tree_table_tab = QTabWidget(self)
-        sizePolicy = QSizePolicy(QSizePolicy.Fixed, QSizePolicy.Expanding)
-        sizePolicy.setHorizontalStretch(0)
-        sizePolicy.setVerticalStretch(0)
-        sizePolicy.setHeightForWidth(
-            self.tree_table_tab.sizePolicy().hasHeightForWidth())
+        sizePolicy = QSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
+        sizePolicy.setHorizontalStretch(1)
+        sizePolicy.setVerticalStretch(1)
+        # sizePolicy.setHeightForWidth(False)
         self.tree_table_tab.setSizePolicy(sizePolicy)
-        self.tree_table_tab.setMinimumSize(QSize(850, 0))
-
-        self.contentLayout.addWidget(self.tree_table_tab)
+        self.tree_table_tab.setMinimumWidth(850)
 
         # startpointTree
         self.startpoint_tree_widget = StartpointTreeWidget(self, self.area_model)
-        # sizePolicy = QSizePolicy(QSizePolicy.Fixed, QSizePolicy.Expanding)
-        # sizePolicy.setHorizontalStretch(0)
-        # sizePolicy.setVerticalStretch(0)
-        # sizePolicy.setHeightForWidth(
-        #     self.legger_tree_widget.sizePolicy().hasHeightForWidth())
-        # self.legger_tree_widget.setSizePolicy(sizePolicy)
-        # self.legger_tree_widget.setMinimumSize(QSize(750, 0))
-
         self.tree_table_tab.addTab(self.startpoint_tree_widget, 'startpunten')
 
         # LeggerTree
         self.legger_tree_widget = LeggerTreeWidget(self, self.legger_model)
-        # sizePolicy = QSizePolicy(QSizePolicy.Fixed, QSizePolicy.Expanding)
-        # sizePolicy.setHorizontalStretch(0)
-        # sizePolicy.setVerticalStretch(0)
-        # sizePolicy.setHeightForWidth(
-        #     self.legger_tree_widget.sizePolicy().hasHeightForWidth())
-        # self.legger_tree_widget.setSizePolicy(sizePolicy)
-        # self.legger_tree_widget.setMinimumSize(QSize(750, 0))
-
         self.tree_table_tab.addTab(self.legger_tree_widget, 'hydrovakken')
 
+        self.hydrovak_graphSplitter.addWidget(self.tree_table_tab)
+        # ------------------- graphs -----------------------
         # graphs
-        self.graph_vlayout = QVBoxLayout(self)
 
-        # Graph
+        sizePolicy = QSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
+        sizePolicy.setHorizontalStretch(1)
+        sizePolicy.setVerticalStretch(1)
+        # sizePolicy.setHeightForWidth(False)
+
+        self.graph_widget = QSplitter(Qt.Vertical, self)
+        self.graph_widget.setSizePolicy(sizePolicy)
+        self.graph_widget.setMinimumWidth(250)
+
+        # self.graph_widget.addWidget(self.graph_vlayout)
+
         self.plot_widget = LeggerPlotWidget(
             self, session=self.session,
             legger_model=self.legger_model,
             variant_model=self.variant_model)
+
         sizePolicy = QSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
-        sizePolicy.setHorizontalStretch(1)
         sizePolicy.setVerticalStretch(1)
-        sizePolicy.setHeightForWidth(
-            self.plot_widget.sizePolicy().hasHeightForWidth())
+        sizePolicy.setHeightForWidth(False)
         self.plot_widget.setSizePolicy(sizePolicy)
         self.plot_widget.setMinimumSize(QSize(250, 150))
-
-        self.graph_vlayout.addWidget(self.plot_widget, 2)
+        self.graph_widget.addWidget(self.plot_widget)
 
         # Sideview Graph
         self.sideview_widget = LeggerSideViewPlotWidget(
             self, session=self.session,
             legger_model=self.legger_model)
         sizePolicy = QSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
-        sizePolicy.setHorizontalStretch(1)
         sizePolicy.setVerticalStretch(1)
         sizePolicy.setHeightForWidth(
             self.sideview_widget.sizePolicy().hasHeightForWidth())
         self.sideview_widget.setSizePolicy(sizePolicy)
         self.sideview_widget.setMinimumSize(QSize(250, 150))
 
-        self.graph_vlayout.addWidget(self.sideview_widget)
+        self.graph_widget.addWidget(self.sideview_widget)
 
-        self.contentLayout.addLayout(self.graph_vlayout, 2)
+        # -------------- varianten ----------------
+        self.variantWidget = QWidget(self)
+        self.variantVstack = QVBoxLayout(self)
 
-        self.rightVstack = QVBoxLayout(self)
         sizePolicy = QSizePolicy(QSizePolicy.Fixed, QSizePolicy.Expanding)
         sizePolicy.setHorizontalStretch(0)
         sizePolicy.setVerticalStretch(0)
+
+        self.variantWidget.setSizePolicy(sizePolicy)
+        self.variantWidget.setMinimumWidth(600)
+
+        self.variantWidget.setLayout(self.variantVstack)
 
         self.begroeiings_combo = QComboBox(self)
         self.begroeiings_strategy_combo = QComboBox(self)
@@ -1166,24 +1239,28 @@ class LeggerWidget(QDockWidget):
         vbox_strat.addWidget(self.begroeiings_combo)
         vbox_strat.addWidget(self.begroeiings_strategy_combo)
         self.groupBox_begroeiings.setLayout(vbox_strat)
-        self.rightVstack.addWidget(self.groupBox_begroeiings)
+        self.variantVstack.addWidget(self.groupBox_begroeiings)
 
         # variantentable
         self.plot_item_table = VariantenTable(self, variant_model=self.variant_model)
-        self.plot_item_table.setMinimumWidth(380)
 
-        self.rightVstack.addWidget(self.plot_item_table)
+        self.variantVstack.addWidget(self.plot_item_table)
 
         self.selected_variant_remark = QPlainTextEdit(self)
         self.selected_variant_remark.setFixedHeight(100)
         self.selected_variant_remark.setDisabled(True)
-        self.rightVstack.addWidget(self.selected_variant_remark)
+        self.variantVstack.addWidget(self.selected_variant_remark)
 
         self.kijk_variant_knop = QPushButton(self)
         self.kijk_variant_knop.setDisabled(True)
-        self.rightVstack.addWidget(self.kijk_variant_knop)
+        self.variantVstack.addWidget(self.kijk_variant_knop)
 
-        self.contentLayout.addLayout(self.rightVstack, 0)
+        # initialize dockable state
+        self.graphDockWidget = None
+        self.variantDockWidget = None
+        self.toggle_dockable(self.subwindows_docked)
+
+        # --------------- combine everything -----------------
 
         self.main_vlayout.addLayout(self.contentLayout)
 

@@ -26,9 +26,9 @@ class TestTheoreticalProfiles(unittest.TestCase):
 
         bv = BegroeiingsVariant()
 
-        profiles = create_theoretical_profiles(self.legger_db, 2, bv)
+        profiles = create_theoretical_profiles(self.legger_db, 2, 2, bv)
 
-        write_theoretical_profile_results_to_db(profiles, self.legger_db, 2, bv)
+        write_theoretical_profile_results_to_db(profiles, self.legger_db, 2, 2, bv)
 
         pass
 

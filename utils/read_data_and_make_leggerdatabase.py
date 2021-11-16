@@ -207,12 +207,13 @@ class CreateLeggerSpatialite(object):
         # """)
 
         session.execute("""
-        INSERT INTO hydroobject  (id, code, categorieoppwaterlichaam, streefpeil, geometry)
+        INSERT INTO hydroobject  (id, code, categorieoppwaterlichaam, streefpeil, debiet_inlaat, geometry)
         SELECT 
             ho.hydroobject_id as id,
             min(ho.code),
             min(ho.categorieoppwaterlichaam),
             min(pgp.streefpeil_bwn2) as streefpeil,
+            max(ho.aanvoerdebiet),
             min(ho.geometry)
         FROM imp_hydroobject ho
         JOIN  imp_peilgebieden_na_datacheck pgp ON st_intersects(ho.geometry, pgp.geometry)  
@@ -314,8 +315,8 @@ WITH
          """)
 
         session.execute("""
-UPDATE hydroobject
-SET debiet = debiet_3di
+    UPDATE hydroobject
+    SET debiet = debiet_3di
                  """)
 
         session.execute("""
