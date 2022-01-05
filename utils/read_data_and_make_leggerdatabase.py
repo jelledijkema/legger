@@ -51,7 +51,8 @@ def nonwkt(value, default_value=None):
 class CreateLeggerSpatialite(object):
     """
         Select "dump" or "export" .gdb files that come from DAMO
-        This should be similar to the export that is send to the N&S datachecker and modelbuilder for this model revision.
+        This should be similar to the export that is send to the N&S datachecker and modelbuilder for this model revision,
+        except discharge in 'afvoer' and 'anvoer' have been added as well as waterleverlevels.
 
         The output of this step is a legger_{polder}_{datetime}.sqlite file with all the necessary tables and data.
         Step 1: make empty legger database
@@ -67,7 +68,7 @@ class CreateLeggerSpatialite(object):
         self.ogr_exe = os.path.abspath(os.path.join(sys.executable, os.pardir, os.pardir, 'bin', 'ogr2ogr.exe'))
 
         self.tables = ['DuikerSifonHevel', 'Waterdeel', 'HydroObject',
-                       'GW_PRO', 'GW_PRW', 'GW_PBP', 'IWS_GEO_BESCHR_PROFIELPUNTEN', 'Debieten_3Di_HR_waterlopen',
+                       'GW_PRO', 'GW_PRW', 'GW_PBP', 'IWS_GEO_BESCHR_PROFIELPUNTEN', 'Debieten_3Di_HR',
                        'Peilgebieden_na_datacheck']
         # tabellen oude methode peilgebieden: 'PeilafwijkingGebied', 'PeilgebiedPraktijk',
 
@@ -190,34 +191,17 @@ class CreateLeggerSpatialite(object):
           FROM imp_hydroobject
         """)
 
-        # vullen hydroobjecten
-        # oude methode
-        # session.execute("""
-        # INSERT INTO hydroobject  (id, code, categorieoppwaterlichaam, streefpeil, geometry)
-        # SELECT
-        #     ho.hydroobject_id as id,
-        #     min(ho.code),
-        #     min(ho.categorieoppwaterlichaam),
-        #     min(COALESCE(pgp.peil_wsa, pag.peil_wsa)) as streefpeil,
-        #     min(ho.geometry)
-        # FROM imp_hydroobject ho
-        # JOIN  imp_peilgebiedpraktijk pgp ON st_intersects(ho.geometry, pgp.geometry)
-        # LEFT OUTER JOIN  imp_peilafwijkinggebied pag ON st_intersects(ho.geometry, pag.geometry)
-        # GROUP BY id
-        # """)
-
         session.execute("""
-        INSERT INTO hydroobject  (id, code, categorieoppwaterlichaam, streefpeil, debiet_inlaat, geometry)
+        INSERT INTO hydroobject  (id, code, categorieoppwaterlichaam, streefpeil, zomerpeil, debiet_inlaat, geometry)
         SELECT 
-            ho.hydroobject_id as id,
-            min(ho.code),
-            min(ho.categorieoppwaterlichaam),
-            min(pgp.streefpeil_bwn2) as streefpeil,
-            max(ho.aanvoerdebiet),
-            min(ho.geometry)
-        FROM imp_hydroobject ho
-        JOIN  imp_peilgebieden_na_datacheck pgp ON st_intersects(ho.geometry, pgp.geometry)  
-        GROUP BY ho.hydroobject_id
+            hydroobject_id as id,
+            code,
+            categorieoppwaterlichaam,
+            winterpeil as streefpeil,
+            zomerpeil,
+            aanvoerdebiet_totaal_m3_s,
+            geometry
+        FROM imp_hydroobject
         """)
 
         session.execute("""
@@ -262,14 +246,15 @@ class CreateLeggerSpatialite(object):
 
         # debiet 3di
         session.execute("""
-         CREATE TABLE debiet_3di AS SELECT
+         CREATE TABLE debiet_3di AS 
+         SELECT
              ogc_fid as id,
-             code,
-             polder,
-             CASE WHEN richting > 0 THEN q_m3_s ELSE -1 * q_m3_s END as debiet,
-             verhang_abs_cm_km,
+             --code,
+             --polder,
+             CASE WHEN richting > 0 THEN q_mean_m3_s ELSE -1 * q_mean_m3_s END as debiet,
+             -- verhang_abs_cm_km,
              geometry
-         FROM imp_Debieten_3Di_HR_waterlopen;
+         FROM imp_Debieten_3Di_HR;
          """)
 
         session.execute("""
@@ -282,14 +267,18 @@ class CreateLeggerSpatialite(object):
 
         session.execute("""
 WITH
-    cnt as (SELECT 1 x union select x+1 from cnt where x<9),
-    pnt as (SELECT h.id, cnt.x / 10.0 as fraction, Line_Interpolate_Point(h.geometry, cnt.x / 10.0) as geom, ST_LENGTH(h.geometry) as length
-            FROM hydroobject h, cnt),
-    pnt_buf as (SELECT p.*, ST_Expand(p.geom, MIN(5, length/ 11 )) as geom_buffer from pnt p),
-    link as (SELECT 
+    cnt as (SELECT 1 x union select x+1 from cnt where x<24)
+	, pnt as (
+			SELECT h.id, cnt.x / 25.0 as fraction, Line_Interpolate_Point(h.geometry, cnt.x / 25.0) as geom, ST_LENGTH(h.geometry) as length
+            FROM hydroobject h, cnt
+							--WHERE h.id = 165183  -- FOR DEBUGGING
+	), pnt_buf as (
+			SELECT p.*, ST_Expand(p.geom, MIN(1, length/ 11 )) as geom_buffer from pnt p)
+	,link as (
+			SELECT 
                 p.id as h_id, 
                 d.id as d_id, 
-                p.fraction, 5 - st_distance(p.geom, d.geometry) as score, 
+                p.fraction, 1 - st_distance(p.geom, d.geometry) as score, 
                 abs(d.debiet) as flow 
              FROM pnt_buf p, debiet_3di d 
              WHERE st_intersects(p.geom_buffer, d.geometry) 
@@ -299,7 +288,7 @@ WITH
     score as (SELECT h_id, d_id, sum(score) as score, max(flow) as flow, count(*) as cnt
               FROM link 
               GROUP BY h_id, d_id 
-              ORDER BY 1, 4 DESC, 3 DESC),
+              ORDER BY h_id, 3 DESC, 4 DESC),
     linked as (SELECT distinct * FROM score WHERE cnt >= 2 GROUP BY h_id),
     matched as (SELECT  
                     h.id as hydro_id, 
@@ -310,7 +299,11 @@ WITH
 
     UPDATE hydroobject
     SET 
-        debiet_3di = (SELECT m.debiet_3di FROM matched m WHERE m.hydro_id = id),
+        debiet_3di = (
+			SELECT m.debiet_3di FROM matched m
+				--, hydroobject -- FOR DEBUGGING
+				WHERE m.hydro_id = id
+					),
         score = (SELECT m.score FROM matched m WHERE m.hydro_id = id)
          """)
 

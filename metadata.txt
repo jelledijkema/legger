@@ -7,7 +7,7 @@ qgisMinimumVersion=3.4
 description=Leggertool, tool for getting 'legger' profiles based on dicharged and
     situational data
 version=1.2
-author=Jelle Dijkema and Bastiaan Roos
+author=Bastiaan Roos, Wouter van Esse and Jelle Dijkema.
 email=bastiaan.roos@roosgeo.nl
 
 about=...
