@@ -98,9 +98,9 @@ class ProfileCalculationWidget(QWidget):  # , FORM_CLASS):
         # fill surge combobox
         surge_choices = ['%s' % s for s in [1.5, 2.0, 2.5, 3.0, 3.5, 4.0, 4.5, 5.0]]
         self.surge_combo_box.insertItems(0, surge_choices)
-        self.surge_combo_box.setCurrentIndex(3)
+        self.surge_combo_box.setCurrentIndex(5)
         self.surge_combo_inlaat_box.insertItems(0, surge_choices)
-        self.surge_combo_inlaat_box.setCurrentIndex(3)
+        self.surge_combo_inlaat_box.setCurrentIndex(5)
 
     def timestep_selection_change(self, nr):
         """Proces new selected timestep in combobox
