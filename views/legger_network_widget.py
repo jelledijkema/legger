@@ -456,7 +456,7 @@ class LeggerWidget(QDockWidget):
                         begroeiingsvariant) != str:
                     profile_variant = self.session.query(Varianten).filter(
                         Varianten.hydro_id == node.hydrovak.get('hydro_id'),
-                        Varianten.begroeiingsvariant_id == begroeiingsvariant.id,
+                        Varianten.begroeiingsvariant_id == begroeiingsvariant, 
                         Varianten.diepte < depth + precision,
                         Varianten.diepte > depth - precision
                     )
