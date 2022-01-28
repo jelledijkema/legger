@@ -28,7 +28,7 @@ def kijkprofiel_function(item, column_index):
 
 # field and display config of 'hydrovakken'
 HORIZONTAL_HEADERS = (
-    {'field': 'code', 'column_width': 250, 'show': True},
+    {'field': 'code', 'column_width': 125, 'show': True},
     {'field': 'hydro_id', 'column_width': 100, 'show': False},
     {'field': 'sp', 'field_type': CHECKBOX_FIELD, 'column_width': 25, 'single_selection': True,
      'default': False, 'header': 's', 'header_tooltip': 'startpunt traject'},
@@ -50,7 +50,8 @@ HORIZONTAL_HEADERS = (
     {'field': 'selected_depth_tmp', 'header': 'sel d', 'header_tooltip': 'geselecteerde diepte tijdens hover over varianten', 'column_width': 60},
     {'field': 'selected_depth', 'header': 'pd', 'header_tooltip': 'geselecteerde diepte', 'column_width': 60},
     {'field': 'selected_width', 'header': 'pb', 'header_tooltip': 'geselecteerde breedte', 'column_width': 60},
-    {'field': 'verhang', 'header': 'verh', 'header_tooltip': 'verhang (cm/km)', 'column_width': 60},
+    {'field': 'verhang', 'header': 'verh afv', 'round': 2,'header_tooltip': 'verhang afvoer (cm/km)', 'column_width': 60},
+    {'field': 'verhang_inlaat', 'header': 'verh inl', 'round': 2,'header_tooltip': 'verhang inlaat (cm/km)', 'column_width': 60},
     {'field': 'over_depth', 'header': 'od', 'header_tooltip': 'overdiepte (* obv theoretisch profiel)', 'column_width': 60},
     {'field': 'over_width', 'header': 'ob', 'header_tooltip': 'overbreedte (* obv theoretisch profiel)', 'column_width': 60},
     {'field': 'selected_begroeiingsvariant_id', 'header': 'beg', 'header_tooltip': 'geselecteerde begroeiingsvariant id', 'column_width': 40},
@@ -94,6 +95,7 @@ class hydrovak_class(object):
             'selected_depth': 'geselecteerd_diepte',
             'selected_width': 'geselecteerd_breedte',
             'verhang': 'geselecteerd_verhang',
+            'verhang_inlaat': 'geselecteerd_verhang_inlaat',
             'selected_variant_id': 'geselecteerde_variant',
             'begroeiingsvariant_id': 'begroeiingsvariant_id',
             'selected_begroeiingsvariant_id': 'geselecteerde_begroeiingsvariant',
@@ -299,6 +301,19 @@ class LeggerTreeModel(BaseTreeModel):
                 return QBrush(QColor(*settings.SELECT_COLOR))
             elif item.hydrovak.get('hover'):
                 return QBrush(QColor(*settings.HOVER_COLOR))
+            # kleuren voor ingevulde die een score hebben 
+            elif item.hydrovak.get('selected_depth') is not None and item.hydrovak.get('verhang') is not None and item.hydrovak.get('verhang_inlaat') is not None and item.hydrovak.get('score') is not None:
+                if float(item.hydrovak.get('verhang')) <= 4.0 and float(item.hydrovak.get('verhang_inlaat')) <= 4.0 and float(item.hydrovak.get('score')) >= 0.98:
+                    return QBrush(QColor(*settings.GOOD_COLOR))
+                else:# float(item.hydrovak.get('score')) < 0.98:
+                    return QBrush(QColor(*settings.READY_COLOR))
+            # kleuren voor ingevulde die geen score hebben 
+            elif item.hydrovak.get('selected_depth') is not None and item.hydrovak.get('verhang') is not None and item.hydrovak.get('verhang_inlaat') is not None and item.hydrovak.get('score') is None:
+                if float(item.hydrovak.get('verhang')) <= 4.0 and float(item.hydrovak.get('verhang_inlaat')) <= 4.0:
+                    return QBrush(QColor(*settings.MAYBE_COLOR))
+            # alle andere ingevulde krijgen een licht oranje kleur
+                else:
+                    return QBrush(QColor(*settings.READY_COLOR))
             elif item.hydrovak.get('selected_depth') is not None:
                 return QBrush(QColor(*settings.READY_COLOR))
             else:
