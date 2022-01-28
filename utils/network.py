@@ -544,8 +544,8 @@ class Network(object):
         while len(queue) > 0:
             node, tot_weight = queue.pop()
             for line in node.inflow(mode, include_nones=True):
-                if line.id in [474252, 140888]:
-                    a = 1
+                # if line.id in [474252, 140888]:
+                #     a = 1
 
                 line: Line
                 if line.category == 1:
@@ -560,7 +560,7 @@ class Network(object):
                         tree[to_node.nr][1] = weight
                         queue.append([to_node, weight])
 
-        # freeze all values made based on connection with
+        # freeze all values made based on connection with startnodes
         tree = [[line_nr, weight, line_nr is not None, min_cat] for line_nr, weight, freeze, min_cat in tree]
 
         # second, force primary not yet reached by routing
@@ -621,8 +621,8 @@ class Network(object):
 
         while len(queue) > 0:
             node, tot_weight = queue.pop()
-            if node.id == 113:
-                a = 1
+            # if node.id == 113:
+            #     a = 1
 
             for line in node.inflow(mode, include_nones=True):
                 line: Line
@@ -657,8 +657,8 @@ class Network(object):
                  if line_nr is not None]
         while len(queue) > 0:
             node, tot_weight = queue.pop()
-            if node.id == 113:
-                a = 1
+            # if node.id == 113:
+            #     a = 1
 
             for line in node.outgoing():
                 line: Line
@@ -711,8 +711,8 @@ class Network(object):
         for node_nr, [line_nr, weight, _, _] in enumerate(tree):
             if line_nr is not None:
                 line = self.graph.line(line_nr)
-                if line.id == 1084919:
-                    a = 1
+                # if line.id == 1084919:
+                #     a = 1
 
                 line.extra_data['weight'] = weight
                 if line.inflow_node(mode).nr != node_nr:
@@ -723,8 +723,8 @@ class Network(object):
 
         for line in self.graph.lines:
             if line.extra_data.get('weight') is None:
-                if line.id == 377326:
-                    a = 1
+                # if line.id == 377326:
+                #     a = 1
                 weight_inflow = tree[line.inflow_node(mode).nr][1]
                 weight_outflow = tree[line.outflow_node(mode).nr][1]
                 if weight_inflow is not None and weight_outflow is not None:
@@ -759,8 +759,8 @@ class Network(object):
             # if node == last_added_node:
             #     break
 
-            if 140870 in [l.id for l in node.outflow(modus=Definitions.FORCED)]:
-                a = 1
+            # if 140870 in [l.id for l in node.outflow(modus=Definitions.FORCED)]:
+            #     a = 1
 
             flow = node.flow(modus=Definitions.FORCED)
             flow_3di = node.flow(modus=Definitions.DEBIET_3DI)
@@ -773,8 +773,8 @@ class Network(object):
             else:
                 all_inflows_not_known = len(
                     [l for l in node.inflow(modus=Definitions.FORCED) if l.debiet_modified is None])
-                if 140870 in [l.id for l in node.outflow(modus=Definitions.FORCED)] and all_inflows_not_known == 0:
-                    a = 1
+                # if 140870 in [l.id for l in node.outflow(modus=Definitions.FORCED)] and all_inflows_not_known == 0:
+                #     a = 1
 
                 if all_inflows_not_known == 0:
                     # all inflows are known, so we can process this node
@@ -852,35 +852,42 @@ class Network(object):
 
                     if len(node_queue) > 0:
                         last_node = [*node_queue.values()][-1]
+                        c_last_repeated = 0
                 else:
                     # wait with this node. add it to the end of the stack.
                     node_queue[node.id] = node
+                    # at this moment nothing has processed last loop
                     if node == last_node:
                         print(node.nr)
-                        category = 1
-                        if c_last_repeated <= 15:
-                            category = 3
-                        elif c_last_repeated <= 30:
+                        category = 3
+                        all_category = 3
+                        if c_last_repeated >= 4:
+                            category = 1
+                        if c_last_repeated >= 2:
                             category = 2
+                        if c_last_repeated >= 8:
+                            all_category = 2
+                        if c_last_repeated >= 10:
+                            all_category = 1
 
                         for node in [*node_queue.values()]:
                             # for circulars set tree end parts in current endnode list to minflow
                             for line in node.inflow(modus=Definitions.FORCED):
                                 if line.extra_data.get('tree_end') and \
                                         line.debiet_modified is None and \
-                                        line.category == category:
-                                    line.set_debiet_modified(
-                                        line.debiet_3di if line.debiet_3di is not None else min_flow, 0)
+                                        line.category >= category:
+                                    line.set_debiet_modified(min_flow)
+                                        # line.debiet_3di if line.debiet_3di is not None else min_flow, 0)
 
-                        if c_last_repeated in [15, 30, 40]:
+                        if c_last_repeated in [6, 8, 10]:
                             # for larger circulars set all tree end parts to minflow and add these endpoints to the queue
 
                             for line in self.graph.lines:
                                 if line.extra_data.get('tree_end') and \
                                         line.debiet_modified is None and \
-                                        line.category == category:
-                                    line.set_debiet_modified(
-                                        line.debiet_3di if line.debiet_3di is not None else min_flow, 0)
+                                        line.category >= all_category:
+                                    line.set_debiet_modified(min_flow)
+                                        # line.debiet_3di if line.debiet_3di is not None else min_flow, 0)
                                     add_node = line.outflow_node(modus=Definitions.FORCED)
                                     if not node_done[add_node.nr]:
                                         node_queue[add_node.id] = add_node
@@ -888,7 +895,7 @@ class Network(object):
                                 last_node = [*node_queue.values()][-1]
 
                         c_last_repeated += 1
-                        if c_last_repeated > 50:
+                        if c_last_repeated > 12:
                             print(
                                 "loop over 'open' nodes, without fixing one. seems we are in an endless loop. Probably "
                                 "there is a loop flow.")
