@@ -382,7 +382,7 @@ class ProfileCalculationWidget(QWidget):  # , FORM_CLASS):
         self.step_redirect_flow_button.clicked.connect(self.execute_redirect_flows)
 
         self.groupBox_step_redirect_flows = QtWidgets.QGroupBox(self)
-        self.groupBox_step_redirect_flows.setTitle("stap 2: herverdeel 3di debiet")
+        self.groupBox_step_redirect_flows.setTitle("stap 2: kies eindpunten en daarna herverdeel 3di debiet")
         self.box_step_redirect_flows = QtWidgets.QVBoxLayout()
         self.box_step_redirect_flows.addWidget(self.step_redirect_flow_button)
         self.groupBox_step_redirect_flows.setLayout(self.box_step_redirect_flows)  # box toevoegen aan groupbox

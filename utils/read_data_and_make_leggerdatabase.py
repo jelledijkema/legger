@@ -152,7 +152,7 @@ class CreateLeggerSpatialite(object):
         # vullen profielen
         session.execute("""
         INSERT INTO profielen  (proident, bron_profiel, pro_id, hydro_id)
-        SELECT proident, osmomsch, pro_id, ho.hydroobject_id
+        SELECT proident, osmomsch, pro_id, ho.hydroobject_id as hydroobject_id
         FROM imp_gw_pro pro
         LEFT JOIN imp_hydroobject ho ON st_intersects(pro.geometry, ho.geometry)  
         where betrouwbaar = 1
@@ -163,43 +163,36 @@ class CreateLeggerSpatialite(object):
         INSERT INTO kenmerken(
             id,
             diepte,
-            bron_diepte,
             bodemhoogte,
             breedte,
-            --bodembreedte,
-            bron_breedte,
             lengte,
             taludvoorkeur,
             steilste_talud,
             grondsoort,
-            bron_grondsoort,
             hydro_id)
         SELECT 
             hydroobject_id as id,
-            substr(hoogte_getabuleerd, instr(hoogte_getabuleerd, ' ')) as diepte, 
-            keuze_profiel as bron_diepte,
-            bodemhoogte_nap as bodemhoogte,
-            substr(breedte_getabuleerd, instr(breedte_getabuleerd, ' ')) as waterbreedte,
-            --substr(breedte_getabuleerd, 1, instr(breedte_getabuleerd, ' ')-1) as bodembreedte, 
-            keuze_profiel as bron_breedte,
-            shape_length as lengte,
+            CASE WHEN winterpeil IS NOT NULL AND ws_bodemhoogte IS NOT NULL THEN winterpeil - ws_bodemhoogte END as diepte, 
+            ws_bodemhoogte as bodemhoogte,
+            breedte as waterbreedte,
+            ST_Length(geometry) as lengte,
             taludvoorkeur as talud_voorkeur,
             min(ws_talud_links, ws_talud_rechts) as steilste_talud,
             grondsoort as grondsoort,
-            "" as bron_grondsoort,
             hydroobject_id as hydro_id
           FROM imp_hydroobject
         """)
 
         session.execute("""
-        INSERT INTO hydroobject  (id, code, categorieoppwaterlichaam, streefpeil, zomerpeil, debiet_inlaat, geometry)
+        INSERT INTO hydroobject  (id, code, categorieoppwaterlichaam, streefpeil, zomerpeil, debiet_inlaat, debiet_fme, geometry)
         SELECT 
             hydroobject_id as id,
             code,
             categorieoppwaterlichaam,
             winterpeil as streefpeil,
             zomerpeil,
-            aanvoerdebiet_totaal_m3_s,
+            debiet_aanvoer,
+            debiet_afvoer_prof,
             geometry
         FROM imp_hydroobject
         """)
@@ -248,11 +241,8 @@ class CreateLeggerSpatialite(object):
         session.execute("""
          CREATE TABLE debiet_3di AS 
          SELECT
-             ogc_fid as id,
-             --code,
-             --polder,
-             CASE WHEN richting > 0 THEN q_mean_m3_s ELSE -1 * q_mean_m3_s END as debiet,
-             -- verhang_abs_cm_km,
+             fid as id,
+             CASE WHEN richting > 0 THEN q_abs ELSE -1 * q_abs END as debiet,
              geometry
          FROM imp_Debieten_3Di_HR;
          """)
