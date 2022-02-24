@@ -184,7 +184,7 @@ class CreateLeggerSpatialite(object):
         """)
 
         session.execute("""
-        INSERT INTO hydroobject  (id, code, categorieoppwaterlichaam, streefpeil, zomerpeil, debiet_inlaat, debiet_fme, geometry)
+        INSERT INTO hydroobject  (id, code, categorieoppwaterlichaam, streefpeil, zomerpeil, debiet_inlaat, debiet_fme, richting_fme, geometry)
         SELECT 
             hydroobject_id as id,
             code,
@@ -193,6 +193,7 @@ class CreateLeggerSpatialite(object):
             zomerpeil,
             debiet_aanvoer,
             debiet_afvoer_prof,
+            richting,
             geometry
         FROM imp_hydroobject
         """)

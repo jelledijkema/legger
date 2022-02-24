@@ -94,6 +94,7 @@ class HydroObject(Base):
     zomerpeil = Column(Float)
     debiet_3di = Column(Float)
     debiet_fme = Column(Float)
+    richting_fme = Column(Integer)
     debiet_inlaat = Column(Float)
     debiet_aangepast = Column(Float)
     debiet = Column(Float)
