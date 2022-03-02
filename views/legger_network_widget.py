@@ -196,8 +196,8 @@ class LeggerWidget(QDockWidget):
             0, self.begroeiings_varianten.keys())
 
         self.begroeiings_variant_strategies = OrderedDict((
-            ('alleen dit hydrovak', 'only_this_hydrovak'),
             ('alle bovenstroomse hydrovakken', 'all_upstream'),
+            ('alleen dit hydrovak', 'only_this_hydrovak'),
         ))
 
         self.begroeiings_strategy_combo.insertItems(0, self.begroeiings_variant_strategies.keys())
