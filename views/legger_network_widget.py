@@ -498,12 +498,14 @@ class LeggerWidget(QDockWidget):
                         over_width = "{}*".format(try_round(over_width, 2, '-'))
 
                     verhang = try_round(profilev.verhang, 1, '-')
+                    verhang_inlaat = try_round(profilev.verhang_inlaat, 1, '-')
                     self.legger_model.setDataItemKey(node, 'selected_depth', depth)
                     self.legger_model.setDataItemKey(node, 'selected_width', width)
                     self.legger_model.setDataItemKey(node, 'selected_variant_id', profilev.id)
                     self.legger_model.setDataItemKey(node, 'selected_begroeiingsvariant_id',
                                                      profilev.begroeiingsvariant_id)
                     self.legger_model.setDataItemKey(node, 'verhang', verhang)
+                    self.legger_model.setDataItemKey(node, 'verhang_inlaat', verhang_inlaat)
                     self.legger_model.setDataItemKey(node, 'score', score)
                     self.legger_model.setDataItemKey(node, 'over_depth', over_depth)
                     self.legger_model.setDataItemKey(node, 'over_width', over_width)
