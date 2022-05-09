@@ -578,7 +578,7 @@
     <property key="labeling/distMapUnitScale" value="0,0,0,0,0,0"/>
     <property key="labeling/drawLabels" value="true"/>
     <property key="labeling/enabled" value="true"/>
-    <property key="labeling/fieldName" value="round(debiet,2)"/>
+    <property key="labeling/fieldName" value="'lt:' || round("debiet_3di",4) ||  '\n'  || 'fme:' || round("debiet_fme",4)||  '\n'  || 'lth:' || round("debiet_aangepast",4)"/>
     <property key="labeling/fitInPolygonOnly" value="false"/>
     <property key="labeling/fontBold" value="false"/>
     <property key="labeling/fontCapitals" value="0"/>

@@ -233,18 +233,18 @@ def calc_profile_variants_for_hydro_object(
                                         'begroeiingsdeel', 'surge', 'afvoer_leidend', 'verhang_inlaat'])
 
     # minus 0.10, because in loop this is added
-    water_depth = store_from_depth - 0.10
+    water_depth = store_from_depth - 0.05
 
     go_on = True
     afvoer_leidend = 1
     while go_on:
         # water_depth for this while loop
         if water_depth <= 1:
-            water_depth = water_depth + 0.10
+            water_depth = water_depth + 0.05
         elif water_depth <= 3:
-            water_depth = water_depth + 0.20
+            water_depth = water_depth + 0.10
         else:
-            water_depth = water_depth + 0.50
+            water_depth = water_depth + 0.20
 
         # initial values for finding profile which fits
         gradient_pitlo_griffioen = 1000

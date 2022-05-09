@@ -15,7 +15,7 @@ def snap_points(db_cursor):
         -- registreer de geometry (alleen bij debuggen)
         --SELECT RecoverGeometryColumn( 'nodes' , 'geometry' , 28992 , 'POINT' );
         
-        -- koppel bein en eindpunten die binnen 50 cm van elkaar liggen
+        -- koppel begin en eindpunten die binnen 50 cm van elkaar liggen
         DROP TABLE IF EXISTS nodes_join
         ;
         
